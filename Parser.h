@@ -8,23 +8,22 @@ private:
 	Lexer* lexer;
 	ASTNode* root;
 
-	// functions that determing factors,terms and expressions
 	ASTNode* ParseFactor();
 	ASTNode* ParseTerm();
-	ASTNode* ParseExpr();   // assignment expression here? or new one?
+	ASTNode* ParseExpr();   // assignment expression here? atm its a new one
 	ASTNode* ParseCond();
 	ASTNode* ParseIf();
-	// TODO:
-	ASTNode* ParseProgram();  // main and functions? or compound statements
+	ASTNode* ParseWhile();
+	ASTNode* ParseProgram();                      // main and functions and assignments/declarations - just main now - entry point
 	ASTNode* ParseCompoundStatement();
-	std::vector<ASTNode*>& ParseStatementList();  // list
+	std::vector<ASTNode*> ParseStatementList();   // simplify vector here?
 	ASTNode* ParseStatement();
-	ASTNode* ParseAssignment();
-	// variable ?
-	// assignment?
+	ASTNode* ParseAssignStatement();
+	// variable ? for type?
 	ASTNode* ParseEmpty();
 
-	bool failState = false;
+	bool failState = false; 
+	// something to count nodes out of curiosity?:P
 public:
 	Parser(Lexer* lex);
 	~Parser();
