@@ -1,6 +1,6 @@
 #include "Lexer.h"
 
-void Lexer::tokenizeSource(std::ifstream& infile)
+void Lexer::TokenizeSource(std::ifstream& infile)
 {
 	std::string line;
 
@@ -38,6 +38,7 @@ void Lexer::tokenizeSource(std::ifstream& infile)
 		}
 		if (prev < line.length()) sourceTokens.push_back(line.substr(prev, std::string::npos));
 	}
+	sourceTokens.push_back("END"); // temp end of file token
 }
 
 bool Lexer::IsDiscardableCharacter(const std::string& delimiter) { return delimiter.find_first_of(" \t\r\n") != std::string::npos; }
@@ -118,20 +119,26 @@ Lexer::Lexer(char* sourcePath)
 		return;
 	}
 
-	tokenizeSource(infile);
+	TokenizeSource(infile);
 	infile.close();
 }
 Lexer::~Lexer() {}
 
-void Lexer::printTokenizedInput()
+void Lexer::PrintTokenizedInput()
 {
 	for (std::string token : sourceTokens) std::cout << token << " ";
 	std::cout << "\n";
 }
-bool Lexer::consume(std::string token)  // make it token? NO need to return or use advance anymore
+
+bool Lexer::Done() { return sourceTokens.at(currentTokenIndex) == "END"; } // HACK
+
+void Lexer::Consume(std::string token)  // make it token? NO need to return or use advance anymore, can be void
 {
-	if (token == sourceTokens.at(currentTokenIndex)) return advance();
-	else throw UnexpectedTokenException("Encountered unexpected token ' " + token + "'"); // needs line number here preferably also handle it somewhere
+	if (token == sourceTokens.at(currentTokenIndex))
+	{
+		if (currentTokenIndex + 1 < sourceTokens.size()) { ++currentTokenIndex; }
+	}
+	else throw UnexpectedTokenException("Encountered unexpected token ' " + token + "', Expected: " + sourceTokens.at(currentTokenIndex)); // needs line number here preferably also handle it somewhere
 }
 // end of tokens???  dont really like it
 bool Lexer::advance()
@@ -141,7 +148,5 @@ bool Lexer::advance()
 		++currentTokenIndex;
 		return true;
 	}
-	tokensLeft = false;  // ugh
-	return false;
 }
-std::string& Lexer::getCurrentToken() { return sourceTokens.at(currentTokenIndex); }
+std::string& Lexer::GetCurrentToken() { return sourceTokens.at(currentTokenIndex); }

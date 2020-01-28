@@ -15,12 +15,11 @@ class Lexer
 private:
 	friend class Parser;
 
-	std::vector<std::string> sourceTokens;  // switch of array of Tokens (since it has already been processed it can same time)
+	std::vector<std::string> sourceTokens;  // switch to array of Tokens (since it has already been processed it can same time)
 	int currentTokenIndex = 0;
-	bool tokensLeft = true;
 
 	// Tokenize source based on the specified delimiters (preserving those delimiters if not whitespace characters)
-	void tokenizeSource(std::ifstream& infile);
+	void TokenizeSource(std::ifstream& infile);
 	// Token recognizers - some can be const char* - more efficient than memory alloc
 	bool IsDiscardableCharacter(const std::string& delimiter);
 	bool IsCompoundOperator(const std::string& delimiter, const std::string& next);  // UNUSED
@@ -34,8 +33,9 @@ public:
 	Lexer(char* sourcePath);  // const
 	~Lexer();
 
-	void printTokenizedInput();
-	bool consume(std::string token); // const ptr?
+	void PrintTokenizedInput();
+	bool Done();
+	void Consume(std::string token); // const ptr?
 	bool advance();  // this should raise an error if the expected token passed from the parser isnt the one given - else advance
-	std::string& getCurrentToken();
+	std::string& GetCurrentToken();
 };
