@@ -9,7 +9,7 @@ the name C--. This project is part of a final year dissertation.
 
 ### Prerequisites
 
-None so far
+For the ability to visualize the abstract syntax tree, the library treant-js is required - [treant-js](https://github.com/fperucic/treant-js)
 
 ## Authors
 
