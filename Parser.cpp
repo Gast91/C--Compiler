@@ -180,7 +180,7 @@ std::vector<ASTNode*> Parser::ParseStatementList()
 	nodes.push_back(node);
 
 	// End of a statement is signified by semicolon, end of statement list is right curly bracket
-	while (lexer->GetCurrentToken() == ";" || lexer->GetCurrentToken() == "}")
+	while (lexer->GetCurrentToken() == ";" || lexer->GetCurrentToken() == "}") // still problems - parent this time
 	{
 		lexer->Consume(lexer->GetCurrentToken());
 		nodes.push_back(ParseStatement());
@@ -194,7 +194,7 @@ ASTNode* Parser::ParseStatement()           // just if and assignment now - FOR/
 	ASTNode* node;
 	if (lexer->GetCurrentToken() == "if") node = ParseIf();              // Handle keywords better!
 	else if (lexer->GetCurrentToken() == "while") node = ParseWhile();
-	else if (lexer->GetCurrentToken() == "END") node = ParseEmpty();  // hack
+	else if (lexer->GetCurrentToken() == "END") node = ParseEmpty();  // hack - also still problems - parent this time
 	else if (lexer->IsIdentifier(lexer->GetCurrentToken(), true)) node = ParseAssignStatement();  // Could also be a declaration - for later
 	else node = ParseEmpty();
 
@@ -219,7 +219,15 @@ Parser::Parser(Lexer* lex) : lexer(lex)
 	// Not all tokens were processed
 	if (!lexer->Done()) { failState = true; std::cout << "Unrecognized token: '" + lexer->GetCurrentToken() + "'"; }  // meh
 
-	if (!failState) root->Print();
+	if (!failState)
+	{
+		std::vector<std::string> config;
+		std::ofstream out("super-simple.js");
+		std::string rootID = GenerateJSONHeader(out, root, "ROOT", config);
+		root->Print();
+		root->PrintJSON(out, rootID, config);
+		GenerateJSONFooter(out, config);
+	}
 	std::cin.get(); // debug only
 }
 
@@ -234,7 +242,6 @@ Parser::~Parser()
 	MUST:
 	GENERATE ASSEMBLY FROM AST
 	VISITING NODES
-	JSON AST VISUALISATION?
 	COULD EXPAND UPON:
 	FOR, FUNCTIONS, ARRAYS, MISCELLANEOUS
 */
