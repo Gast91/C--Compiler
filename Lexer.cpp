@@ -112,6 +112,7 @@ Lexer::Lexer(char* sourcePath)
 	std::ifstream infile;
 
 	infile.open("source.txt");  // this for debug
+	//infile.open(sourcePath);
 
 	if (!infile)
 	{
@@ -126,6 +127,7 @@ Lexer::~Lexer() {}
 
 void Lexer::PrintTokenizedInput()
 {
+	std::cout << "Tokenized Input (Split by whitespace):\n";
 	for (std::string token : sourceTokens) std::cout << token << " ";
 	std::cout << "\n";
 }
@@ -139,14 +141,5 @@ void Lexer::Consume(std::string token)  // make it token? NO need to return or u
 		if (currentTokenIndex + 1 < sourceTokens.size()) { ++currentTokenIndex; }
 	}
 	else throw UnexpectedTokenException("Encountered unexpected token ' " + token + "', Expected: " + sourceTokens.at(currentTokenIndex)); // needs line number here preferably also handle it somewhere
-}
-// end of tokens???  dont really like it
-bool Lexer::advance()
-{
-	if (currentTokenIndex + 1 < sourceTokens.size())
-	{
-		++currentTokenIndex;
-		return true;
-	}
 }
 std::string& Lexer::GetCurrentToken() { return sourceTokens.at(currentTokenIndex); }

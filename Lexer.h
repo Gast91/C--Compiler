@@ -4,11 +4,7 @@
 #include <string>
 #include <vector>
 
-class UnexpectedTokenException : public std::exception
-{
-public:
-	UnexpectedTokenException(std::string msg) : exception(msg.c_str()) {}  // ugh
-};
+#include "Error.h"
 
 class Lexer
 {
@@ -17,6 +13,7 @@ private:
 
 	std::vector<std::string> sourceTokens;  // switch to array of Tokens (since it has already been processed it can same time)
 	int currentTokenIndex = 0;
+	int line = 1;
 
 	// Tokenize source based on the specified delimiters (preserving those delimiters if not whitespace characters)
 	void TokenizeSource(std::ifstream& infile);
@@ -36,6 +33,5 @@ public:
 	void PrintTokenizedInput();
 	bool Done();
 	void Consume(std::string token); // const ptr?
-	bool advance();  // this should raise an error if the expected token passed from the parser isnt the one given - else advance
 	std::string& GetCurrentToken();
 };
