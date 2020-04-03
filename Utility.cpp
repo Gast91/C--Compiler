@@ -8,6 +8,7 @@ std::string GenerateID(const ASTNode* node, const char* ID)
 	id.insert(0, ID);
 	return id;
 }
+
 std::string GenerateJSONHeader(std::ofstream& out, const ASTNode* root, const char* rootID, std::vector<std::string>& config)
 {
 	out << "config = {\n\tcontainer: \"#AST\"\n};\n\n";
@@ -17,12 +18,14 @@ std::string GenerateJSONHeader(std::ofstream& out, const ASTNode* root, const ch
 	config.push_back(id);
 	return id;
 }
+
 void GenerateJSONFooter(std::ofstream& out, std::vector<std::string>& config)
 {
 	out << "simple_chart_config = [\n    ";
 	for (unsigned int i = 0; i < config.size(); ++i) { if (i != 0) out << ", "; out << config.at(i); }
 	out << "\n];";
 }
+
 std::string GenerateJSON(std::ofstream& out, const ASTNode* node, const char* ID, std::string& parentID, std::string name, std::vector<std::string>& config)
 {
 	std::string nodeID = GenerateID(node, ID);
