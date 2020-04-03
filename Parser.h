@@ -10,21 +10,24 @@ private:
 
 	ASTNode* ParseFactor();
 	ASTNode* ParseTerm();
-	ASTNode* ParseExpr();   // assignment expression here? atm its a new one
+	ASTNode* ParseExpr();
 	ASTNode* ParseCond();
 	ASTNode* ParseIf();
 	ASTNode* ParseWhile();
 	ASTNode* ParseProgram();                      // main and functions and assignments/declarations - just main now - entry point
 	ASTNode* ParseCompoundStatement();
-	std::vector<ASTNode*> ParseStatementList();   // simplify vector here?
+	std::vector<ASTNode*> ParseStatementList();
+	ASTNode* ParseDeclarationStatement();
 	ASTNode* ParseStatement();
 	ASTNode* ParseAssignStatement();
-	// variable ? for type?
+	ASTNode* ParseReturn();
 	ASTNode* ParseEmpty();
 
 	bool failState = false; 
-	// something to count nodes out of curiosity?:P
 public:
 	Parser(Lexer* lex);
 	~Parser();
+
+	ASTNode* GetAST() const { return failState ? nullptr : root; }
+	bool Success() const { return !failState; }
 };

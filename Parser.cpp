@@ -14,12 +14,12 @@ ASTNode* Parser::ParseFactor()
 		lexer->Consume("-");
 		return new UnaryASTNode(Token::Sub, ParseFactor());
 	}
-	else if (lexer->IsInteger(current))
+	else if (lexer->IsInteger(current))   // pointless rechecking again, lexer has identified it already and tokenized it. tokens should be enums already
 	{
 		lexer->Consume(current);
 		return new IntegerNode(current);
 	}
-	else if (lexer->IsIdentifier(current, true))
+	else if (lexer->IsIdentifier(current, true))  // pointless rechecking again, lexer has identified it already and tokenized it
 	{
 		lexer->Consume(current);
 		return new IdentifierNode(current);
@@ -31,7 +31,7 @@ ASTNode* Parser::ParseFactor()
 		lexer->Consume(")");
 		return node;
 	}
-	else throw UnexpectedTokenException("Unexpected token '" + current + "'");
+	else throw UnexpectedTokenException("Unexpected token '" + current + "'"); // needed?
 }
 // TERM := FACTOR ((MUL | DIV) FACTOR)*  <---
 ASTNode* Parser::ParseTerm()
@@ -120,6 +120,7 @@ ASTNode* Parser::ParseIf()
 	// Body of If statement can be a collection of statements
 	ASTNode* ifBody = ParseCompoundStatement();
 
+
 	// NOT THIS WAY, IF IS A TERNARY NODE - ATLEAST?
 	//if (lexer->getCurrentToken() == "else") lexer->consume("else");
 	//if (lexer->getCurrentToken() == "if")
@@ -148,6 +149,7 @@ ASTNode* Parser::ParseWhile()
 	// Body of while statement can be a collection of statements
 	ASTNode* whileBody = ParseCompoundStatement();
 
+
 	return new WhileNode(conditionNode, whileBody);
 }
 // PROGRAM := int main LPAR RPAR { COMPOUND_STATEMENT }
@@ -165,27 +167,23 @@ ASTNode* Parser::ParseProgram()                 // hacky way for only main now
 // COMPOUND_STATEMENT := LCUR STATEMENT_LIST RCUR
 ASTNode* Parser::ParseCompoundStatement()
 {
-	lexer->Consume("{");
 	CompoundStatementNode* compound = new CompoundStatementNode();
-
 	for (const auto& statement : ParseStatementList()) compound->Push(statement);
+
 	return compound;
 }
-// STATEMENT_LIST := STATEMENT | STATEMENT SEMICOLON STATEMENT_LIST
+// STATEMENT_LIST := STATEMENT | STATEMENT SEMICOLON STATEMENT_LIST 
 std::vector<ASTNode*> Parser::ParseStatementList()
 {
+	lexer->Consume("{");
 	ASTNode* node = ParseStatement();
 
 	std::vector<ASTNode*> nodes;
 	nodes.push_back(node);
 
-	// End of a statement is signified by semicolon, end of statement list is right curly bracket
-	while (lexer->GetCurrentToken() == ";" || lexer->GetCurrentToken() == "}") // still problems - parent this time
-	{
-		lexer->Consume(lexer->GetCurrentToken());
-		nodes.push_back(ParseStatement());
-	}
-
+	// Statement list ends at a closing curly bracket
+	while (lexer->GetCurrentToken() != "}") nodes.push_back(ParseStatement());
+	lexer->Consume("}");
 	return nodes;
 }
 // STATEMENT : COMPOUND_STATEMENT | ASSIGN_STATEMENT | EMPTY_STATEMENT  - statement can be compound not reflected here
@@ -194,11 +192,30 @@ ASTNode* Parser::ParseStatement()           // just if and assignment now - FOR/
 	ASTNode* node;
 	if (lexer->GetCurrentToken() == "if") node = ParseIf();              // Handle keywords better!
 	else if (lexer->GetCurrentToken() == "while") node = ParseWhile();
-	else if (lexer->GetCurrentToken() == "END") node = ParseEmpty();  // hack - also still problems - parent this time
+	else if (lexer->GetCurrentToken() == "END") node = ParseEmpty();       // hack - also still problems - parent this time
+	else if (lexer->GetCurrentToken() == "return") node = ParseReturn();   // return token sucks printed as a tree
+	else if (lexer->GetCurrentToken() == "int") node = ParseDeclarationStatement();  // lexer->isSymbol()?
 	else if (lexer->IsIdentifier(lexer->GetCurrentToken(), true)) node = ParseAssignStatement();  // Could also be a declaration - for later
 	else node = ParseEmpty();
 
 	return node;
+}
+// DECLARATION_STATEMENT := INT/FLOAT/.. IDENTIFIER SEMI
+ASTNode* Parser::ParseDeclarationStatement()
+{
+	// ints, chars, floats
+	std::string current = lexer->GetCurrentToken();
+	Token type;
+	if (current == "int") type = Token::Int;
+	// ...
+	lexer->Consume(lexer->GetCurrentToken());
+	IdentifierNode* ident = new IdentifierNode(lexer->GetCurrentToken());
+	lexer->Consume(lexer->GetCurrentToken());
+
+	// if here is an equals rather than semi, there is also an assigment
+	// needs another DeclareAssignStatementNode
+	lexer->Consume(";");
+	return new DeclareStatementNode(ident, type);
 }
 // ASSIGN_STATEMENT := IDENTIFIER ASSIGN EXPRESSION
 ASTNode* Parser::ParseAssignStatement()
@@ -207,7 +224,17 @@ ASTNode* Parser::ParseAssignStatement()
 	IdentifierNode* ident = new IdentifierNode(current);
 	lexer->Consume(current);
 	lexer->Consume("=");
-	return new AssignStatementNode(ident, ParseExpr());
+	ASTNode* node = new AssignStatementNode(ident, ParseExpr());
+	lexer->Consume(";");
+	return node;
+}
+// RETURN_STATEMENT := RETURN EXPRESSION
+ASTNode* Parser::ParseReturn()
+{
+	lexer->Consume(lexer->GetCurrentToken());
+	ASTNode* node = new UnaryASTNode(Token::Ret, ParseExpr());
+	lexer->Consume(";");
+	return node;
 }
 ASTNode* Parser::ParseEmpty() { return new EmptyStatementNode(); }  // not needed, can directly return empty
 
@@ -216,32 +243,17 @@ Parser::Parser(Lexer* lex) : lexer(lex)
 	try { root = ParseProgram(); }
 	catch (UnexpectedTokenException ex) { failState = true; std::cout << ex.what() << "\n"; }
 
-	// Not all tokens were processed
-	if (!lexer->Done()) { failState = true; std::cout << "Unrecognized token: '" + lexer->GetCurrentToken() + "'"; }  // meh
-
-	if (!failState)
-	{
-		std::vector<std::string> config;
-		std::ofstream out("super-simple.js");
-		std::string rootID = GenerateJSONHeader(out, root, "ROOT", config);
-		root->Print();
-		root->PrintJSON(out, rootID, config);
-		GenerateJSONFooter(out, config);
-	}
-	std::cin.get(); // debug only
+	// Somewhere, somehow not all tokens were processed.
+	if (!lexer->Done()) { failState = true; std::cout << "Unrecognized token: '" + lexer->GetCurrentToken() + "'"; }
+	else std::cout << "\nParsing Successful, AST Built";
 }
 
-Parser::~Parser()
-{
-	// CONSIDER SMART POINTERS
-	delete root;
-}
+Parser::~Parser() { delete root; }
 
 // FEATURES MISSING TODO:
 /*
 	MUST:
 	GENERATE ASSEMBLY FROM AST
-	VISITING NODES
 	COULD EXPAND UPON:
 	FOR, FUNCTIONS, ARRAYS, MISCELLANEOUS
 */
@@ -249,10 +261,7 @@ Parser::~Parser()
 // PARTIAL IMPLEMENTATION TODO:
 /*
 	PROGRAM INCOMPLETE
-	NO VARIABLE DECLARATION (TYPES)
 	NO TYPE CHECKING
-	NO SYMBOL TABLE ??
-	VARIABLE SCOPE
 */
 
 // GRAMMARS TODO :
