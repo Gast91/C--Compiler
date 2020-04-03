@@ -1,16 +1,36 @@
 #include "Parser.h"
+#include "Symbol.h"
+#include "ASTVisualizer.h"
+#include "CodeGenerator.h"
 
 int main(int argc, char* argv[])
 {
 	// Create lexer and pass to it the file to be tokenized
-	Lexer* lexer = new Lexer(argv[argc - 1]);
-	// Show tokenized input - debug
+	Lexer* lexer = new Lexer(argv[argc - 1]);                // file hardcoded in the lexer atm
+	// Show tokenized input - Debug
 	lexer->PrintTokenizedInput();
-	// Create parser, pass it to the lexer and parse input from lexer
+
+	// Create parser, pass to it the lexer and parse input from lexer
 	Parser* parser = new Parser(lexer);
-	
-	// Use AST created by parser to output assembly
-	// Assembly to executable via vendor assembler?
+	if (parser->Success())
+	{
+		// Parse Successful, print the AST
+		ASTVisualizer ASTPrinter;
+		ASTPrinter.PrintAST(*(parser->GetAST()));
+		// Perform Semantic Analysis to the AST
+		SemanticAnalyzer* semanticAnalyzer = new SemanticAnalyzer();
+		try { parser->GetAST()->Accept(*semanticAnalyzer); }
+		catch (const std::exception& ex) { std::cout << "\n" << ex.what(); }
+		// Show symbol table info gathered by the semantic analysis
+		semanticAnalyzer->Print();
+		delete semanticAnalyzer;  // we will probably need it for code generation so no destruction
+
+		// If semantic analysis was a success
+		/*CodeGenerator codeGenerator;
+		codeGenerator.GenerateAssembly(parser->GetAST());*/
+	}
+
+	std::cin.get(); // Debug Only
 
 	// Cleanup
 	delete lexer;
