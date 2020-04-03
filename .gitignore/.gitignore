@@ -17,7 +17,8 @@
 mono_crash.*
 
 # Abstract Syntax Tree
-.AST
+AST.js
+AST.css
 
 # Build results
 [Dd]ebug/
