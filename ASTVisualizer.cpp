@@ -27,25 +27,9 @@ void ASTVisualizer::PrintAST(ASTNode& n)
 	std::cout << "\n\nAST Visualisation File Successfully created\n";
 }
 
-void ASTVisualizer::Visit(ASTNode& n) { n.Accept(*this); } // this should be an error or something
+void ASTVisualizer::Visit(ASTNode& n) { assert(("ASTVisualizer visited base ASTNode class?!", false)); }
 
-void ASTVisualizer::Visit(UnaryASTNode& n)
-{
-	// Print to console
-	if (consoleOutput)
-	{
-		std::string name = n.op == Token::Ret ? "RET" : std::string(1, (char)GetTokenValue(n.op));
-		std::cout << "Unary: '" << name << "' [";
-		n.expr->Accept(*this);
-		std::cout << "]";
-	}
-	else // Print JSON
-	{
-		std::string name = n.op == Token::Ret ? "RET" : std::string(1, (char)GetTokenValue(n.op));  // ugh
-		n.SetChildrenPrintID(GenerateJSON(out, &n, "UNARY", n.parentID, name, config));
-		n.expr->Accept(*this);
-	}
-}
+void ASTVisualizer::Visit(UnaryASTNode& n) { n.expr->Accept(*this); }
 
 void ASTVisualizer::Visit(BinaryASTNode& n)
 {
@@ -67,12 +51,28 @@ void ASTVisualizer::Visit(IdentifierNode& n)
 	else  GenerateJSON(out, &n, "ID", n.parentID, n.value, config); // Print JSON
 }
 
+void ASTVisualizer::Visit(UnaryOperationNode& n)
+{
+	// Print to console
+	if (consoleOutput)
+	{
+		std::cout << "Unary: '" << n.op.first << "' [";
+		n.expr->Accept(*this);
+		std::cout << "]";
+	}
+	else // Print JSON
+	{
+		n.SetChildrenPrintID(GenerateJSON(out, &n, "UNARY", n.parentID, n.op.first, config));
+		n.expr->Accept(*this);
+	}
+}
+
 void ASTVisualizer::Visit(BinaryOperationNode& n)
 {
 	// Print to console
 	if (consoleOutput)
 	{
-		std::cout << "BinOp: '" << (char)GetTokenValue(n.op) << "' [L: ";
+		std::cout << "BinOp: '" << n.op.first << "' [L: ";
 		n.left->Accept(*this);
 		std::cout << " R: ";
 		n.right->Accept(*this);
@@ -80,7 +80,7 @@ void ASTVisualizer::Visit(BinaryOperationNode& n)
 	}
 	else // Print JSON
 	{
-		n.SetChildrenPrintID(GenerateJSON(out, &n, "BINOP", n.parentID, { (char)GetTokenValue(n.op) }, config));
+		n.SetChildrenPrintID(GenerateJSON(out, &n, "BINOP", n.parentID, n.op.first, config));
 		n.left->Accept(*this);
 		n.right->Accept(*this);
 	}
@@ -91,7 +91,7 @@ void ASTVisualizer::Visit(ConditionNode& n)
 	// Print to console
 	if (consoleOutput)
 	{
-		std::cout << "COND: '" << (char)GetTokenValue(n.op) << "' [L: ";
+		std::cout << "COND: '" << n.op.first << "' [L: ";
 		n.left->Accept(*this);
 		std::cout << " R: ";
 		n.right->Accept(*this);
@@ -99,7 +99,7 @@ void ASTVisualizer::Visit(ConditionNode& n)
 	}
 	else // Print JSON
 	{
-		n.SetChildrenPrintID(GenerateJSON(out, &n, "COND", n.parentID, { (char)GetTokenValue(n.op) }, config));
+		n.SetChildrenPrintID(GenerateJSON(out, &n, "COND", n.parentID, n.op.first, config));
 		n.left->Accept(*this);
 		n.right->Accept(*this);
 	}
@@ -158,15 +158,15 @@ void ASTVisualizer::Visit(DeclareStatementNode& n)
 	// Print to console
 	if (consoleOutput)
 	{
-		std::cout << "\nDECL: '";
+		std::cout << "\nDECL: [";
 		n.identifier->Accept(*this);
-		std::cout << "'";
+		std::cout << "]";
 	}
 	else // Print JSON
 	{
-		std::string t;
-		if (n.type == Token::Int) t = "INTEGER"; // ugh
-		n.SetChildrenPrintID(GenerateJSON(out, &n, "DECL", n.parentID, t, config));
+		//std::string t;
+		//if (n.type == Token::INT_TYPE) t = "INTEGER"; // ugh
+		n.SetChildrenPrintID(GenerateJSON(out, &n, "DECL", n.parentID, n.type.first, config));
 		n.identifier->Accept(*this);
 	}
 }
@@ -176,7 +176,7 @@ void ASTVisualizer::Visit(AssignStatementNode& n)
 	// Print to console
 	if (consoleOutput)
 	{
-		std::cout << "\nASSIGN: '" << (char)GetTokenValue(n.op) << "' [L: ";
+		std::cout << "\nASSIGN: '" << n.op.first << "' [L: ";
 		n.left->Accept(*this);
 		std::cout << " R: ";
 		n.right->Accept(*this);
@@ -184,9 +184,25 @@ void ASTVisualizer::Visit(AssignStatementNode& n)
 	}
 	else // Print JSON
 	{
-		n.SetChildrenPrintID(GenerateJSON(out, &n, "ASSIGN", n.parentID, { (char)GetTokenValue(n.op) }, config));
+		n.SetChildrenPrintID(GenerateJSON(out, &n, "ASSIGN", n.parentID, n.op.first, config));
 		n.left->Accept(*this);
 		n.right->Accept(*this);
+	}
+}
+
+void ASTVisualizer::Visit(ReturnStatementNode& n)
+{
+	// Print to console
+	if (consoleOutput)
+	{
+		std::cout << "\nRETURN: [";
+		n.expr->Accept(*this);
+		std::cout << "]";
+	}
+	else // Print JSON
+	{
+		n.SetChildrenPrintID(GenerateJSON(out, &n, "RETURN", n.parentID, "RETURN", config));
+		n.expr->Accept(*this);
 	}
 }
 

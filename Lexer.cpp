@@ -6,25 +6,28 @@ void Lexer::TokenizeSource(std::ifstream& infile)
 
 	while (std::getline(infile, line))
 	{
+		// Add a new line character to the token vector to let the lexer know when a new line is reached
+		// when returning the tokens. Used for token line tracking for errors.
+		sourceTokens.push_back(std::make_pair("\n", Token::NLINE));
+
 		unsigned int prev = 0, pos;
 		while ((pos = line.find_first_of(" \t+-*/()=!><&|;{}", prev)) != std::string::npos)
 		{
 			if (pos < prev) continue;
-			if (pos > prev) sourceTokens.push_back(line.substr(prev, pos - prev));
-			// This delimiter is a special character or an operator (normal or compound) and must be preserved as a token 
-			//or it is a form of a whitespace character and must be discarded
+			if (pos > prev) AddToken(line.substr(prev, pos - prev));
 
-			// Get the delimiter that was found as a string
-			std::string delimiter = line.substr(pos, 1);     // make it a char here
+			// This delimiter is a special character or an operator (normal or compound) and must be preserved as a token 
+			// or it is a form of a whitespace character and must be discarded
+			const std::string delimiter = line.substr(pos, 1);
 			// Discard whitespaces, tabs, newlines etc
 			if (!IsDiscardableCharacter(delimiter))
 			{
 				// If the next character and the current delimiter form a compound operator,
 				// they must be preserved as one token
-				std::string nextCharacter = line.substr(pos + 1, 1);
+				const std::string nextCharacter = line.substr(pos + 1, 1);
 				if (IsCompoundOperator(delimiter, nextCharacter))
 				{
-					sourceTokens.push_back(delimiter + nextCharacter);
+					AddToken(delimiter + nextCharacter);
 					// Skip the next character since it has been processed already (part of a compound operator)
 					prev = pos + 2;
 					continue;
@@ -32,19 +35,37 @@ void Lexer::TokenizeSource(std::ifstream& infile)
 				// Comment start at any point in this line means we skip the rest of the line
 				else if (IsComment(delimiter, nextCharacter)) { pos = prev = std::string::npos; break; }
 				// Delimiter is just a normal operator, preserve it
-				else sourceTokens.push_back(delimiter);
+				else AddToken(delimiter);
 			}
 			prev = pos + 1;
 		}
-		if (prev < line.length()) sourceTokens.push_back(line.substr(prev, std::string::npos));
+		if (prev < line.length()) AddToken(line.substr(prev, std::string::npos));
 	}
-	sourceTokens.push_back("END"); // temp end of file token
+	AddToken("\032");  // End of file Token
+	while (sourceTokens.at(currentTokenIndex).second == Token::NLINE) { this->line++; currentTokenIndex++; }
 }
 
-bool Lexer::IsDiscardableCharacter(const std::string& delimiter) { return delimiter.find_first_of(" \t\r\n") != std::string::npos; }
-bool Lexer::IsCompoundOperator(const std::string& delimiter, const std::string& next)
+void Lexer::AddToken(const std::string& tok)
 {
-	switch (delimiter[0])
+	// Get iterator to token if already in the map (this will be the case for defined language features and operators)
+	// but not for literals and identifiers or things that do not fall in either of the aforementioned categories.
+	auto[it, success] = tokens.emplace(tok, Token::UNKNOWN);
+	if (success)
+	{
+		// Succesful insertion has the identifiers, literal or garbage token marked as unknown
+		// Update it if it satisfies the criteria for a literal or identifier
+		if (IsIdentifier(tok, true)) it->second = Token::IDENTIFIER;
+		else if (IsInteger(tok))     it->second = Token::INT_LITERAL;
+		// Or it is a not yet defined language feature or garbage token
+	}
+	sourceTokens.push_back(std::make_pair(it->first, it->second));
+}
+
+bool Lexer::IsDiscardableCharacter(const std::string& delimiter) const { return delimiter.find_first_of(" \t\r\n") != std::string::npos; }
+
+bool Lexer::IsCompoundOperator(const std::string& delimiter, const std::string& next) const
+{
+	switch (delimiter[0])  // more missing
 	{
 	case '>': case '<': case '*': case '/': case '!': case '=': return next == "=";
 	case '+':  return next == "=" || next == "+";
@@ -54,11 +75,13 @@ bool Lexer::IsCompoundOperator(const std::string& delimiter, const std::string& 
 	default: return false;
 	}
 }
-bool Lexer::IsComment(const std::string& delimiter, const std::string& next)  // just const char* both - what is the point of strings, same as compoundoperators
+
+bool Lexer::IsComment(const std::string& delimiter, const std::string& next) const
 {
 	return delimiter[0] == '/' && next == "/";
 }
-bool Lexer::IsDigit(char c)
+
+bool Lexer::IsDigit(const char c) const
 {
 	return c == '0' || c == '1' ||
 		   c == '2' || c == '3' ||
@@ -66,7 +89,8 @@ bool Lexer::IsDigit(char c)
 		   c == '6' || c == '7' ||
 		   c == '8' || c == '9';
 }
-bool Lexer::IsInteger(const std::string& num)
+
+bool Lexer::IsInteger(const std::string& num) const
 {
 	unsigned int i = 0;
 	char digit = num.front();
@@ -77,7 +101,8 @@ bool Lexer::IsInteger(const std::string& num)
 	}
 	return false;
 }
-bool Lexer::IsCharacter(char c)
+
+bool Lexer::IsCharacter(const char c) const
 {
 	return c == 'a' || c == 'b' || c == 'c' || c == 'd' || c == 'e' || c == 'f' || c == 'g' ||
 		   c == 'h' || c == 'i' || c == 'j' || c == 'k' || c == 'l' || c == 'm' || c == 'n' ||
@@ -89,7 +114,8 @@ bool Lexer::IsCharacter(char c)
 		   c == 'X' || c == 'Y' || c == 'z' || c == '_' || IsDigit(c);
 	return false;
 }
-bool Lexer::IsIdentifier(const std::string& identifier, const bool firstCall)
+
+bool Lexer::IsIdentifier(const std::string& identifier, const bool firstCall) const
 {
 	if (firstCall) if (IsDigit(identifier[0])) return false;
 	unsigned int i = 0;
@@ -101,13 +127,15 @@ bool Lexer::IsIdentifier(const std::string& identifier, const bool firstCall)
 	}
 	return false;
 }
-bool Lexer::IsKeyword(const std::string& keyword)
-{
-	return keyword == "int" || keyword == "if" || keyword == "else" ||
-		   keyword == "while" || keyword == "for" || keyword == "return";
-}
 
-Lexer::Lexer(char* sourcePath)
+// Not needed anymore/for now with the updated token processing
+//bool Lexer::IsKeyword(const std::string& keyword) const
+//{
+//	return keyword == "int" || keyword == "if" || keyword == "else" ||
+//		   keyword == "while" || keyword == "for" || keyword == "return";
+//}
+
+Lexer::Lexer(const char* sourcePath)
 {
 	std::ifstream infile;
 
@@ -123,23 +151,28 @@ Lexer::Lexer(char* sourcePath)
 	TokenizeSource(infile);
 	infile.close();
 }
+
 Lexer::~Lexer() {}
 
-void Lexer::PrintTokenizedInput()
+void Lexer::PrintTokens() const
 {
 	std::cout << "Tokenized Input (Split by whitespace):\n";
-	for (std::string token : sourceTokens) std::cout << token << " ";
+	for (const auto& token : sourceTokens) if (token.second != Token::NLINE && token.second != Token::FILE_END) std::cout << token.first << " ";
 	std::cout << "\n";
 }
 
-bool Lexer::Done() { return sourceTokens.at(currentTokenIndex) == "END"; } // HACK
+bool Lexer::Done() const { return sourceTokens.at(currentTokenIndex).second == Token::FILE_END; }
 
-void Lexer::Consume(std::string token)  // make it token? NO need to return or use advance anymore, can be void
+std::string Lexer::GetLine() const { return std::to_string(line); }
+
+void Lexer::Consume(const Token token)
 {
-	if (token == sourceTokens.at(currentTokenIndex))
+	if (token == sourceTokens.at(currentTokenIndex).second)
 	{
 		if (currentTokenIndex + 1 < sourceTokens.size()) { ++currentTokenIndex; }
 	}
-	else throw UnexpectedTokenException("Encountered unexpected token ' " + token + "', Expected: " + sourceTokens.at(currentTokenIndex)); // needs line number here preferably also handle it somewhere
+	else throw UnexpectedTokenException("Encountered unexpected token at line " + GetLine() + ", Expected: " + sourceTokens.at(currentTokenIndex).first);
+	while (sourceTokens.at(currentTokenIndex).second == Token::NLINE) { line++; currentTokenIndex++; }
 }
-std::string& Lexer::GetCurrentToken() { return sourceTokens.at(currentTokenIndex); }
+
+const TokenPair& Lexer::GetCurrentToken() { return sourceTokens.at(currentTokenIndex); }

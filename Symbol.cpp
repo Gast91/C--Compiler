@@ -31,7 +31,7 @@ void VariableSymbol::Print()
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 NestedScope::NestedScope(std::string n) : Symbol(n) {}
 
-void NestedScope::Print() { std::cout << name << " <Nested Scope>\n"; }
+void NestedScope::Print() { std::cout << name << " <NESTED_SCOPE>\n"; }
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 //-----------------------------------------SymbolTable Definitions-------------------------------------------------------------------------------------
@@ -85,16 +85,9 @@ SemanticAnalyzer::SemanticAnalyzer()
 
 SemanticAnalyzer::~SemanticAnalyzer() { for (const auto& scope : symbolTable) delete scope; }
 
-void SemanticAnalyzer::Visit(ASTNode& n)
-{
-	// If this gets called it will be a stack overflow/Infinite loop and things must have gotten catastrophically wrong
-	n.Accept(*this);
-}
+void SemanticAnalyzer::Visit(ASTNode& n) { assert(("Semantic Analyzer visited base ASTNode class?!", false)); }
 
-void SemanticAnalyzer::Visit(UnaryASTNode& n)
-{
-	n.expr->Accept(*this);
-}
+void SemanticAnalyzer::Visit(UnaryASTNode& n) { n.expr->Accept(*this); }
 
 void SemanticAnalyzer::Visit(BinaryASTNode& n)
 {
@@ -113,6 +106,8 @@ void SemanticAnalyzer::Visit(IdentifierNode& n)
 										+ currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
 	}
 }
+
+void SemanticAnalyzer::Visit(UnaryOperationNode& n) { n.expr->Accept(*this); }
 
 void SemanticAnalyzer::Visit(BinaryOperationNode& n)
 {
@@ -212,11 +207,13 @@ void SemanticAnalyzer::Visit(AssignStatementNode& n)
 	n.right->Accept(*this);  
 }
 
+void SemanticAnalyzer::Visit(ReturnStatementNode& n) { n.expr->Accept(*this); }
+
 void SemanticAnalyzer::Visit(EmptyStatementNode& n) {}
 
 void SemanticAnalyzer::Print() const
 { 
-	std::cout << (failState ? "\nSemantic Analysis FAILED " : "\nSemantic Analysis Complete ") << "->Dumping Scope / Symbol Information : \n\n";
+	std::cout << (failState ? "\nSemantic Analysis FAILED " : "\nSemantic Analysis Complete ") << "-> Dumping Scope / Symbol Information : \n\n";
 	for (const auto& scope : symbolTable) scope->Print();
 }
 

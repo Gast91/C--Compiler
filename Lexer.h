@@ -5,33 +5,33 @@
 #include <vector>
 
 #include "Error.h"
+#include "Token.h"
 
 class Lexer
 {
 private:
-	friend class Parser;
+	std::vector<TokenPair> sourceTokens;
+	unsigned int currentTokenIndex = 0;
+	unsigned int line = 0;
 
-	std::vector<std::string> sourceTokens;  // switch to array of Tokens (since it has already been processed it can same time)
-	int currentTokenIndex = 0;
-	int line = 1;
-
-	// Tokenize source based on the specified delimiters (preserving those delimiters if not whitespace characters)
 	void TokenizeSource(std::ifstream& infile);
-	// Token recognizers - some can be const char* - more efficient than memory alloc
-	bool IsDiscardableCharacter(const std::string& delimiter);
-	bool IsCompoundOperator(const std::string& delimiter, const std::string& next);  // UNUSED
-	bool IsComment(const std::string& delimiter, const std::string& next);
-	bool IsDigit(char c);
-	bool IsInteger(const std::string& num);
-	bool IsCharacter(char c);
-	bool IsIdentifier(const std::string& identifier, const bool firstCall);
-	bool IsKeyword(const std::string& keyword);   // UNUSED
+	void AddToken(const std::string& tok);
+
+	bool IsDiscardableCharacter(const std::string& delimiter) const ;
+	bool IsCompoundOperator(const std::string& delimiter, const std::string& next) const;
+	bool IsComment(const std::string& delimiter, const std::string& next) const;
+	bool IsDigit(const char c) const;
+	bool IsInteger(const std::string& num) const;
+	bool IsCharacter(const char c) const;
+	bool IsIdentifier(const std::string& identifier, const bool firstCall) const;
+	//bool IsKeyword(const std::string& keyword) const;   // Not needed anymore/for now with the updated token processing
 public:
-	Lexer(char* sourcePath);  // const
+	Lexer(const char* sourcePath);
 	~Lexer();
 
-	void PrintTokenizedInput();
-	bool Done();
-	void Consume(std::string token); // const ptr?
-	std::string& GetCurrentToken();
+	void PrintTokens() const;
+	bool Done() const;
+	std::string GetLine() const;
+	void Consume(const Token token);
+	const TokenPair& GetCurrentToken();
 };

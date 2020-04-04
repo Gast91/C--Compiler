@@ -23,6 +23,7 @@ public:
 	virtual void Visit(BinaryASTNode& n)         override;
 	virtual void Visit(IntegerNode& n)           override;
 	virtual void Visit(IdentifierNode& n)        override;
+	virtual void Visit(UnaryOperationNode& n)    override;
 	virtual void Visit(BinaryOperationNode& n)   override;
 	virtual void Visit(ConditionNode& n)         override;
 	virtual void Visit(IfNode& n)                override;
@@ -30,5 +31,6 @@ public:
 	virtual void Visit(CompoundStatementNode& n) override;
 	virtual void Visit(DeclareStatementNode& n)  override;
 	virtual void Visit(AssignStatementNode& n)   override;
+	virtual void Visit(ReturnStatementNode& n)   override;
 	virtual void Visit(EmptyStatementNode& n)    override;
 };
