@@ -8,7 +8,7 @@ int main(int argc, char* argv[])
 	// Create lexer and pass to it the file to be tokenized
 	Lexer* lexer = new Lexer(argv[argc - 1]);                // file hardcoded in the lexer atm
 	// Show tokenized input - Debug
-	lexer->PrintTokenizedInput();
+	lexer->PrintTokens();
 
 	// Create parser, pass to it the lexer and parse input from lexer
 	Parser* parser = new Parser(lexer);
