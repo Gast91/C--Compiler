@@ -1,4 +1,5 @@
 #pragma once
+#include <cassert>
 
 // Forward Declarations
 class ASTNode;
@@ -6,6 +7,7 @@ class UnaryASTNode;
 class BinaryASTNode;
 class IntegerNode;
 class IdentifierNode;
+class UnaryOperationNode;
 class BinaryOperationNode;
 class ConditionNode;
 class IfNode;
@@ -13,6 +15,7 @@ class WhileNode;
 class CompoundStatementNode;
 class DeclareStatementNode;
 class AssignStatementNode;
+class ReturnStatementNode;
 class EmptyStatementNode;
 
 // Pure Abstract Class/Interface that all classes that "walk" the AST should inherit from
@@ -28,6 +31,7 @@ public:
 	virtual void Visit(BinaryASTNode& n) = 0;
 	virtual void Visit(IntegerNode& n) = 0;
 	virtual void Visit(IdentifierNode& n) = 0;
+	virtual void Visit(UnaryOperationNode& n) = 0;
 	virtual void Visit(BinaryOperationNode& n) = 0;
 	virtual void Visit(ConditionNode& n) = 0;
 	virtual void Visit(IfNode& n) = 0;
@@ -35,6 +39,7 @@ public:
 	virtual void Visit(CompoundStatementNode& n) = 0;
 	virtual void Visit(DeclareStatementNode& n) = 0;
 	virtual void Visit(AssignStatementNode& n) = 0;
+	virtual void Visit(ReturnStatementNode& n) = 0;
 	virtual void Visit(EmptyStatementNode& n) = 0;
 };
 
