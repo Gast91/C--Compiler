@@ -1,50 +1,62 @@
 #include "Parser.h"
 
+Parser::Parser(const Lexer& lex) : lexer(lex)
+{
+	try { root = ParseProgram(); }
+	catch (UnexpectedTokenException ex) { failState = true; std::cout << ex.what() << "\n"; }
+
+	// Somewhere, somehow not all tokens were processed.
+	if (!lexer.Done()) { failState = true; std::cout << "\nPARSER ERROR: Parsing Failure\n"; }
+	else std::cout << "\nParsing Successful, AST Built";
+}
+
+Parser::~Parser() { delete root; }
+
 // FACTOR := (ADD | SUB ) FACTOR | INTEGER | IDENTIFIER | LPAR EXPRESSION RPAR
 ASTNode* Parser::ParseFactor()
 {
-	const auto currentToken = lexer->GetCurrentToken();
+	const auto currentToken = lexer.GetCurrentToken();
 	// Just an add operator before a number literal or identifier
 	if (currentToken.second == Token::ADD)
 	{
-		lexer->Consume(Token::ADD);
+		lexer.Consume(Token::ADD);
 		return new UnaryOperationNode(currentToken, ParseFactor());
 	}
 	// Just a minus operator before a number literal or identifier (negation)
 	else if (currentToken.second == Token::SUB)
 	{
-		lexer->Consume(Token::SUB);
+		lexer.Consume(Token::SUB);
 		return new UnaryOperationNode(currentToken, ParseFactor());
 	}
 	else if (currentToken.second == Token::INT_LITERAL)
 	{
-		lexer->Consume(Token::INT_LITERAL);
+		lexer.Consume(Token::INT_LITERAL);
 		return new IntegerNode(currentToken.first);
 	}
 	else if (currentToken.second == Token::IDENTIFIER)
 	{
-		lexer->Consume(Token::IDENTIFIER);
+		lexer.Consume(Token::IDENTIFIER);
 		return new IdentifierNode(currentToken.first);
 	}
 	else if (currentToken.second == Token::LPAR)
 	{
-		lexer->Consume(Token::LPAR);
+		lexer.Consume(Token::LPAR);
 		ASTNode* node = ParseExpr();
-		lexer->Consume(Token::RPAR);
+		lexer.Consume(Token::RPAR);
 		return node;
 	}
-	else throw UnexpectedTokenException("Unexpected token '" + currentToken.first + "' at line " + lexer->GetLine());
+	else throw UnexpectedTokenException("Unexpected token '" + currentToken.first + "' at line " + lexer.GetLine());
 }
 // TERM := FACTOR ((MUL | DIV) FACTOR)*
 ASTNode* Parser::ParseTerm()
 {
 	ASTNode* node = ParseFactor();
 
-	while (lexer->GetCurrentToken().second == Token::MUL || lexer->GetCurrentToken().second == Token::DIV)
+	while (lexer.GetCurrentToken().second == Token::MUL || lexer.GetCurrentToken().second == Token::DIV)
 	{
-		const auto currentToken = lexer->GetCurrentToken();
-		 lexer->Consume(lexer->GetCurrentToken().second);
-		 node = new BinaryOperationNode(node, currentToken, ParseFactor());
+		const auto currentToken = lexer.GetCurrentToken();
+		lexer.Consume(lexer.GetCurrentToken().second);
+		node = new BinaryOperationNode(node, currentToken, ParseFactor());
 	}
 	return node;
 }
@@ -53,10 +65,10 @@ ASTNode* Parser::ParseExpr()
 {
 	ASTNode* node = ParseTerm();
 
-	while (lexer->GetCurrentToken().second == Token::ADD || lexer->GetCurrentToken().second == Token::SUB)
+	while (lexer.GetCurrentToken().second == Token::ADD || lexer.GetCurrentToken().second == Token::SUB)
 	{
-		const auto currentToken = lexer->GetCurrentToken();
-		lexer->Consume(lexer->GetCurrentToken().second);
+		const auto currentToken = lexer.GetCurrentToken();
+		lexer.Consume(lexer.GetCurrentToken().second);
 		node = new BinaryOperationNode(node, currentToken, ParseTerm());
 	}
 	return node;
@@ -66,10 +78,10 @@ ASTNode* Parser::ParseCond()
 {
 	ASTNode* node = ParseExpr();
 
-	while (lexer->GetCurrentToken().second == Token::LT || lexer->GetCurrentToken().second == Token::GT) // <=, >=, ==, != at least
+	while (lexer.GetCurrentToken().second == Token::LT || lexer.GetCurrentToken().second == Token::GT) // <=, >=, ==, != at least
 	{
-		const auto currentToken = lexer->GetCurrentToken();
-		lexer->Consume(lexer->GetCurrentToken().second);
+		const auto currentToken = lexer.GetCurrentToken();
+		lexer.Consume(lexer.GetCurrentToken().second);
 		node = new BinaryOperationNode(node, currentToken, ParseExpr());
 	}
 	return node;
@@ -78,10 +90,10 @@ ASTNode* Parser::ParseCond()
 ASTNode* Parser::ParseIf()
 {
 	// We already know the token is an if, begin parsing the statement
-	lexer->Consume(Token::IF);
-	lexer->Consume(Token::LPAR);
+	lexer.Consume(Token::IF);
+	lexer.Consume(Token::LPAR);
 	ASTNode* conditionNode = ParseCond();
-	lexer->Consume(Token::RPAR);
+	lexer.Consume(Token::RPAR);
 
 	// Body of If statement can be a collection of statements
 	ASTNode* ifBody = ParseCompoundStatement();
@@ -91,10 +103,10 @@ ASTNode* Parser::ParseIf()
 // WHILE_STATEMENT := WHILE LPAR CONDITION RPAR { COMPOUND_STATEMENT }
 ASTNode* Parser::ParseWhile()
 {
-	lexer->Consume(Token::WHILE);
-	lexer->Consume(Token::LPAR);
+	lexer.Consume(Token::WHILE);
+	lexer.Consume(Token::LPAR);
 	ASTNode* conditionNode = ParseCond();
-	lexer->Consume(Token::RPAR);
+	lexer.Consume(Token::RPAR);
 
 	// Body of while statement can be a collection of statements
 	ASTNode* whileBody = ParseCompoundStatement();
@@ -104,10 +116,10 @@ ASTNode* Parser::ParseWhile()
 // PROGRAM := int main LPAR RPAR { COMPOUND_STATEMENT }
 ASTNode* Parser::ParseProgram()                                // hacky way for only main now
 {
-	lexer->Consume(Token::INT_TYPE);
-	lexer->Consume(Token::MAIN);                              // hack here as well
-	lexer->Consume(Token::LPAR); 
-	lexer->Consume(Token::RPAR);
+	lexer.Consume(Token::INT_TYPE);
+	lexer.Consume(Token::MAIN);                              // hack here as well
+	lexer.Consume(Token::LPAR); 
+	lexer.Consume(Token::RPAR);
 
 	ASTNode* node = ParseCompoundStatement();
 
@@ -124,15 +136,15 @@ ASTNode* Parser::ParseCompoundStatement()
 // STATEMENT_LIST := STATEMENT | STATEMENT SEMICOLON STATEMENT_LIST 
 std::vector<ASTNode*> Parser::ParseStatementList()
 {
-	lexer->Consume(Token::LCURLY);
+	lexer.Consume(Token::LCURLY);
 	ASTNode* node = ParseStatement();
 
 	std::vector<ASTNode*> nodes;
 	nodes.push_back(node);
 
 	// Statement list ends at a closing curly bracket
-	while (lexer->GetCurrentToken().second != Token::RCURLY) nodes.push_back(ParseStatement());
-	lexer->Consume(Token::RCURLY);
+	while (lexer.GetCurrentToken().second != Token::RCURLY) nodes.push_back(ParseStatement());
+	lexer.Consume(Token::RCURLY);
 	return nodes;
 }
 // STATEMENT : COMPOUND_STATEMENT | ASSIGN_STATEMENT | EMPTY_STATEMENT
@@ -140,14 +152,14 @@ ASTNode* Parser::ParseStatement()                                               
 {
 	ASTNode* node;
 
-	const auto currentToken = lexer->GetCurrentToken().second;
+	const auto currentToken = lexer.GetCurrentToken().second;
 	if      (currentToken == Token::IF)         node = ParseIf();
 	else if (currentToken == Token::WHILE)      node = ParseWhile();
-	//else if (currentToken == Token::FILE_END)   node = ParseEmpty();               //FILE_END might be totally unnecessary also
+	//else if (currentToken == Token::FILE_END)   node = ParseEmpty();
 	else if (currentToken == Token::RET)        node = ParseReturn();
-	else if (currentToken == Token::INT_TYPE)   node = ParseDeclarationStatement();  // lexer->isSymbol()? the same will happen for all types
+	else if (currentToken == Token::INT_TYPE)   node = ParseDeclarationStatement();  // lexer.isSymbol()? the same will happen for all types
 	else if (currentToken == Token::IDENTIFIER) node = ParseAssignStatement();
-	else throw UnexpectedTokenException("Encountered unexpected token ' " + lexer->GetCurrentToken().first + "' at line " + lexer->GetLine());
+	else throw UnexpectedTokenException("Encountered unexpected token ' " + lexer.GetCurrentToken().first + "' at line " + lexer.GetLine());
 
 	return node;
 }
@@ -155,52 +167,37 @@ ASTNode* Parser::ParseStatement()                                               
 ASTNode* Parser::ParseDeclarationStatement()
 {
 	// Type Specifier is next (int, float, char etc..)
-	const auto currentToken = lexer->GetCurrentToken();
-	lexer->Consume(currentToken.second);
+	const auto currentToken = lexer.GetCurrentToken();
+	lexer.Consume(currentToken.second);
 
 	// Next is the identifier
-	IdentifierNode* ident = new IdentifierNode(lexer->GetCurrentToken().first, currentToken.second);
-	lexer->Consume(Token::IDENTIFIER);
-
-	// if here is an equals rather than semi, there is also an assigment
-	// needs another DeclareAssignStatementNode child of node below will 
-	// need to be an ASTNode rather than identifier to handle =? some other way?
-	lexer->Consume(Token::SEMI);
+	IdentifierNode* ident = new IdentifierNode(lexer.GetCurrentToken().first, currentToken.second);
+	lexer.Consume(Token::IDENTIFIER);
+	lexer.Consume(Token::SEMI);
 	return new DeclareStatementNode(ident, currentToken);
 }
 // ASSIGN_STATEMENT := IDENTIFIER ASSIGN EXPRESSION
 ASTNode* Parser::ParseAssignStatement()
 {
-	const auto currentToken = lexer->GetCurrentToken();
+	const auto currentToken = lexer.GetCurrentToken();
 	IdentifierNode* ident = new IdentifierNode(currentToken.first);
-	lexer->Consume(Token::IDENTIFIER);
-	lexer->Consume(Token::ASSIGN);
+	lexer.Consume(Token::IDENTIFIER);
+	lexer.Consume(Token::ASSIGN);
 	ASTNode* node = new AssignStatementNode(ident, ParseExpr());
-	lexer->Consume(Token::SEMI);
+	lexer.Consume(Token::SEMI);
 	return node;
 }
 // RETURN_STATEMENT := RETURN EXPRESSION
 ASTNode* Parser::ParseReturn()
 {
-	lexer->Consume(Token::RET);
+	lexer.Consume(Token::RET);
 
 	ASTNode* node = new ReturnStatementNode(ParseExpr());
-	lexer->Consume(Token::SEMI);
+	lexer.Consume(Token::SEMI);
 	return node;
 }
-ASTNode* Parser::ParseEmpty() { return new EmptyStatementNode(); }  // not needed, can directly return empty
 
-Parser::Parser(Lexer* lex) : lexer(lex)  // const address
-{
-	try { root = ParseProgram(); }
-	catch (UnexpectedTokenException ex) { failState = true; std::cout << ex.what() << "\n"; }
-
-	// Somewhere, somehow not all tokens were processed.
-	if (!lexer->Done()) { failState = true; std::cout << "\nPARSER ERROR: Parsing Failure\n"; }
-	else std::cout << "\nParsing Successful, AST Built";
-}
-
-Parser::~Parser() { delete root; }
+ASTNode* Parser::ParseEmpty() { return new EmptyStatementNode(); }  // OBSOLETE - REMOVE HERE AND FROM  VISITOR CLASSES FOR REMOVAL
 
 // FEATURES MISSING TODO:
 /*
@@ -218,6 +215,7 @@ Parser::~Parser() { delete root; }
 
 // GRAMMARS TODO :
 /*
+NO DECL AND ASSIGN IN ONE - NOT REALLY IMPORTANT ATM
 FOR_STATEMENT := FOR LPAR (ASSIGN_STATEMENT | EMPTY_STATEMENT) (CONDITION | EMPTY_STATEMENT) (STEP | EMPTY_STATEMENT) RPAR { COMPOUND_STATEMENT }
 FUNCTION := TYPE IDENTIFIER (  comma separated list of type identifiers ) { COMPOUND_STATEMENT }
 ARRAYS?

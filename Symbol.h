@@ -66,7 +66,7 @@ public:
 	~SymbolTable();  // Deleting of Symbols will be handled here
 
 	bool DefineSymbol(Symbol* s);
-	Symbol* LookUpSymbol(std::string& symName);
+	Symbol* LookUpSymbol(const std::string& symName);
 
 	void Print();
 };
@@ -102,3 +102,7 @@ public:
 	void Print() const;
 	bool Success() const;
 };
+
+/*
+	-Visitor parameters const? dont think it conflicts with anything
+*/

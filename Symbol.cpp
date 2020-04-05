@@ -39,7 +39,7 @@ void NestedScope::Print() { std::cout << name << " <NESTED_SCOPE>\n"; }
 SymbolTable::SymbolTable(const std::string& name, const int level, SymbolTable* parent) : scopeName(name), scopeLevel(level), parentScope(parent)
 { 
 	// Built-In Symbols will be redefined for every new scope
-	DefineSymbol(new BuiltInSymbol("INTEGER")); 
+	DefineSymbol(new BuiltInSymbol("int")); 
 	// "New" Built In Symbols will have to be declared added here, in order to be used
 }
 
@@ -47,23 +47,19 @@ SymbolTable::~SymbolTable() { for (const auto& s : symbols) delete s.second; }
 
 bool SymbolTable::DefineSymbol(Symbol* s)
 {
-	// Redefinition of an identifier can happen in a nested scope. The nested identifier will hide the one in the parent.
-	// But redefinition cannot happen in the same scope.
-	if (symbols.find(s->name) == symbols.end())
-	{
-		symbols[s->name] = s;
-		return true;
-	}
-	return false;
+	// Redefinition of an identifier can happen in a nested scope. The nested identifier
+	// will hide the one in the parent scope. But redefinition cannot happen in the same scope.
+	const auto[it, success] = symbols.insert({ s->name, s });
+	return success;
 }
 
-Symbol* SymbolTable::LookUpSymbol(std::string& symName)
+Symbol* SymbolTable::LookUpSymbol(const std::string& symName)
 {
 	// If the identifier is not found in the current scope, this function will
 	// recursively check the parent scope all the way up to the global scope.
 	// If it at the end the identifier is not present anywhere, there is a semantic error.
-	try { return symbols.at(symName); }
-	catch (std::out_of_range ex)  { return parentScope ? parentScope->LookUpSymbol(symName) : nullptr; }
+	if (const auto it = symbols.find(symName); it != symbols.end()) return it->second;
+	else return parentScope ? parentScope->LookUpSymbol(symName) : nullptr;
 }
 
 void SymbolTable::Print()
@@ -99,10 +95,10 @@ void SemanticAnalyzer::Visit(IntegerNode& n) {}
 
 void SemanticAnalyzer::Visit(IdentifierNode& n)
 {
-	if (!currentScope->LookUpSymbol(n.value))
+	if (!currentScope->LookUpSymbol(n.name))
 	{
 		failState = true;
-		throw SymbolNotFoundException("\nUse of undeclared identifier '" + n.value + "' in scope '"
+		throw SymbolNotFoundException("\nUse of undeclared identifier '" + n.name + "' in scope '"
 										+ currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
 	}
 }
@@ -176,12 +172,10 @@ void SemanticAnalyzer::Visit(CompoundStatementNode& n)
 
 void SemanticAnalyzer::Visit(DeclareStatementNode& n)
 {
-	// Get Declaration Node's type (int,float,etc)						- Hard-Coded atm
-	std::string typeName = "INTEGER";
-	// Look it up in the symbol table and get the symbolType object
-	Symbol* symbolType = currentScope->LookUpSymbol(typeName);
+	// Look up Declaration Node's type in the symbol table
+	Symbol* symbolType = currentScope->LookUpSymbol(n.type.first);
 	// Get the variable name from the Declaration's Identifier Node
-	std::string variableName = n.identifier->value;						// name would be better than value
+	std::string variableName = n.identifier->name;
 	// Define a new VarSymbol using variable name and symbolType
 	Symbol* variableSymbol = new VariableSymbol(variableName, symbolType);
 	if (!currentScope->DefineSymbol(variableSymbol))
@@ -196,14 +190,14 @@ void SemanticAnalyzer::Visit(DeclareStatementNode& n)
 
 void SemanticAnalyzer::Visit(AssignStatementNode& n)
 {
-	std::string symbolName = static_cast<IdentifierNode*>(n.left)->value;
+	std::string symbolName = static_cast<IdentifierNode*>(n.left)->name;
 	if (!currentScope->LookUpSymbol(symbolName))
 	{
 		failState = true;
 		throw SymbolNotFoundException("\nUse of undeclared identifier '" + symbolName + "' in scope '"
 										+ currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
 	}
-	// left's value has been extracted and if we reached here we know the symbol is in the table so no need to visit left
+	// Identifier's name (left) has been extracted. If we reached here we know the symbol's in the table so no need to visit left node
 	n.right->Accept(*this);  
 }
 

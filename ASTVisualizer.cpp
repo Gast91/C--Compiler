@@ -8,7 +8,7 @@ void ASTVisualizer::PrintAST(ASTNode& n)
 {
 	out.open("AST.js");    // error checking - unable to open file? also must set to completely overwrite
 	// First node is the parent of all other nodes and doesnt have a parent itself, its parentID is itself
-	n.parentID = GenerateJSONHeader(out, &n, "ROOT", config);
+	n.parentID = GenerateJSONHeader(out, &n, "ROOT", config);  // In the future this might also be a function
 	// The next node in line will look for this one's id and that is why it's value is set to its own id rather than null
 	n.SetChildrenPrintID(n.parentID);
 	// Recursively visit each of the tree's nodes and print it to the console
@@ -24,6 +24,7 @@ void ASTVisualizer::PrintAST(ASTNode& n)
 
 	// Footer of the file must be a configuration list of all the nodes and their ids
 	GenerateJSONFooter(out, config);
+	out.close();
 	std::cout << "\n\nAST Visualisation File Successfully created\n";
 }
 
@@ -39,28 +40,25 @@ void ASTVisualizer::Visit(BinaryASTNode& n)
 
 void ASTVisualizer::Visit(IntegerNode& n)
 {
-	// Print to console
 	if   (consoleOutput) std::cout << "Int: " << n.value;
-	else GenerateJSON(out, &n, "INT", n.parentID, std::to_string(n.value), config); // Print JSON
+	else GenerateJSON(out, &n, "INT", n.parentID, std::to_string(n.value), config);
 }
 
 void ASTVisualizer::Visit(IdentifierNode& n)
 {
-	// Print to console
-	if    (consoleOutput) std::cout << "Ident: " << n.value;
-	else  GenerateJSON(out, &n, "ID", n.parentID, n.value, config); // Print JSON
+	if    (consoleOutput) std::cout << "Ident: " << n.name;
+	else  GenerateJSON(out, &n, "ID", n.parentID, n.name, config);
 }
 
 void ASTVisualizer::Visit(UnaryOperationNode& n)
 {
-	// Print to console
 	if (consoleOutput)
 	{
 		std::cout << "Unary: '" << n.op.first << "' [";
 		n.expr->Accept(*this);
 		std::cout << "]";
 	}
-	else // Print JSON
+	else
 	{
 		n.SetChildrenPrintID(GenerateJSON(out, &n, "UNARY", n.parentID, n.op.first, config));
 		n.expr->Accept(*this);
@@ -69,7 +67,6 @@ void ASTVisualizer::Visit(UnaryOperationNode& n)
 
 void ASTVisualizer::Visit(BinaryOperationNode& n)
 {
-	// Print to console
 	if (consoleOutput)
 	{
 		std::cout << "BinOp: '" << n.op.first << "' [L: ";
@@ -78,7 +75,7 @@ void ASTVisualizer::Visit(BinaryOperationNode& n)
 		n.right->Accept(*this);
 		std::cout << "]";
 	}
-	else // Print JSON
+	else
 	{
 		n.SetChildrenPrintID(GenerateJSON(out, &n, "BINOP", n.parentID, n.op.first, config));
 		n.left->Accept(*this);
@@ -88,7 +85,6 @@ void ASTVisualizer::Visit(BinaryOperationNode& n)
 
 void ASTVisualizer::Visit(ConditionNode& n)
 {
-	// Print to console
 	if (consoleOutput)
 	{
 		std::cout << "COND: '" << n.op.first << "' [L: ";
@@ -97,7 +93,7 @@ void ASTVisualizer::Visit(ConditionNode& n)
 		n.right->Accept(*this);
 		std::cout << "]";
 	}
-	else // Print JSON
+	else
 	{
 		n.SetChildrenPrintID(GenerateJSON(out, &n, "COND", n.parentID, n.op.first, config));
 		n.left->Accept(*this);
@@ -107,7 +103,6 @@ void ASTVisualizer::Visit(ConditionNode& n)
 
 void ASTVisualizer::Visit(IfNode& n)
 {
-	// Print to console
 	if (consoleOutput)
 	{
 		std::cout << "\nIF: " << "[";
@@ -117,7 +112,7 @@ void ASTVisualizer::Visit(IfNode& n)
 		if (n.body) n.body->Accept(*this);
 		std::cout << "]";
 	}
-	else // Print JSON
+	else
 	{
 		n.SetChildrenPrintID(GenerateJSON(out, &n, "IF", n.parentID, "IF", config));
 		n.condition->Accept(*this);
@@ -127,7 +122,6 @@ void ASTVisualizer::Visit(IfNode& n)
 
 void ASTVisualizer::Visit(WhileNode& n)
 {
-	// Print to console
 	if (consoleOutput)
 	{
 		std::cout << "\nWHILE: " << "[";
@@ -137,7 +131,7 @@ void ASTVisualizer::Visit(WhileNode& n)
 		if (n.body) n.body->Accept(*this);
 		std::cout << "]";
 	}
-	else // Print JSON
+	else
 	{
 		n.SetChildrenPrintID(GenerateJSON(out, &n, "WHILE", n.parentID, "WHILE", config));
 		n.condition->Accept(*this);
@@ -155,17 +149,14 @@ void ASTVisualizer::Visit(CompoundStatementNode& n)
 
 void ASTVisualizer::Visit(DeclareStatementNode& n)
 {
-	// Print to console
 	if (consoleOutput)
 	{
-		std::cout << "\nDECL: [";
+		std::cout << "\n" << n.type.first << " DECL: [";
 		n.identifier->Accept(*this);
 		std::cout << "]";
 	}
-	else // Print JSON
+	else
 	{
-		//std::string t;
-		//if (n.type == Token::INT_TYPE) t = "INTEGER"; // ugh
 		n.SetChildrenPrintID(GenerateJSON(out, &n, "DECL", n.parentID, n.type.first, config));
 		n.identifier->Accept(*this);
 	}
@@ -173,7 +164,6 @@ void ASTVisualizer::Visit(DeclareStatementNode& n)
 
 void ASTVisualizer::Visit(AssignStatementNode& n)
 {
-	// Print to console
 	if (consoleOutput)
 	{
 		std::cout << "\nASSIGN: '" << n.op.first << "' [L: ";
@@ -182,7 +172,7 @@ void ASTVisualizer::Visit(AssignStatementNode& n)
 		n.right->Accept(*this);
 		std::cout << "]";
 	}
-	else // Print JSON
+	else
 	{
 		n.SetChildrenPrintID(GenerateJSON(out, &n, "ASSIGN", n.parentID, n.op.first, config));
 		n.left->Accept(*this);
@@ -192,14 +182,13 @@ void ASTVisualizer::Visit(AssignStatementNode& n)
 
 void ASTVisualizer::Visit(ReturnStatementNode& n)
 {
-	// Print to console
 	if (consoleOutput)
 	{
 		std::cout << "\nRETURN: [";
 		n.expr->Accept(*this);
 		std::cout << "]";
 	}
-	else // Print JSON
+	else
 	{
 		n.SetChildrenPrintID(GenerateJSON(out, &n, "RETURN", n.parentID, "RETURN", config));
 		n.expr->Accept(*this);

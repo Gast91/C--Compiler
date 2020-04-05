@@ -27,11 +27,11 @@ private:
 	//bool IsKeyword(const std::string& keyword) const;   // Not needed anymore/for now with the updated token processing
 public:
 	Lexer(const char* sourcePath);
-	~Lexer();
+	~Lexer() = default;
 
 	void PrintTokens() const;
 	bool Done() const;
-	std::string GetLine() const;
+	const std::string GetLine() const;
 	void Consume(const Token token);
 	const TokenPair& GetCurrentToken();
 };

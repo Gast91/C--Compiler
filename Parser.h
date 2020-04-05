@@ -5,7 +5,7 @@
 class Parser
 {
 private:
-	Lexer* lexer;
+	Lexer lexer;
 	ASTNode* root;
 
 	ASTNode* ParseFactor();
@@ -25,9 +25,9 @@ private:
 
 	bool failState = false; 
 public:
-	Parser(Lexer* lex);
+	Parser(const Lexer& lex);
 	~Parser();
 
 	ASTNode* GetAST() const { return failState ? nullptr : root; }
-	bool Success() const { return !failState; }
+	bool Success()    const { return !failState; }
 };

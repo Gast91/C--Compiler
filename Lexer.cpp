@@ -2,29 +2,28 @@
 
 void Lexer::TokenizeSource(std::ifstream& infile)
 {
-	std::string line;
-
-	while (std::getline(infile, line))
+	std::string srcLine;
+	while (std::getline(infile, srcLine))
 	{
 		// Add a new line character to the token vector to let the lexer know when a new line is reached
 		// when returning the tokens. Used for token line tracking for errors.
 		sourceTokens.push_back(std::make_pair("\n", Token::NLINE));
 
 		unsigned int prev = 0, pos;
-		while ((pos = line.find_first_of(" \t+-*/()=!><&|;{}", prev)) != std::string::npos)
+		while ((pos = srcLine.find_first_of(" \t+-*/()=!><&|;{}", prev)) != std::string::npos)
 		{
 			if (pos < prev) continue;
-			if (pos > prev) AddToken(line.substr(prev, pos - prev));
+			if (pos > prev) AddToken(srcLine.substr(prev, pos - prev));
 
 			// This delimiter is a special character or an operator (normal or compound) and must be preserved as a token 
 			// or it is a form of a whitespace character and must be discarded
-			const std::string delimiter = line.substr(pos, 1);
+			const std::string delimiter = srcLine.substr(pos, 1);
 			// Discard whitespaces, tabs, newlines etc
 			if (!IsDiscardableCharacter(delimiter))
 			{
 				// If the next character and the current delimiter form a compound operator,
 				// they must be preserved as one token
-				const std::string nextCharacter = line.substr(pos + 1, 1);
+				const std::string nextCharacter = srcLine.substr(pos + 1, 1);
 				if (IsCompoundOperator(delimiter, nextCharacter))
 				{
 					AddToken(delimiter + nextCharacter);
@@ -39,24 +38,24 @@ void Lexer::TokenizeSource(std::ifstream& infile)
 			}
 			prev = pos + 1;
 		}
-		if (prev < line.length()) AddToken(line.substr(prev, std::string::npos));
+		if (prev < srcLine.length()) AddToken(srcLine.substr(prev, std::string::npos));
 	}
 	AddToken("\032");  // End of file Token
-	while (sourceTokens.at(currentTokenIndex).second == Token::NLINE) { this->line++; currentTokenIndex++; }
+	while (sourceTokens.at(currentTokenIndex).second == Token::NLINE) { ++line; ++currentTokenIndex; }
 }
 
 void Lexer::AddToken(const std::string& tok)
 {
 	// Get iterator to token if already in the map (this will be the case for defined language features and operators)
 	// but not for literals and identifiers or things that do not fall in either of the aforementioned categories.
-	auto[it, success] = tokens.emplace(tok, Token::UNKNOWN);
+	const auto[it, success] = tokens.emplace(tok, Token::UNKNOWN);
 	if (success)
 	{
 		// Succesful insertion has the identifiers, literal or garbage token marked as unknown
 		// Update it if it satisfies the criteria for a literal or identifier
 		if (IsIdentifier(tok, true)) it->second = Token::IDENTIFIER;
 		else if (IsInteger(tok))     it->second = Token::INT_LITERAL;
-		// Or it is a not yet defined language feature or garbage token
+		// Or it is a not yet defined language feature or garbage token so it stays unknown
 	}
 	sourceTokens.push_back(std::make_pair(it->first, it->second));
 }
@@ -152,8 +151,6 @@ Lexer::Lexer(const char* sourcePath)
 	infile.close();
 }
 
-Lexer::~Lexer() {}
-
 void Lexer::PrintTokens() const
 {
 	std::cout << "Tokenized Input (Split by whitespace):\n";
@@ -163,16 +160,13 @@ void Lexer::PrintTokens() const
 
 bool Lexer::Done() const { return sourceTokens.at(currentTokenIndex).second == Token::FILE_END; }
 
-std::string Lexer::GetLine() const { return std::to_string(line); }
+const std::string Lexer::GetLine() const { return std::to_string(line); }
 
 void Lexer::Consume(const Token token)
 {
-	if (token == sourceTokens.at(currentTokenIndex).second)
-	{
-		if (currentTokenIndex + 1 < sourceTokens.size()) { ++currentTokenIndex; }
-	}
+	if (token == sourceTokens.at(currentTokenIndex).second && currentTokenIndex + 1 < sourceTokens.size()) ++currentTokenIndex;
 	else throw UnexpectedTokenException("Encountered unexpected token at line " + GetLine() + ", Expected: " + sourceTokens.at(currentTokenIndex).first);
-	while (sourceTokens.at(currentTokenIndex).second == Token::NLINE) { line++; currentTokenIndex++; }
+	while (sourceTokens.at(currentTokenIndex).second == Token::NLINE) { ++line; ++currentTokenIndex; }
 }
 
 const TokenPair& Lexer::GetCurrentToken() { return sourceTokens.at(currentTokenIndex); }
