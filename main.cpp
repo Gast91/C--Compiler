@@ -11,7 +11,7 @@ int main(int argc, char* argv[])
 	lexer->PrintTokens();
 
 	// Create parser, pass to it the lexer and parse input from lexer
-	Parser* parser = new Parser(lexer);
+	Parser* parser = new Parser(*lexer);
 	if (parser->Success())
 	{
 		// Parse Successful, print the AST
@@ -36,7 +36,7 @@ int main(int argc, char* argv[])
 	delete lexer;
 	delete parser;
 
-	_CrtDumpMemoryLeaks();
+	_CrtSetDbgFlag(_CRTDBG_LEAK_CHECK_DF);  // _CrtDumpMemoryLeaks() will be called AFTER main has been exited
 }
 
 /*---------------GRAMMAR SPECIFICATION--------------------------------------
