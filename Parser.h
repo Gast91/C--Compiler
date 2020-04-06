@@ -15,7 +15,9 @@ private:
     ASTNode* ParseCond();
     ASTNode* ParseIf();
     ASTNode* ParseWhile();
+    ASTNode* ParseDoWhile();
     ASTNode* ParseProgram();                      // main and functions and assignments/declarations - just main now - entry point
+    ASTNode* ParseStatementBlock();
     ASTNode* ParseCompoundStatement();
     std::vector<ASTNode*> ParseStatementList();
     ASTNode* ParseDeclarationStatement();

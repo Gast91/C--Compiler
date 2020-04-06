@@ -47,6 +47,7 @@ ASTNode* Parser::ParseFactor()
     }
     else throw UnexpectedTokenException("Unexpected token '" + currentToken.first + "' at line " + lexer.GetLine());
 }
+
 // TERM := FACTOR ((MUL | DIV) FACTOR)*
 ASTNode* Parser::ParseTerm()
 {
@@ -60,6 +61,7 @@ ASTNode* Parser::ParseTerm()
     }
     return node;
 }
+
 // EXPRESSION := TERM ((PLUS | MINUS) TERM)* <---
 ASTNode* Parser::ParseExpr()
 {
@@ -73,6 +75,7 @@ ASTNode* Parser::ParseExpr()
     }
     return node;
 }
+
 // BOOL_EXPR := EXPR REL_OP EXPR
 ASTNode* Parser::ParseBoolExpr()
 {
@@ -87,6 +90,7 @@ ASTNode* Parser::ParseBoolExpr()
     }
     return node;
 }
+
 //CONDITION := BOOL_EXPR (LOG_AND|LOG_OR) BOOL_EXPR | 
             // BOOL_EXPR (LOG_AND|LOG_OR) CONDITION
 ASTNode* Parser::ParseCond()
@@ -106,6 +110,7 @@ ASTNode* Parser::ParseCond()
     parsingCond = false;
     return node;
 }
+
 // IF_STATEMENT =: IF_KEY LPAR CONDITION RPAR { COMPOUND_STATEMENT }  [MORE NEEDED HERE]
 ASTNode* Parser::ParseIf()
 {
@@ -119,7 +124,10 @@ ASTNode* Parser::ParseIf()
     ASTNode* ifBody = ParseCompoundStatement();
 
     return new IfNode(conditionNode, ifBody);  // if here must have slots of multiple ifelse and 1 else, how? vector?
+
+    // if has a vector of pair? condition body and a ASTNode* elseBody check online
 }
+
 // WHILE_STATEMENT := WHILE LPAR CONDITION RPAR { COMPOUND_STATEMENT }
 ASTNode* Parser::ParseWhile()
 {
@@ -129,10 +137,23 @@ ASTNode* Parser::ParseWhile()
     lexer.Consume(Token::RPAR);
 
     // Body of while statement can be a collection of statements
-    ASTNode* whileBody = ParseCompoundStatement();
-
-    return new WhileNode(conditionNode, whileBody);
+    return new WhileNode(conditionNode, ParseCompoundStatement());
 }
+
+// DO_WHILE_STATEMENT := DO { COMPOUND_STATEMENT } WHILE LPAR CONDITION RPAR
+ASTNode* Parser::ParseDoWhile()
+{
+    lexer.Consume(Token::DO);
+    ASTNode* bodyNode = ParseCompoundStatement();
+    lexer.Consume(Token::WHILE);
+    lexer.Consume(Token::LPAR);
+    ASTNode* conditionNode = ParseCond();
+    lexer.Consume(Token::RPAR);
+
+    // Body of do while statement can be a collection of statements
+    return new DoWhileNode(conditionNode, bodyNode);
+}
+
 // PROGRAM := int main LPAR RPAR { COMPOUND_STATEMENT }
 ASTNode* Parser::ParseProgram()                                // hacky way for only main now
 {
@@ -145,6 +166,18 @@ ASTNode* Parser::ParseProgram()                                // hacky way for 
 
     return node;
 }
+
+// BLOCK := { COMPOUND_STATEMENT }
+// Used mainly to take care of scopes not attached to statements. Needs to be
+// a seperate class to be visited by the semantic analyzer.
+ASTNode* Parser::ParseStatementBlock()
+{
+    StatementBlockNode* compound = new StatementBlockNode();
+    for (const auto& statement : ParseStatementList()) compound->Push(statement);
+
+    return compound;
+}
+
 // COMPOUND_STATEMENT := LCUR STATEMENT_LIST RCUR
 ASTNode* Parser::ParseCompoundStatement()
 {
@@ -153,6 +186,7 @@ ASTNode* Parser::ParseCompoundStatement()
 
     return compound;
 }
+
 // STATEMENT_LIST := STATEMENT | STATEMENT SEMICOLON STATEMENT_LIST 
 std::vector<ASTNode*> Parser::ParseStatementList()
 {
@@ -167,19 +201,23 @@ std::vector<ASTNode*> Parser::ParseStatementList()
     lexer.Consume(Token::RCURLY);
     return nodes;
 }
+
 // STATEMENT : COMPOUND_STATEMENT | ASSIGN_STATEMENT | EMPTY_STATEMENT
-ASTNode* Parser::ParseStatement()                                                    // FOR/OTHER STAMENTS..etc go here
+ASTNode* Parser::ParseStatement()                                                        // FOR/OTHER STAMENTS..etc go here
 {
     const auto currentToken = lexer.GetCurrentToken().second;
     if         (currentToken == Token::IF)         return ParseIf();
-    else if    (currentToken == Token::WHILE)      return ParseWhile();
+    else if    (currentToken == Token::WHILE)      return ParseWhile();                  // Merge Loop Statements?
+    else if    (currentToken == Token::DO)         return ParseDoWhile();
     else if    (currentToken == Token::RET)        return ParseReturn();
     else if    (currentToken == Token::INT_TYPE)   return ParseDeclarationStatement();   // lexer.isType()? the same will happen for all types - and functions + void
     else if    (currentToken == Token::IDENTIFIER) return ParseAssignStatement();
-    else if    (currentToken == Token::RCURLY)	   return ParseEmpty();                  // Compound Statement has no body
+    else if    (currentToken == Token::LCURLY)	   return ParseStatementBlock();         // Specifically parses free floating statement blocks (enclosed by { })
+    else if    (currentToken == Token::RCURLY)	   return ParseEmpty();
     else if    (currentToken == Token::FILE_END)   return ParseEmpty();
     else throw UnexpectedTokenException("Encountered unexpected token '" + lexer.GetCurrentToken().first + "' at line " + lexer.GetLine());
 }
+
 // DECLARATION_STATEMENT := INT/FLOAT/.. IDENTIFIER SEMI
 ASTNode* Parser::ParseDeclarationStatement()
 {
@@ -193,6 +231,7 @@ ASTNode* Parser::ParseDeclarationStatement()
     lexer.Consume(Token::SEMI);
     return new DeclareStatementNode(ident, currentToken);
 }
+
 // ASSIGN_STATEMENT := IDENTIFIER ASSIGN EXPRESSION
 ASTNode* Parser::ParseAssignStatement()
 {
@@ -204,6 +243,7 @@ ASTNode* Parser::ParseAssignStatement()
     lexer.Consume(Token::SEMI);
     return node;
 }
+
 // RETURN_STATEMENT := RETURN EXPRESSION
 ASTNode* Parser::ParseReturn()
 {
@@ -214,12 +254,13 @@ ASTNode* Parser::ParseReturn()
     return node;
 }
 
-ASTNode* Parser::ParseEmpty() { return new EmptyStatementNode(); }  // OBSOLETE - REMOVE HERE AND FROM  VISITOR CLASSES FOR REMOVAL
+ASTNode* Parser::ParseEmpty() { return new EmptyStatementNode(); }  // OBSOLETE - REMOVE HERE AND FROM VISITOR CLASSES FOR REMOVAL
 
+// COMPLETE IF'S - MAKE DECLARE ASSIGN
 // FEATURES MISSING TODO:
 /*
     MUST:
-    GENERATE ASSEMBLY FROM AST
+    GENERATE ASSEMBLY FROM TAC
     COULD EXPAND UPON:
     FOR, FUNCTIONS, ARRAYS, MISCELLANEOUS
 */
