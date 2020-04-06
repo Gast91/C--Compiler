@@ -123,14 +123,14 @@ public:
     void SetChildrenPrintID(const std::string& pID) override { condition->parentID = pID; body->parentID = pID; }
 };
 
-class WhileNode : public ASTNode  // copy of if right now - if will change later
+class IterationNode : public ASTNode
 {
 public:
     ASTNode* condition;
     ASTNode* body;
 public:
-    WhileNode(ASTNode* cond, ASTNode* b) noexcept : condition(cond), body(b) {}
-    ~WhileNode()
+    IterationNode(ASTNode* cond, ASTNode* b) noexcept : condition(cond), body(b) {}
+    ~IterationNode()
     {
         delete condition;
         if (body) delete body;
@@ -140,7 +140,23 @@ public:
     void SetChildrenPrintID(const std::string& pID) override { condition->parentID = pID; body->parentID = pID; }
 };
 
-class CompoundStatementNode : public ASTNode
+class WhileNode : public IterationNode
+{
+public:
+    WhileNode(ASTNode* cond, ASTNode* b) noexcept : IterationNode(cond, b) {}
+
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+};
+
+class DoWhileNode : public IterationNode
+{
+public:
+    DoWhileNode(ASTNode* cond, ASTNode* b) noexcept : IterationNode(cond, b) {}
+
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+};
+
+class CompoundStatementNode : public ASTNode   // make BlockNode inheriting from this to accomodate for scope { }
 {
 public:
     std::vector<ASTNode*> statements;
@@ -152,6 +168,12 @@ public:
     void SetChildrenPrintID(const std::string& pID) override { for (const auto& statement : statements) statement->parentID = pID; }
 
     void Push(ASTNode* statement) { statements.push_back(statement); }
+};
+
+class StatementBlockNode : public CompoundStatementNode
+{
+public:
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
 
 class DeclareStatementNode : public ASTNode
