@@ -2,8 +2,8 @@
 #include "AbstractSyntaxTree.h"
 
 ThreeAddressCode CodeGenerator::instructions;
-int CodeGenerator::temporaries = 0;
-int CodeGenerator::labels = 0;
+int Temporary::tempCount = 0;
+int Label::labelCount = 0;
 
 void CodeGenerator::GenerateAssembly(ASTNode* n)
 {
@@ -12,19 +12,19 @@ void CodeGenerator::GenerateAssembly(ASTNode* n)
 	n->Accept(*this);
 	std::cout << "pop rbp\nret\n";*/
 	std::cout << "Intermediate Language Representation:\nmain:\n";
-	PlainVisit(n);
+	PlainVisit(n);  // Start Traversing the AST
 	for (const auto& instruction : instructions)   // no string comparisons pls - how about string_view or something else - merge stuff
 	{
-		// if there is a second operand, output in the form dest = src1 op src2
+		// if there is a second operand then the instruction represent's a full three address code (3 addresses, 2 max operands on the right)
 		if (instruction.src2.has_value()) 
-			std::cout << "\t" << instruction.dest.value() << " = " << instruction.src1.value() << " " << instruction.op.value() << " " << instruction.src2.value() << ";\n";
-		else if (instruction.op.value() == "=")       std::cout << "\t" << instruction.dest.value() << " " << instruction.op.value() << " " << instruction.src1.value() << ";\n";
-		else if (instruction.op.value() == "IfZ")     std::cout << "\t" << instruction.op.value() << " " << instruction.src1.value() << " Goto " << instruction.dest.value() << ";\n";
+			std::cout << '\t' << instruction.dest.value() << " = " << instruction.src1.value() << ' ' << instruction.op.value() << ' ' << instruction.src2.value() << ";\n";
+		else if (instruction.op.value() == "=")       std::cout << '\t' << instruction.dest.value() << ' ' << instruction.op.value() << ' ' << instruction.src1.value() << ";\n";
+		else if (instruction.op.value() == "IfZ")     std::cout << '\t' << instruction.op.value() << ' ' << instruction.src1.value() << " Goto " << instruction.dest.value() << ";\n";
 		else if (instruction.op.value() == "Label")   std::cout << instruction.dest.value() << ":\n";
-		else if (instruction.op.value() == "Return")  std::cout << "\t" << instruction.op.value() << " " << instruction.dest.value() << ";\n";
-		else if (instruction.op.value() == "Goto")    std::cout << "\t" << instruction.op.value() << " " << instruction.dest.value() << ":\n";
-		// Unary
-		else std::cout << "\t" << instruction.dest.value() << " = " << instruction.op.value() << " " << instruction.src1.value() << ";\n";
+		else if (instruction.op.value() == "Return")  std::cout << '\t' << instruction.op.value() << ' ' << instruction.dest.value() << ";\n";
+		else if (instruction.op.value() == "Goto")    std::cout << '\t' << instruction.op.value() << ' ' << instruction.dest.value() << ":\n";
+		// Unary Instruction
+		else std::cout << '\t' << instruction.dest.value() << " = " << instruction.op.value() << ' ' << instruction.src1.value() << ";\n";
 	}
 }
 
@@ -37,51 +37,41 @@ void CodeGenerator::Visit(IdentifierNode& n) { Return({ std::nullopt, std::nullo
 
 void CodeGenerator::Visit(UnaryOperationNode& n)
 {
-	Quadruples q = GetValue(n.expr);
-	instructions.push_back({ n.op.first, q.dest, std::nullopt, "_t" + std::to_string(temporaries) });
+	instructions.push_back({ n.op.first, GetValue(n.expr).dest, std::nullopt, Temporary::NewTemporary() });
 	Return(instructions.back());
-	++temporaries;
 }
 
 void CodeGenerator::Visit(BinaryOperationNode& n)
 {
-	Quadruples q1 = GetValue(n.left);
-	Quadruples q2 = GetValue(n.right);
-	instructions.push_back({ n.op.first, q1.dest, q2.dest, "_t" + std::to_string(temporaries) });
+	instructions.push_back({ n.op.first, GetValue(n.left).dest, GetValue(n.right).dest, Temporary::NewTemporary() });
 	Return(instructions.back());
-	++temporaries;
 }
 
-void CodeGenerator::Visit(ConditionNode& n)  // we will need logical expressions? what the fuck is happening here
+void CodeGenerator::Visit(ConditionNode& n)  // we will need logical expressions? what the fuck is happening here - AST might need modification or assert in not needed
 {
-	std::cout << "HERE";
+	//std::cout << "HERE";
 	/*Quadruples q1 = GetValue(n.left);
 	Quadruples q2 = GetValue(n.right);
 	instructions.push_back({ n.op.first, q1.dest, q2.dest, "t" + std::to_string(temporaries) });
-	std::cout << "\nCHECK " << "t" + std::to_string(temporaries) << "\n";
+	std::cout << "\nCHECK " << "t" + std::to_string(temporaries) << '\n';
 	Return(instructions.at(temporaries));
 	++temporaries;*/
 }
 
 void CodeGenerator::Visit(IfNode& n)   // no else etc - would be nice, probably no if else - but first parser must be able to understand it
 {
-	Quadruples cond = GetValue(n.condition);
-	std::string falseLabel = "_L" + std::to_string(labels);
-	instructions.push_back({ "IfZ", cond.dest, std::nullopt, falseLabel });  // better encoding here? can be others than IfFalse(Z) based on cond operator?
-	++labels;
+	const auto falseLabel = Label::NewLabel();
+	instructions.push_back({ "IfZ", GetValue(n.condition).dest, std::nullopt, falseLabel });  // better encoding here? can be others than IfFalse(Z) based on cond operator?
 	if (n.body) PlainVisit(n.body);
 	instructions.push_back({ "Label", std::nullopt, std::nullopt, falseLabel });
 }
 
 void CodeGenerator::Visit(WhileNode& n)
 {
-	std::string startLabel = "_L" + std::to_string(labels);
-	++labels;
+	const auto startLabel = Label::NewLabel();
 	instructions.push_back({ "Label", std::nullopt, std::nullopt, startLabel });
-	Quadruples cond = GetValue(n.condition);
-	std::string endLabel = "_L" + std::to_string(labels);
-	++labels;
-	instructions.push_back({ "IfZ", cond.dest, std::nullopt, endLabel });
+	const auto endLabel = Label::NewLabel();
+	instructions.push_back({ "IfZ", GetValue(n.condition).dest, std::nullopt, endLabel });
 	if (n.body) PlainVisit(n.body);
 	instructions.push_back({ "Goto", std::nullopt, std::nullopt, startLabel });
 	instructions.push_back({ "Label", std::nullopt, std::nullopt, endLabel });
@@ -103,15 +93,12 @@ void CodeGenerator::Visit(DeclareStatementNode& n)
 
 void CodeGenerator::Visit(AssignStatementNode& n)
 {
-	Quadruples q1 = GetValue(n.left);
-	Quadruples q2 = GetValue(n.right);
-	instructions.push_back({ n.op.first, q2.dest, std::nullopt, q1.dest });
+	instructions.push_back({ n.op.first, GetValue(n.right).dest, std::nullopt, GetValue(n.left).dest });
 }
 
 void CodeGenerator::Visit(ReturnStatementNode& n)
 {
-	Quadruples expr = GetValue(n.expr);
-	instructions.push_back({ "Return", std::nullopt, std::nullopt, expr.dest });
+	instructions.push_back({ "Return", std::nullopt, std::nullopt, GetValue(n.expr).dest });
 	// we are done here we must jump to the end or something
 }
 
@@ -123,10 +110,9 @@ void CodeGenerator::Visit(EmptyStatementNode& n) {}
 	-Start filling out the functions - output TAC into the console for start (expressions done - googo ifs!)
 	-Rename+cpp+h to CodeGeneratorIR?
 
-	switch in all couts from "\n" to '\n'
 	check asserts if work
 	conserve temporaries - the t0 = a * b --> c = t0 is annoying!!!
-	merge some Quadruples expr = GetValue(n.expr) etc that are used only for one thing?
+	optional's in place?
 	need beginfunc and endfunc, jump for return to the end and allocating space at begin func?
 
 	-CHECK STD::VISITOR-VARIANT - nah
