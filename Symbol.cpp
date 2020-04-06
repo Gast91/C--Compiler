@@ -61,13 +61,13 @@ void SymbolTable::Print()
 {
 	std::cout << "Declared Symbols in '" << scopeName << "' <Lvl: " << std::to_string(scopeLevel) << "> :\n";
 	for (const auto& s : symbols) s.second->Print();
-	std::cout << "\n";
+	std::cout << '\n';
 }
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 //-----------------------------------------SemanticAnalyzer Definitions------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
-SemanticAnalyzer::SemanticAnalyzer() 
+SemanticAnalyzer::SemanticAnalyzer()
 { 
 	// At the start, the only Scope/Symbol Table is the Global one (which also has no parent)
 	symbolTable.push_back(new SymbolTable("GLOBAL_SCOPE", 1));
@@ -195,7 +195,7 @@ void SemanticAnalyzer::Visit(ReturnStatementNode& n) { n.expr->Accept(*this); }
 
 void SemanticAnalyzer::Visit(EmptyStatementNode& n) {}
 
-void SemanticAnalyzer::Print() const
+void SemanticAnalyzer::PrintAnalysisInfo() const
 { 
 	std::cout << (failState ? "\nSemantic Analysis FAILED " : "\nSemantic Analysis Complete ") << "-> Dumping Scope / Symbol Information : \n\n";
 	for (const auto& scope : symbolTable) scope->Print();

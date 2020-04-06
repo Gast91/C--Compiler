@@ -60,11 +60,11 @@ void Lexer::AddToken(const std::string& tok)
 	sourceTokens.push_back(std::make_pair(it->first, it->second));
 }
 
-bool Lexer::IsDiscardableCharacter(const std::string& delimiter) const { return delimiter.find_first_of(" \t\r\n") != std::string::npos; }
+bool Lexer::IsDiscardableCharacter(const std::string& delimiter) const noexcept { return delimiter.find_first_of(" \t\r\n") != std::string::npos; }
 
 bool Lexer::IsCompoundOperator(const std::string& delimiter, const std::string& next) const
 {
-	switch (delimiter[0])  // more missing
+	switch (delimiter.front())  // more missing - get rid of front's etc
 	{
 	case '>': case '<': case '*': case '/': case '!': case '=': return next == "=";
 	case '+':  return next == "=" || next == "+";
@@ -75,12 +75,12 @@ bool Lexer::IsCompoundOperator(const std::string& delimiter, const std::string& 
 	}
 }
 
-bool Lexer::IsComment(const std::string& delimiter, const std::string& next) const
+bool Lexer::IsComment(const std::string& delimiter, const std::string& next) const // - get rid of front's etc
 {
-	return delimiter[0] == '/' && next == "/";
+	return delimiter.front() == '/' && next == "/";
 }
 
-bool Lexer::IsDigit(const char c) const
+bool Lexer::IsDigit(const char c) const noexcept
 {
 	return c == '0' || c == '1' ||
 		   c == '2' || c == '3' ||
@@ -92,7 +92,7 @@ bool Lexer::IsDigit(const char c) const
 bool Lexer::IsInteger(const std::string& num) const
 {
 	unsigned int i = 0;
-	char digit = num.front();
+	const char digit = num.front();
 	if (IsDigit(digit))
 	{
 		if (++i >= num.length()) return true;
@@ -101,7 +101,7 @@ bool Lexer::IsInteger(const std::string& num) const
 	return false;
 }
 
-bool Lexer::IsCharacter(const char c) const
+bool Lexer::IsCharacter(const char c) const noexcept
 {
 	return c == 'a' || c == 'b' || c == 'c' || c == 'd' || c == 'e' || c == 'f' || c == 'g' ||
 		   c == 'h' || c == 'i' || c == 'j' || c == 'k' || c == 'l' || c == 'm' || c == 'n' ||
@@ -114,11 +114,11 @@ bool Lexer::IsCharacter(const char c) const
 	return false;
 }
 
-bool Lexer::IsIdentifier(const std::string& identifier, const bool firstCall) const
+bool Lexer::IsIdentifier(const std::string& identifier, const bool firstCall) const  // - get rid of front's etc
 {
-	if (firstCall) if (IsDigit(identifier[0])) return false;
+	if (firstCall) if (IsDigit(identifier.front())) return false;
 	unsigned int i = 0;
-	char character = identifier.front();
+	const char character = identifier.front();
 	if (IsCharacter(character))
 	{
 		if (++i >= identifier.length()) return true;
@@ -138,8 +138,7 @@ Lexer::Lexer(const char* sourcePath)
 {
 	std::ifstream infile;
 
-	infile.open("source.txt");  // this for debug
-	//infile.open(sourcePath);
+	infile.open(sourcePath);
 
 	if (!infile)
 	{
@@ -154,8 +153,8 @@ Lexer::Lexer(const char* sourcePath)
 void Lexer::PrintTokens() const
 {
 	std::cout << "Tokenized Input (Split by whitespace):\n";
-	for (const auto& token : sourceTokens) if (token.second != Token::NLINE && token.second != Token::FILE_END) std::cout << token.first << " ";
-	std::cout << "\n";
+	for (const auto& token : sourceTokens) if (token.second != Token::NLINE && token.second != Token::FILE_END) std::cout << token.first << ' ';
+	std::cout << '\n';
 }
 
 bool Lexer::Done() const { return sourceTokens.at(currentTokenIndex).second == Token::FILE_END; }

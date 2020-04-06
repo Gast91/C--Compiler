@@ -17,17 +17,16 @@ private:
 	void TokenizeSource(std::ifstream& infile);
 	void AddToken(const std::string& tok);
 
-	bool IsDiscardableCharacter(const std::string& delimiter) const ;
+	bool IsDiscardableCharacter(const std::string& delimiter) const noexcept;
 	bool IsCompoundOperator(const std::string& delimiter, const std::string& next) const;
 	bool IsComment(const std::string& delimiter, const std::string& next) const;
-	bool IsDigit(const char c) const;
+	bool IsDigit(const char c) const noexcept;
 	bool IsInteger(const std::string& num) const;
-	bool IsCharacter(const char c) const;
+	bool IsCharacter(const char c) const noexcept;
 	bool IsIdentifier(const std::string& identifier, const bool firstCall) const;
 	//bool IsKeyword(const std::string& keyword) const;   // Not needed anymore/for now with the updated token processing
 public:
 	Lexer(const char* sourcePath);
-	~Lexer() = default;
 
 	void PrintTokens() const;
 	bool Done() const;

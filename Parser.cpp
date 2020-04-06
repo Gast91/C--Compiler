@@ -3,7 +3,7 @@
 Parser::Parser(const Lexer& lex) : lexer(lex)
 {
 	try { root = ParseProgram(); }
-	catch (UnexpectedTokenException ex) { failState = true; std::cout << ex.what() << "\n"; }
+	catch (UnexpectedTokenException ex) { failState = true; std::cout << ex.what() << '\n'; }
 
 	// Somewhere, somehow not all tokens were processed.
 	if (!lexer.Done()) { failState = true; std::cout << "\nPARSER ERROR: Parsing Failure\n"; }
@@ -150,19 +150,15 @@ std::vector<ASTNode*> Parser::ParseStatementList()
 // STATEMENT : COMPOUND_STATEMENT | ASSIGN_STATEMENT | EMPTY_STATEMENT
 ASTNode* Parser::ParseStatement()                                                    // FOR/OTHER STAMENTS..etc go here
 {
-	ASTNode* node;
-
 	const auto currentToken = lexer.GetCurrentToken().second;
-	if         (currentToken == Token::IF)         node = ParseIf();
-	else if    (currentToken == Token::WHILE)      node = ParseWhile();
-	else if    (currentToken == Token::RET)        node = ParseReturn();
-	else if    (currentToken == Token::INT_TYPE)   node = ParseDeclarationStatement();   // lexer.isSymbol()? the same will happen for all types
-	else if    (currentToken == Token::IDENTIFIER) node = ParseAssignStatement();
-	else if    (currentToken == Token::RCURLY)		node = ParseEmpty();                 // Compound Statement has no body
-	else if    (currentToken == Token::FILE_END)   node = ParseEmpty();
+	if         (currentToken == Token::IF)         return ParseIf();
+	else if    (currentToken == Token::WHILE)      return ParseWhile();
+	else if    (currentToken == Token::RET)        return ParseReturn();
+	else if    (currentToken == Token::INT_TYPE)   return ParseDeclarationStatement();   // lexer.isType()? the same will happen for all types - and functions + void
+	else if    (currentToken == Token::IDENTIFIER) return ParseAssignStatement();
+	else if    (currentToken == Token::RCURLY)	   return ParseEmpty();                  // Compound Statement has no body
+	else if    (currentToken == Token::FILE_END)   return ParseEmpty();
 	else throw UnexpectedTokenException("Encountered unexpected token '" + lexer.GetCurrentToken().first + "' at line " + lexer.GetLine());
-
-	return node;
 }
 // DECLARATION_STATEMENT := INT/FLOAT/.. IDENTIFIER SEMI
 ASTNode* Parser::ParseDeclarationStatement()

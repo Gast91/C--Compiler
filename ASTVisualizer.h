@@ -12,25 +12,25 @@ private:
 	std::ofstream out;
 	bool consoleOutput;
 public:
-	ASTVisualizer(bool console = true);
+	ASTVisualizer(bool console = true) noexcept;
 	~ASTVisualizer() = default;
 
 	void PrintAST(ASTNode& n);
 
 	// Inherited via ASTNodeVisitor
-	virtual void Visit(ASTNode& n)               override;
-	virtual void Visit(UnaryASTNode& n)          override;
-	virtual void Visit(BinaryASTNode& n)         override;
-	virtual void Visit(IntegerNode& n)           override;
-	virtual void Visit(IdentifierNode& n)        override;
-	virtual void Visit(UnaryOperationNode& n)    override;
-	virtual void Visit(BinaryOperationNode& n)   override;
-	virtual void Visit(ConditionNode& n)         override;
-	virtual void Visit(IfNode& n)                override;
-	virtual void Visit(WhileNode& n)             override;
-	virtual void Visit(CompoundStatementNode& n) override;
-	virtual void Visit(DeclareStatementNode& n)  override;
-	virtual void Visit(AssignStatementNode& n)   override;
-	virtual void Visit(ReturnStatementNode& n)   override;
-	virtual void Visit(EmptyStatementNode& n)    override;
+	void Visit(ASTNode& n)               override;
+	void Visit(UnaryASTNode& n)          override;
+	void Visit(BinaryASTNode& n)         override;
+	void Visit(IntegerNode& n)           override;
+	void Visit(IdentifierNode& n)        override;
+	void Visit(UnaryOperationNode& n)    override;
+	void Visit(BinaryOperationNode& n)   override;
+	void Visit(ConditionNode& n)         override;
+	void Visit(IfNode& n)                override;
+	void Visit(WhileNode& n)             override;
+	void Visit(CompoundStatementNode& n) override;
+	void Visit(DeclareStatementNode& n)  override;
+	void Visit(AssignStatementNode& n)   override;
+	void Visit(ReturnStatementNode& n)   override;
+	void Visit(EmptyStatementNode& n)    override;
 };

@@ -28,6 +28,6 @@ public:
 	Parser(const Lexer& lex);
 	~Parser();
 
-	ASTNode* GetAST() const { return failState ? nullptr : root; }
-	bool Success()    const { return !failState; }
+	ASTNode* GetAST() const noexcept { return failState ? nullptr : root; }
+	bool Success()    const noexcept { return !failState; }
 };

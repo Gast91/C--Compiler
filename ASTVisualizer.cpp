@@ -1,7 +1,7 @@
 #include "ASTVisualizer.h"
 #include "AbstractSyntaxTree.h"
 
-ASTVisualizer::ASTVisualizer(bool console) : consoleOutput(console) {}
+ASTVisualizer::ASTVisualizer(bool console) noexcept : consoleOutput(console) {}
 
 void ASTVisualizer::PrintAST(ASTNode& n)
 {
@@ -17,7 +17,7 @@ void ASTVisualizer::PrintAST(ASTNode& n)
 		n.Accept(*this);
 		consoleOutput = false;
 	}
-	else std::cout << "\n";
+	else std::cout << '\n';
 	// Recursively visit each of the tree's nodes and print JSON to file
 	n.Accept(*this);
 
@@ -150,7 +150,7 @@ void ASTVisualizer::Visit(DeclareStatementNode& n)
 {
 	if (consoleOutput)
 	{
-		std::cout << "\n" << n.type.first << " DECL: [";
+		std::cout << '\n' << n.type.first << " DECL: [";
 		n.identifier->Accept(*this);
 		std::cout << "]";
 	}
