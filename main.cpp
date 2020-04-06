@@ -26,10 +26,9 @@ int main(int argc, char* argv[])
 		delete semanticAnalyzer;  // we will probably need it for code generation so no destruction
 
 		// If semantic analysis was a success
-		/*CodeGenerator codeGenerator;
-		codeGenerator.GenerateAssembly(parser->GetAST());*/
+		CodeGenerator codeGenerator;
+		codeGenerator.GenerateAssembly(parser->GetAST());
 	}
-
 	std::cin.get(); // Debug Only
 
 	// Cleanup
