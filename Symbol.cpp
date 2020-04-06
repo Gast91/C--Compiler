@@ -129,6 +129,8 @@ void SemanticAnalyzer::Visit(IfNode& n)
     currentScope = nestedScope->parentScope;
 }
 
+void SemanticAnalyzer::Visit(IterationNode& n) { assert(("Semantic Analyzer visited base IterationNode class?!", false)); }
+
 void SemanticAnalyzer::Visit(WhileNode& n)
 {
     // Visit Condition, Identifiers in the condition belong to the current scope
@@ -153,9 +155,47 @@ void SemanticAnalyzer::Visit(WhileNode& n)
     currentScope = nestedScope->parentScope;
 }
 
-void SemanticAnalyzer::Visit(CompoundStatementNode& n)
+void SemanticAnalyzer::Visit(DoWhileNode& n)
 {
+    // Do-while's body belongs to a different, nested scope
+    // Generate a name for it and add the nested scope as a symbol into the parent scope (current)
+    std::string nestedScopeName = GenerateID(&n, "DO");
+    currentScope->DefineSymbol(new NestedScope(nestedScopeName));
+
+    // New nested scope with the nested scope name, at a greater depth than the current with the current scope as its parent
+    SymbolTable* nestedScope = new SymbolTable(nestedScopeName, currentScope->scopeLevel + 1, currentScope);
+
+    // Current scope becomes this new scope
+    symbolTable.push_back(nestedScope);
+    currentScope = nestedScope;
+
+    // After we are done with the body of this nested statement we go back to the parent scope
+    currentScope = nestedScope->parentScope;
+
+    // Visit Condition, Identifiers in the condition belong to the parent scope (wset back above)
+    n.condition->Accept(*this);
+}
+
+void SemanticAnalyzer::Visit(CompoundStatementNode& n) { for (const auto& statement : n.statements) statement->Accept(*this); }
+
+void SemanticAnalyzer::Visit(StatementBlockNode& n)
+{
+    // Beginning of a free floating block of statements (i.e inside { } that dont belong to a statement) that is a nested scope
+    std::string nestedScopeName = GenerateID(&n, "BLOCK");
+    currentScope->DefineSymbol(new NestedScope(nestedScopeName));
+
+    // New nested scope with the nested scope name, at a greater depth than the current with the current scope as its parent
+    SymbolTable* nestedScope = new SymbolTable(nestedScopeName, currentScope->scopeLevel + 1, currentScope);
+
+    // Current scope becomes this new scope
+    symbolTable.push_back(nestedScope);
+    currentScope = nestedScope;
+
+    // Visit all the statements in this block
     for (const auto& statement : n.statements) statement->Accept(*this);
+
+    // After we are done with the body of this nested statement block we go back to the parent scope
+    currentScope = nestedScope->parentScope;
 }
 
 void SemanticAnalyzer::Visit(DeclareStatementNode& n)
