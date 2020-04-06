@@ -2,7 +2,6 @@
 #include "AbstractSyntaxTree.h"
 
 ASTVisualizer::ASTVisualizer(bool console) : consoleOutput(console) {}
-ASTVisualizer::~ASTVisualizer() {}
 
 void ASTVisualizer::PrintAST(ASTNode& n)
 {
