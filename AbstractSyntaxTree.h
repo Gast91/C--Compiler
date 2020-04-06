@@ -81,9 +81,10 @@ class IdentifierNode : public ASTNode
 {
 public:
 	Token type;
-	std::string name;
+	const std::string name;
+	const std::string lineNo;
 public:
-	IdentifierNode(const std::string& n, const Token t = Token::UNKNOWN) : type(t), name(n) {}
+	IdentifierNode(const std::string& n, const std::string& line, const Token t = Token::UNKNOWN) : name(n), lineNo(line), type(t) {}
 	virtual ~IdentifierNode() = default;
 
 	virtual void Accept(ASTNodeVisitor& v) { v.Visit(*this); }
@@ -100,7 +101,7 @@ public:
 	virtual void Accept(ASTNodeVisitor& v) { v.Visit(*this); }
 };
 
-class ConditionNode : public BinaryASTNode
+class ConditionNode : public BinaryASTNode  // WHAT????
 {
 public:
 	ConditionNode(ASTNode* l, TokenPair& o, ASTNode* r) : BinaryASTNode(l, o, r) {}
