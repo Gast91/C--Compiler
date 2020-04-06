@@ -27,15 +27,9 @@ void ASTVisualizer::PrintAST(ASTNode& n)
     std::cout << "\n\nAST Visualisation File Successfully created\n";
 }
 
-void ASTVisualizer::Visit(ASTNode& n) { assert(("ASTVisualizer visited base ASTNode class?!", false)); }
-
-void ASTVisualizer::Visit(UnaryASTNode& n) { n.expr->Accept(*this); }
-
-void ASTVisualizer::Visit(BinaryASTNode& n)
-{
-    n.left->Accept(*this);
-    n.right->Accept(*this);
-}
+void ASTVisualizer::Visit(ASTNode& n)       { assert(("ASTVisualizer visited base ASTNode class?!", false)); }
+void ASTVisualizer::Visit(UnaryASTNode& n)  { assert(("ASTVisualizer visited base UnaryASTNode class?!", false)); }
+void ASTVisualizer::Visit(BinaryASTNode& n) { assert(("ASTVisualizer visited base BinaryASTNode class?!", false)); }
 
 void ASTVisualizer::Visit(IntegerNode& n)
 {
@@ -118,7 +112,7 @@ void ASTVisualizer::Visit(IfNode& n)
         if (n.body) n.body->Accept(*this);
     }
 }
-
+void ASTVisualizer::Visit(IterationNode& n) { assert(("ASTVisualizer visited base IterationNode class?!", false)); }
 void ASTVisualizer::Visit(WhileNode& n)
 {
     if (consoleOutput)
@@ -138,7 +132,34 @@ void ASTVisualizer::Visit(WhileNode& n)
     }
 }
 
+void ASTVisualizer::Visit(DoWhileNode& n)
+{
+    if (consoleOutput)
+    {
+        std::cout << "\nDO: " << "[";
+        if (n.body) n.body->Accept(*this);
+        std::cout << " WHILE: ";
+        // While-body can be empty
+        n.condition->Accept(*this);
+        std::cout << "]";
+    }
+    else
+    {
+        n.SetChildrenPrintID(GenerateJSON(out, &n, "DO", n.parentID, "DO", config));
+        if (n.body) n.body->Accept(*this);
+        n.condition->Accept(*this);
+    }
+}
+
 void ASTVisualizer::Visit(CompoundStatementNode& n)
+{
+    // Each child of the compound has this compound as a parent (but we never visualise compound statements)
+    // so the parent of the children is in fact the parent of the compound node
+    n.SetChildrenPrintID(n.parentID);
+    for (const auto& statement : n.statements) statement->Accept(*this);
+}
+
+void ASTVisualizer::Visit(StatementBlockNode& n)
 {
     // Each child of the compound has this compound as a parent (but we never visualise compound statements)
     // so the parent of the children is in fact the parent of the compound node
