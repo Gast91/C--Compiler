@@ -47,7 +47,7 @@ void CodeGenerator::Visit(BinaryOperationNode& n)
     Return(instructions.back());
 }
 
-void CodeGenerator::Visit(ConditionNode& n)  // we will need logical expressions? what the fuck is happening here - AST might need modification or assert in not needed
+void CodeGenerator::Visit(ConditionNode& n)  // assert here! also in other "unused nodes"
 {
     //std::cout << "HERE";
     /*Quadruples q1 = GetValue(n.left);
@@ -65,6 +65,7 @@ void CodeGenerator::Visit(IfNode& n)   // no else etc - would be nice, probably 
     if (n.body) PlainVisit(n.body);
     instructions.push_back({ "Label", std::nullopt, std::nullopt, falseLabel });
 }
+void CodeGenerator::Visit(IterationNode& n) { assert(("Code Generator visited base IterationNode class?!", false)); }
 
 void CodeGenerator::Visit(WhileNode& n)
 {
@@ -77,12 +78,22 @@ void CodeGenerator::Visit(WhileNode& n)
     instructions.push_back({ "Label", std::nullopt, std::nullopt, endLabel });
 }
 
+void CodeGenerator::Visit(DoWhileNode& n)
+{
+    const auto startLabel = Label::NewLabel();
+    instructions.push_back({ "Label", std::nullopt, std::nullopt, startLabel });
+    if (n.body) PlainVisit(n.body);
+    instructions.push_back({ "IfZ", GetValue(n.condition).dest, std::nullopt, startLabel });  // jump if true not false! hmm
+}
+
 void CodeGenerator::Visit(CompoundStatementNode& n)
 {
     for (const auto& statement : n.statements) PlainVisit(statement);
     // the way it is set up here, generation will start here, maybe have a ProgramEntryNode?  also label main:
     // for setting up stack etc? for exit as well - wont work atm - hack atm is generate
 }
+
+void CodeGenerator::Visit(StatementBlockNode& n) { for (const auto& statement : n.statements) PlainVisit(statement); }
 
 void CodeGenerator::Visit(DeclareStatementNode& n)
 {
@@ -106,13 +117,12 @@ void CodeGenerator::Visit(EmptyStatementNode& n) {}
 
 // TODO:
 /*
-    -Fix/Add Nodes into the ast to accomodate logical operations, main/entry point - potentially more? 
-    -Start filling out the functions - output TAC into the console for start (expressions done - googo ifs!)
+    -Fix/Add Nodes into the ast to accomodate main/entry point - potentially more? 
+    -Start filling out the functions - output TAC into the console for start (if else's next, if needs modifying)
     -Rename+cpp+h to CodeGeneratorIR?
 
-    check asserts if work
+    check asserts if work - dont care?
     conserve temporaries - the t0 = a * b --> c = t0 is annoying!!!
-    optional's in place?
     need beginfunc and endfunc, jump for return to the end and allocating space at begin func?
 
     -CHECK STD::VISITOR-VARIANT - nah
