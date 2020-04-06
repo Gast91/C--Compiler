@@ -10,7 +10,7 @@ void Lexer::TokenizeSource(std::ifstream& infile)
         sourceTokens.push_back(std::make_pair("\n", Token::NLINE));
 
         unsigned int prev = 0, pos;
-        while ((pos = srcLine.find_first_of(" \t+-*/()=!><&|;{}", prev)) != std::string::npos)
+        while ((pos = srcLine.find_first_of(" \t+-*/()=!><&|;{}%", prev)) != std::string::npos)
         {
             if (pos < prev) continue;
             if (pos > prev) AddToken(srcLine.substr(prev, pos - prev));
@@ -24,7 +24,7 @@ void Lexer::TokenizeSource(std::ifstream& infile)
                 // If the next character and the current delimiter form a compound operator,
                 // they must be preserved as one token
                 const std::string nextCharacter = srcLine.substr(pos + 1, 1);
-                if (IsCompoundOperator(delimiter, nextCharacter))
+                if (IsCompoundOperator(delimiter, nextCharacter))  // doesnt check for >>= or <<=
                 {
                     AddToken(delimiter + nextCharacter);
                     // Skip the next character since it has been processed already (part of a compound operator)
@@ -64,14 +64,16 @@ bool Lexer::IsDiscardableCharacter(const std::string& delimiter) const noexcept 
 
 bool Lexer::IsCompoundOperator(const std::string& delimiter, const std::string& next) const
 {
-    switch (delimiter.front())  // more missing - get rid of front's etc
+    switch (delimiter.front())  // shiftleft and shiftright missing - get rid of front's etc 
     {
-    case '>': case '<': case '*': case '/': case '!': case '=': return next == "=";
-    case '+':  return next == "=" || next == "+";
-    case '-':  return next == "=" || next == "-";
-    case '&':  return next == "&";
-    case '|':  return next == "|";
-    default: return false;
+    case '*': case '/': case '!': case '=': case '%': case '^': return next == "=";
+    case '+': return next == "=" || next == "+";
+    case '-': return next == "=" || next == "-";
+    case '&': return next == "&" || next == "=";
+    case '|': return next == "|" || next == "=";
+    case '>': return next == ">";
+    case '<': return next == "<";
+    default:  return false;
     }
 }
 
