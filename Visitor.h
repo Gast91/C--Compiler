@@ -43,6 +43,30 @@ public:
 	virtual void Visit(EmptyStatementNode& n) = 0;
 };
 
+// Curiously Recurring Template Pattern - https://www.codeproject.com/Tips/1018315/Visitor-with-the-Return-Value
+template <typename VisitorImpl, typename VisitablePtr, typename ResultType>
+class ValueGetter
+{
+private:
+	ResultType value;
+public:
+	void PlainVisit(VisitablePtr n)
+	{
+		VisitorImpl vis;
+		n->Accept(vis);
+	}
+	static ResultType GetValue(VisitablePtr n)
+	{
+		VisitorImpl vis;
+		n->Accept(vis);
+		return vis.value;
+	}
+	void Return(ResultType value_)
+	{
+		value = value_;
+	}
+};
+
 // Inheriting Classes:
 // ASTVisualizer
 // SemanticAnalyser
