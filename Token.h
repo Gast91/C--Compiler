@@ -47,6 +47,7 @@ enum class Token
 // Reserved Keywords       // Missing stuff, to be added as the parser expands - until then missing ones are treated as identifiers
     IF,
     WHILE,
+    DO,
     INT_TYPE,
     RET,
     MAIN,                  // MAIN IS NOT A RESERVED WORD - ITS AN IDENTIFIER THAT CAN ONLY EXIST ONE OF FOR FUNCTIONS - HACK FOR NOW
@@ -107,6 +108,7 @@ static std::unordered_map<std::string, Token> tokens =
 //-----------------------------------------------
     { "if"     , Token::IF           },
     { "while"  , Token::WHILE        },
+    { "do"     , Token::DO           },
     { "int"    , Token::INT_TYPE     },
     { "return" , Token::RET          },
     { "main"   , Token::MAIN         },              // MAIN IS NOT A RESERVED WORD - ITS AN IDENTIFIER THAT CAN ONLY EXIST ONE OF FOR FUNCTIONS - HACK FOR NOW
