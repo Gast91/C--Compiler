@@ -36,7 +36,7 @@ ASTNode* Parser::ParseFactor()
 	else if (currentToken.second == Token::IDENTIFIER)
 	{
 		lexer.Consume(Token::IDENTIFIER);
-		return new IdentifierNode(currentToken.first);
+		return new IdentifierNode(currentToken.first, lexer.GetLine());
 	}
 	else if (currentToken.second == Token::LPAR)
 	{
@@ -78,7 +78,7 @@ ASTNode* Parser::ParseCond()
 {
 	ASTNode* node = ParseExpr();
 
-	while (lexer.GetCurrentToken().second == Token::LT || lexer.GetCurrentToken().second == Token::GT) // <=, >=, ==, != at least
+	while (lexer.GetCurrentToken().second == Token::LT || lexer.GetCurrentToken().second == Token::GT) // <=, >=, ==, != at least | Need to handle && || also!!
 	{
 		const auto currentToken = lexer.GetCurrentToken();
 		lexer.Consume(lexer.GetCurrentToken().second);
@@ -117,7 +117,7 @@ ASTNode* Parser::ParseWhile()
 ASTNode* Parser::ParseProgram()                                // hacky way for only main now
 {
 	lexer.Consume(Token::INT_TYPE);
-	lexer.Consume(Token::MAIN);                              // hack here as well
+	lexer.Consume(Token::MAIN);                                // hack here as well
 	lexer.Consume(Token::LPAR); 
 	lexer.Consume(Token::RPAR);
 
@@ -153,13 +153,14 @@ ASTNode* Parser::ParseStatement()                                               
 	ASTNode* node;
 
 	const auto currentToken = lexer.GetCurrentToken().second;
-	if      (currentToken == Token::IF)         node = ParseIf();
-	else if (currentToken == Token::WHILE)      node = ParseWhile();
-	//else if (currentToken == Token::FILE_END)   node = ParseEmpty();
-	else if (currentToken == Token::RET)        node = ParseReturn();
-	else if (currentToken == Token::INT_TYPE)   node = ParseDeclarationStatement();  // lexer.isSymbol()? the same will happen for all types
-	else if (currentToken == Token::IDENTIFIER) node = ParseAssignStatement();
-	else throw UnexpectedTokenException("Encountered unexpected token ' " + lexer.GetCurrentToken().first + "' at line " + lexer.GetLine());
+	if         (currentToken == Token::IF)         node = ParseIf();
+	else if    (currentToken == Token::WHILE)      node = ParseWhile();
+	else if    (currentToken == Token::RET)        node = ParseReturn();
+	else if    (currentToken == Token::INT_TYPE)   node = ParseDeclarationStatement();   // lexer.isSymbol()? the same will happen for all types
+	else if    (currentToken == Token::IDENTIFIER) node = ParseAssignStatement();
+	else if    (currentToken == Token::RCURLY)		node = ParseEmpty();                 // Compound Statement has no body
+	else if    (currentToken == Token::FILE_END)   node = ParseEmpty();
+	else throw UnexpectedTokenException("Encountered unexpected token '" + lexer.GetCurrentToken().first + "' at line " + lexer.GetLine());
 
 	return node;
 }
@@ -171,7 +172,7 @@ ASTNode* Parser::ParseDeclarationStatement()
 	lexer.Consume(currentToken.second);
 
 	// Next is the identifier
-	IdentifierNode* ident = new IdentifierNode(lexer.GetCurrentToken().first, currentToken.second);
+	IdentifierNode* ident = new IdentifierNode(lexer.GetCurrentToken().first, lexer.GetLine(), currentToken.second);
 	lexer.Consume(Token::IDENTIFIER);
 	lexer.Consume(Token::SEMI);
 	return new DeclareStatementNode(ident, currentToken);
@@ -180,7 +181,7 @@ ASTNode* Parser::ParseDeclarationStatement()
 ASTNode* Parser::ParseAssignStatement()
 {
 	const auto currentToken = lexer.GetCurrentToken();
-	IdentifierNode* ident = new IdentifierNode(currentToken.first);
+	IdentifierNode* ident = new IdentifierNode(currentToken.first, lexer.GetLine());
 	lexer.Consume(Token::IDENTIFIER);
 	lexer.Consume(Token::ASSIGN);
 	ASTNode* node = new AssignStatementNode(ident, ParseExpr());
