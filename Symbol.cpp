@@ -6,20 +6,16 @@
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 Symbol::Symbol(std::string n, Symbol * t) : name(n), type(t) {}
 
-Symbol::~Symbol() {}    // SymbolTable class will handle the deleting of Symbols
-
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 //-----------------------------------------BuiltInSymbol Definitions-----------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 BuiltInSymbol::BuiltInSymbol(std::string n) : Symbol(n) {}
-
 void BuiltInSymbol::Print() { std::cout << "<" << name << ">\n";  }
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 //-----------------------------------------VariableSymbol Definitions----------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 VariableSymbol::VariableSymbol(std::string n, Symbol * t) : Symbol(n, t) {}
-
 void VariableSymbol::Print() 
 {
 	std::cout << name << ": ";
@@ -30,7 +26,6 @@ void VariableSymbol::Print()
 //-----------------------------------------NestedScope Definitions-------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 NestedScope::NestedScope(std::string n) : Symbol(n) {}
-
 void NestedScope::Print() { std::cout << name << " <NESTED_SCOPE>\n"; }
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -81,16 +76,9 @@ SemanticAnalyzer::SemanticAnalyzer()
 
 SemanticAnalyzer::~SemanticAnalyzer() { for (const auto& scope : symbolTable) delete scope; }
 
-void SemanticAnalyzer::Visit(ASTNode& n) { assert(("Semantic Analyzer visited base ASTNode class?!", false)); }
-
-void SemanticAnalyzer::Visit(UnaryASTNode& n) { n.expr->Accept(*this); }
-
-void SemanticAnalyzer::Visit(BinaryASTNode& n)
-{
-	n.left->Accept(*this);
-	n.right->Accept(*this);
-}
-
+void SemanticAnalyzer::Visit(ASTNode& n)        { assert(("Semantic Analyzer visited base ASTNode class?!", false)); }
+void SemanticAnalyzer::Visit(UnaryASTNode& n)   { assert(("Semantic Analyzer visited base UnaryASTNode class?!", false)); }
+void SemanticAnalyzer::Visit(BinaryASTNode& n)  { assert(("Semantic Analyzer visited base BinaryASTNode class?!", false)); }
 void SemanticAnalyzer::Visit(IntegerNode& n) {}
 
 void SemanticAnalyzer::Visit(IdentifierNode& n)
@@ -98,7 +86,7 @@ void SemanticAnalyzer::Visit(IdentifierNode& n)
 	if (!currentScope->LookUpSymbol(n.name))
 	{
 		failState = true;
-		throw SymbolNotFoundException("\nUse of undeclared identifier '" + n.name + "' in scope '"
+		throw SymbolNotFoundException("\nUse of undeclared identifier '" + n.name + "' at line " + n.lineNo + " in scope '"
 										+ currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
 	}
 }
@@ -175,7 +163,8 @@ void SemanticAnalyzer::Visit(DeclareStatementNode& n)
 	// Look up Declaration Node's type in the symbol table
 	Symbol* symbolType = currentScope->LookUpSymbol(n.type.first);
 	// Get the variable name from the Declaration's Identifier Node
-	std::string variableName = n.identifier->name;
+	const std::string variableName = n.identifier->name;
+	const std::string line = n.identifier->lineNo;
 	// Define a new VarSymbol using variable name and symbolType
 	Symbol* variableSymbol = new VariableSymbol(variableName, symbolType);
 	if (!currentScope->DefineSymbol(variableSymbol))
@@ -183,18 +172,19 @@ void SemanticAnalyzer::Visit(DeclareStatementNode& n)
 		failState = true;
 		// The redefined identifier will not be stored as the program is semantically wrong and Semantic Analysis will stop
 		delete variableSymbol; // Clean up this temporary and throw the RedefinitionException
-		throw SymbolRedefinitionException("Redefinition of identifier '" + variableName + "' in scope '"
-			+ currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
+		throw SymbolRedefinitionException("Redefinition of identifier '" + variableName + "' at line " + line + " in scope '"
+											+ currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
 	}
 }
 
 void SemanticAnalyzer::Visit(AssignStatementNode& n)
 {
-	std::string symbolName = static_cast<IdentifierNode*>(n.left)->name;
-	if (!currentScope->LookUpSymbol(symbolName))
+	//std::string symbolName = static_cast<IdentifierNode*>(n.left)->name;
+	IdentifierNode* identifier = static_cast<IdentifierNode*>(n.left);
+	if (!currentScope->LookUpSymbol(identifier->name))
 	{
 		failState = true;
-		throw SymbolNotFoundException("\nUse of undeclared identifier '" + symbolName + "' in scope '"
+		throw SymbolNotFoundException("\nUse of undeclared identifier '" + identifier->name + "' at line " + identifier->lineNo + " in scope '"
 										+ currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
 	}
 	// Identifier's name (left) has been extracted. If we reached here we know the symbol's in the table so no need to visit left node
@@ -217,4 +207,6 @@ bool SemanticAnalyzer::Success() const { return !failState; }
 Add:	-Each VariableSymbol should have an address associated with it
 		 So that the code generator later on - or assembly generator will know its stack offset
 		-Rename VariableSymbol to IdentifierSymbol?
+		-Move SemanticAnalyzer into his own .h and .cpp files? Rename Symbol.h,Symbol.cpp to SymbolTable?
+		-Missing Type Checking
 */

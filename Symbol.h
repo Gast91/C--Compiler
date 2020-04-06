@@ -17,7 +17,7 @@ public:
 	friend class SymbolTable;
 
 	Symbol(std::string n, Symbol* t = nullptr);
-	virtual ~Symbol();  // SymbolTable class will handle the deleting of Symbols
+	virtual ~Symbol() = default;  // SymbolTable class will handle the deleting of Symbols
 
 	virtual void Print() = 0;
 };
