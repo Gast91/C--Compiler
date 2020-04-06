@@ -17,8 +17,9 @@ enum class Token
     MUL,
     DIV,
     MOD,
-// Shift Operators - >>, <<
-
+// Shift Operators
+    SHL,
+    SHR,
 // Relational and Equality Operations
     GT,
     LT,
@@ -33,14 +34,22 @@ enum class Token
 // Logical Operators
     AND,
     OR,
-// Assignment Operators +=, -=, *=, /=, %=, <<=, >>=, &=, ^=, |=
+// Assignment Operators    // MISSING <<=, >>= Lexer can't deal with triple character operators but parser (for now) cant understand them anyway
     ASSIGN,
-// Reserved Keywords
+    ADD_ASSIGN,
+    SUB_ASSIGN,
+    MUL_ASSIGN,
+    DIV_ASSIGN,
+    MOD_ASSIGN,
+    XOR_ASSIGN,
+    B_OR_ASSIGN,
+    B_AND_ASSIGN,
+// Reserved Keywords       // Missing stuff, to be added as the parser expands - until then missing ones are treated as identifiers
     IF,
     WHILE,
     INT_TYPE,
     RET,
-    MAIN,                 // MAIN IS NOT A RESERVED WORD - ITS AN IDENTIFIER THAT CAN ONLY EXIST ONE OF FOR FUNCTIONS - HACK FOR NOW
+    MAIN,                  // MAIN IS NOT A RESERVED WORD - ITS AN IDENTIFIER THAT CAN ONLY EXIST ONE OF FOR FUNCTIONS - HACK FOR NOW
 // Terminals
     LPAR,
     RPAR,
@@ -50,59 +59,68 @@ enum class Token
 // Miscellaneous
     NLINE,
     FILE_END,
-    UNKNOWN,
+    UNKNOWN
 };
 
 static std::unordered_map<std::string, Token> tokens =
 {
 //-------Arithmetic Operators--------------------
 //-----------------------------------------------
-    { "+"      , Token::ADD      },
-    { "-"      , Token::SUB      },
-    { "*"      , Token::MUL      },
-    { "/"      , Token::DIV      },
-    { "%"      , Token::MOD      },
+    { "+"      , Token::ADD          },
+    { "-"      , Token::SUB          },
+    { "*"      , Token::MUL          },
+    { "/"      , Token::DIV          },
+    { "%"      , Token::MOD          },
 //-------Shift Operators-------------------------
 //-----------------------------------------------
-
+    { "<<"     , Token::SHL          },
+    { ">>"     , Token::SHR          },
 //-------Relational and Equality Operations
 //-----------------------------------------------
-    { ">"      , Token::GT       },
-    { "<"      , Token::LT       },
-    { ">="     , Token::GTE      },
-    { "<="     , Token::LTE      },
-    { "=="     , Token::EQ       },
-    { "!="     , Token::NEQ      },
+    { ">"      , Token::GT           },
+    { "<"      , Token::LT           },
+    { ">="     , Token::GTE          },
+    { "<="     , Token::LTE          },
+    { "=="     , Token::EQ           },
+    { "!="     , Token::NEQ          },
 //-------Bitwise Operators-----------------------
 //-----------------------------------------------
-    { "&"      , Token::BIT_AND  },
-    { "^"      , Token::BIT_XOR  },
-    { "|"      , Token::BIT_OR   },
+    { "&"      , Token::BIT_AND      },
+    { "^"      , Token::BIT_XOR      },
+    { "|"      , Token::BIT_OR       },
 //-------Logical Operators-----------------------
 //-----------------------------------------------
-    { "&&"     , Token::AND      },
-    { "||"     , Token::OR       },
+    { "&&"     , Token::AND          },
+    { "||"     , Token::OR           },
 //-------Assignment Operators--------------------
 //-----------------------------------------------
-    { "="      , Token::ASSIGN   },
+    { "="      , Token::ASSIGN       },
+    { "+="     , Token::ADD_ASSIGN   },
+    { "-="     , Token::SUB_ASSIGN   },
+    { "*="     , Token::MUL_ASSIGN   },
+    { "/="     , Token::DIV_ASSIGN   },
+    { "%="     , Token::MOD_ASSIGN   },
+    { "^="     , Token::XOR_ASSIGN   },
+    { "|="     , Token::B_OR_ASSIGN  },
+    { "&="     , Token::B_AND_ASSIGN },
 //-------Reserved Keywords-----------------------
 //-----------------------------------------------
-    { "if"     , Token::IF       },
-    { "while"  , Token::WHILE    },
-    { "int"    , Token::INT_TYPE },
-    { "return" , Token::RET      },
-    { "main"   , Token::MAIN     },                  // MAIN IS NOT A RESERVED WORD - ITS AN IDENTIFIER THAT CAN ONLY EXIST ONE OF FOR FUNCTIONS - HACK FOR NOW
-//-------Terminals
+    { "if"     , Token::IF           },
+    { "while"  , Token::WHILE        },
+    { "int"    , Token::INT_TYPE     },
+    { "return" , Token::RET          },
+    { "main"   , Token::MAIN         },              // MAIN IS NOT A RESERVED WORD - ITS AN IDENTIFIER THAT CAN ONLY EXIST ONE OF FOR FUNCTIONS - HACK FOR NOW
+//-------Terminals-------------------------------
 //-----------------------------------------------
-    { "("      , Token::LPAR     },
-    { ")"      , Token::RPAR     },
-    { "{"      , Token::LCURLY   },
-    { "}"      , Token::RCURLY   },
-    { ";"      , Token::SEMI     },
+    { "("      , Token::LPAR         },
+    { ")"      , Token::RPAR         },
+    { "{"      , Token::LCURLY       },
+    { "}"      , Token::RCURLY       },
+    { ";"      , Token::SEMI         },
 //-------Miscellaneous---------------------------
 //-----------------------------------------------
-    { "\n"     , Token::NLINE    },
-    { "\032"   , Token::FILE_END },
+    { "\n"     , Token::NLINE        },
+    { "\032"   , Token::FILE_END     }
 };
 
 using TokenPair = std::pair<const std::string, Token>;
