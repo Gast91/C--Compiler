@@ -41,7 +41,7 @@ ASTNode* Parser::ParseFactor()
     else if (currentToken.second == Token::LPAR)
     {
         lexer.Consume(Token::LPAR);
-        ASTNode* node = ParseExpr();
+        ASTNode* node = parsingCond ? ParseCond() : ParseExpr();
         lexer.Consume(Token::RPAR);
         return node;
     }
@@ -73,17 +73,37 @@ ASTNode* Parser::ParseExpr()
     }
     return node;
 }
-//CONDITION := EXPRESSION (LESS | MORE) EXPRESSION   [MORE NEDDED HERE]
-ASTNode* Parser::ParseCond()
+// BOOL_EXPR := EXPR REL_OP EXPR
+ASTNode* Parser::ParseBoolExpr()
 {
     ASTNode* node = ParseExpr();
-
-    while (lexer.GetCurrentToken().second == Token::LT || lexer.GetCurrentToken().second == Token::GT) // <=, >=, ==, != at least | Need to handle && || also!!
+    while (lexer.GetCurrentToken().second == Token::LT  || lexer.GetCurrentToken().second == Token::GT  ||
+           lexer.GetCurrentToken().second == Token::LTE || lexer.GetCurrentToken().second == Token::GTE ||
+           lexer.GetCurrentToken().second == Token::EQ  || lexer.GetCurrentToken().second == Token::NEQ)
     {
         const auto currentToken = lexer.GetCurrentToken();
         lexer.Consume(lexer.GetCurrentToken().second);
         node = new BinaryOperationNode(node, currentToken, ParseExpr());
     }
+    return node;
+}
+//CONDITION := BOOL_EXPR (LOG_AND|LOG_OR) BOOL_EXPR | 
+            // BOOL_EXPR (LOG_AND|LOG_OR) CONDITION
+ASTNode* Parser::ParseCond()
+{
+    // Flag for handling parentheses when parsing factors.
+    // If at the process of parsing a condition, parentheses
+    // mean another condition is coming not an arithmetic expression
+    parsingCond = true;
+    ASTNode* node = ParseBoolExpr();
+
+    while (lexer.GetCurrentToken().second == Token::AND || lexer.GetCurrentToken().second == Token::OR)
+    {
+        const auto currentToken = lexer.GetCurrentToken();
+        lexer.Consume(lexer.GetCurrentToken().second);
+        node = new BinaryOperationNode(node, currentToken, ParseBoolExpr());
+    }
+    parsingCond = false;
     return node;
 }
 // IF_STATEMENT =: IF_KEY LPAR CONDITION RPAR { COMPOUND_STATEMENT }  [MORE NEEDED HERE]

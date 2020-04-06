@@ -11,6 +11,7 @@ private:
     ASTNode* ParseFactor();
     ASTNode* ParseTerm();
     ASTNode* ParseExpr();
+    ASTNode* ParseBoolExpr();
     ASTNode* ParseCond();
     ASTNode* ParseIf();
     ASTNode* ParseWhile();
@@ -23,7 +24,8 @@ private:
     ASTNode* ParseReturn();
     ASTNode* ParseEmpty();
 
-    bool failState = false; 
+    bool failState = false;
+    bool parsingCond = false;
 public:
     Parser(const Lexer& lex);
     ~Parser();
