@@ -111,9 +111,9 @@ class IfNode : public ASTNode
 public:
     ASTNode* condition;
     ASTNode* body;
-    std::string type;     // IF or ELSE_IF
+    std::string type;  // IF or ELSE_IF used only for visualization
 public:
-    IfNode(ASTNode* cond, ASTNode* b) noexcept : condition(cond), body(b) {}
+    IfNode(ASTNode* b, ASTNode* cond) noexcept : body(b),  condition(cond) {}
     ~IfNode()
     {
         delete condition;
