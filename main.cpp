@@ -1,6 +1,6 @@
 #include "Parser.h"
-#include "Symbol.h"
 #include "ASTVisualizer.h"
+#include "SemanticAnalyzer.h"
 #include "CodeGenerator.h"
 
 int main(int argc, char* argv[])
