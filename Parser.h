@@ -13,7 +13,8 @@ private:
     ASTNode* ParseExpr();
     ASTNode* ParseBoolExpr();
     ASTNode* ParseCond();
-    ASTNode* ParseIf();
+    ASTNode* ParseIfCond();
+    ASTNode* ParseIfStatement();
     ASTNode* ParseWhile();
     ASTNode* ParseDoWhile();
     ASTNode* ParseProgram();                      // main and functions and assignments/declarations - just main now - entry point
