@@ -46,6 +46,7 @@ enum class Token
     B_AND_ASSIGN,
 // Reserved Keywords       // Missing stuff, to be added as the parser expands - until then missing ones are treated as identifiers
     IF,
+    ELSE,
     WHILE,
     DO,
     INT_TYPE,
@@ -107,6 +108,7 @@ static std::unordered_map<std::string, Token> tokens =
 //-------Reserved Keywords-----------------------
 //-----------------------------------------------
     { "if"     , Token::IF           },
+    { "else"   , Token::ELSE         },
     { "while"  , Token::WHILE        },
     { "do"     , Token::DO           },
     { "int"    , Token::INT_TYPE     },

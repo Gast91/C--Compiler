@@ -219,7 +219,6 @@ void SemanticAnalyzer::Visit(DeclareStatementNode& n)
 
 void SemanticAnalyzer::Visit(AssignStatementNode& n)
 {
-    //std::string symbolName = static_cast<IdentifierNode*>(n.left)->name;
     IdentifierNode* identifier = dynamic_cast<IdentifierNode*>(n.left);
     if (!currentScope->LookUpSymbol(identifier->name))
     {
@@ -249,4 +248,6 @@ Add:	-Each VariableSymbol should have an address associated with it
         -Rename VariableSymbol to IdentifierSymbol?
         -Move SemanticAnalyzer into his own .h and .cpp files? Rename Symbol.h,Symbol.cpp to SymbolTable?
         -Missing Type Checking
+        -For more types->redefinition to happen must be same name and type
+        -main can be a variable but you cant have two identifiers with type function
 */

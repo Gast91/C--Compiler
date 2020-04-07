@@ -112,7 +112,7 @@ ASTNode* Parser::ParseCond()
 }
 
 // IF_STATEMENT =: IF_KEY LPAR CONDITION RPAR { COMPOUND_STATEMENT }  [MORE NEEDED HERE]
-ASTNode* Parser::ParseIf()
+ASTNode* Parser::ParseIf()                      // split parseIfCondition and ParseIfStatement() will also work with IfStatementNode and IfNode (i think)
 {
     // We already know the token is an if, begin parsing the statement
     lexer.Consume(Token::IF);
@@ -121,11 +121,27 @@ ASTNode* Parser::ParseIf()
     lexer.Consume(Token::RPAR);
 
     // Body of If statement can be a collection of statements
-    ASTNode* ifBody = ParseCompoundStatement();
+    return new IfNode(conditionNode, ParseCompoundStatement());
 
-    return new IfNode(conditionNode, ifBody);  // if here must have slots of multiple ifelse and 1 else, how? vector?
-
-    // if has a vector of pair? condition body and a ASTNode* elseBody check online
+    //IfNode* ifStatement = new IfNode(conditionNode, ParseCompoundStatement());
+    //while (lexer.GetCurrentToken().second == Token::ELSE)
+    //{
+    //    lexer.Consume(Token::ELSE);
+    //    if (lexer.GetCurrentToken().second == Token::IF)  // this is an if else
+    //    {
+    //        lexer.Consume(Token::IF);
+    //        lexer.Consume(Token::LPAR);
+    //        ASTNode* conditionNode = ParseCond();
+    //        lexer.Consume(Token::RPAR);
+    //        ifStatement->AddElseIf(conditionNode, ParseCompoundStatement());
+    //    }
+    //    else // this is just an else, process and return (cant have 2 else!)
+    //    {
+    //        ifStatement->elseBody = ParseCompoundStatement();
+    //        return ifStatement;
+    //    }
+    //}
+    //return ifStatement;  
 }
 
 // WHILE_STATEMENT := WHILE LPAR CONDITION RPAR { COMPOUND_STATEMENT }
@@ -155,7 +171,7 @@ ASTNode* Parser::ParseDoWhile()
 }
 
 // PROGRAM := int main LPAR RPAR { COMPOUND_STATEMENT }
-ASTNode* Parser::ParseProgram()                                // hacky way for only main now
+ASTNode* Parser::ParseProgram()                                // hacky way for only main now - ParseTranslationUnit-> ParseFunction or ParseDeclaration
 {
     lexer.Consume(Token::INT_TYPE);
     lexer.Consume(Token::MAIN);                                // hack here as well

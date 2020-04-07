@@ -47,16 +47,7 @@ void CodeGenerator::Visit(BinaryOperationNode& n)
     Return(instructions.back());
 }
 
-void CodeGenerator::Visit(ConditionNode& n)  // assert here! also in other "unused nodes"
-{
-    //std::cout << "HERE";
-    /*Quadruples q1 = GetValue(n.left);
-    Quadruples q2 = GetValue(n.right);
-    instructions.push_back({ n.op.first, q1.dest, q2.dest, "t" + std::to_string(temporaries) });
-    std::cout << "\nCHECK " << "t" + std::to_string(temporaries) << '\n';
-    Return(instructions.at(temporaries));
-    ++temporaries;*/
-}
+void CodeGenerator::Visit(ConditionNode& n) { assert(("Code Generator visited ConditionNode class?!", false)); }
 
 void CodeGenerator::Visit(IfNode& n)   // no else etc - would be nice, probably no if else - but first parser must be able to understand it
 {
@@ -83,7 +74,7 @@ void CodeGenerator::Visit(DoWhileNode& n)
     const auto startLabel = Label::NewLabel();
     instructions.push_back({ "Label", std::nullopt, std::nullopt, startLabel });
     if (n.body) PlainVisit(n.body);
-    instructions.push_back({ "IfZ", GetValue(n.condition).dest, std::nullopt, startLabel });  // jump if true not false! hmm
+    instructions.push_back({ "IfZ", GetValue(n.condition).dest, std::nullopt, startLabel });  // jump if true not false! hmm. You can negate it here?
 }
 
 void CodeGenerator::Visit(CompoundStatementNode& n)

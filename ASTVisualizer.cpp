@@ -98,7 +98,21 @@ void ASTVisualizer::Visit(IfNode& n)
 {
     if (consoleOutput)
     {
-        std::cout << "\nIF: " << "[";
+        //for (unsigned int i = 0; i < n.ifStatements.size(); ++i)
+        //{
+        //    std::cout << (i == 0 ? "\nIF: " : "\nELSEIF: ") << "[";
+        //    n.ifStatements.at(i).first->Accept(*this);
+        //    std::cout << " BODY: ";
+        //    // If body can be empty
+        //    if (n.ifStatements.at(i).second) n.ifStatements.at(i).second->Accept(*this);
+        //    std::cout << "]";
+        //}
+        //// Else body can be empty
+        //std::cout << "\nELSE: [ BODY: ";
+        //if (n.elseBody) n.elseBody->Accept(*this);
+        //std::cout << "]";
+
+        std::cout << "\nIF: [";
         n.condition->Accept(*this);
         std::cout << " BODY: ";
         // If body can be empty
@@ -107,6 +121,15 @@ void ASTVisualizer::Visit(IfNode& n)
     }
     else
     {
+        /*n.SetChildrenPrintID(GenerateJSON(out, &n, "IF", n.parentID, "IF", config));
+        for (unsigned int i = 0; i < n.ifStatements.size(); ++i)
+        {  
+            n.ifStatements.at(i).first->Accept(*this);
+            if (n.ifStatements.at(i).second) n.ifStatements.at(i).second->Accept(*this);
+        }
+        if (n.elseBody) n.elseBody->Accept(*this);*/
+
+
         n.SetChildrenPrintID(GenerateJSON(out, &n, "IF", n.parentID, "IF", config));
         n.condition->Accept(*this);
         if (n.body) n.body->Accept(*this);
@@ -136,7 +159,7 @@ void ASTVisualizer::Visit(DoWhileNode& n)
 {
     if (consoleOutput)
     {
-        std::cout << "\nDO: " << "[";
+        std::cout << "\nDO: [ BODY: ";
         if (n.body) n.body->Accept(*this);
         std::cout << " WHILE: ";
         // While-body can be empty

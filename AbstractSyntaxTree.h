@@ -105,22 +105,47 @@ public:
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
 
-// this should inherit from a ternary ASTNode
+// this should inherit from a ternary ASTNode   // IFStatementNode with multiple IfNodes under it and an elseBody
 class IfNode : public ASTNode
 {
 public:
     ASTNode* condition;
     ASTNode* body;
+    /*std::vector<std::pair<ASTNode*, ASTNode*>> ifStatements;
+    ASTNode* elseBody;*/
 public:
     IfNode(ASTNode* cond, ASTNode* b) noexcept : condition(cond), body(b) {}
+    /*IfNode(ASTNode* condition, ASTNode* body) noexcept { ifStatements.push_back(std::make_pair(condition, body)); }
+    ~IfNode()
+    {
+        for (const auto& ifStatement : ifStatements) 
+        { 
+            delete ifStatement.first; 
+            if (ifStatement.second) delete ifStatement.second; 
+        }
+        if (elseBody) delete elseBody;
+    }*/
     ~IfNode()
     {
         delete condition;
         if (body) delete body;
     }
-
+    //void AddElseIf(ASTNode* condition, ASTNode* body) { ifStatements.push_back(std::make_pair(condition, body)); }
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+    /*void SetChildrenPrintID(const std::string& pID) override
+    {
+        for (const auto& ifStatement : ifStatements)
+        {
+            ifStatement.first->parentID = pID;
+            ifStatement.second->parentID = pID;
+        }
+        elseBody->parentID = pID;
+    }*/
     void SetChildrenPrintID(const std::string& pID) override { condition->parentID = pID; body->parentID = pID; }
+
+    // vector of Ifs containing pair of condition and body. First is the if and subsequent is elseif
+    // func that pushes back condition and body nodes for each if/elseif parsed
+    // another node that is elseBody - compound
 };
 
 class IterationNode : public ASTNode
@@ -156,7 +181,7 @@ public:
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
 
-class CompoundStatementNode : public ASTNode   // make BlockNode inheriting from this to accomodate for scope { }
+class CompoundStatementNode : public ASTNode
 {
 public:
     std::vector<ASTNode*> statements;
