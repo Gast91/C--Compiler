@@ -270,8 +270,8 @@ bool SemanticAnalyzer::Success() const { return !failState; }
 Add:	-Each VariableSymbol should have an address associated with it
          So that the code generator later on - or assembly generator will know its stack offset
         -Rename VariableSymbol to IdentifierSymbol?
-        -Move SemanticAnalyzer into his own .h and .cpp files? Rename Symbol.h,Symbol.cpp to SymbolTable?
+        -Move SemanticAnalyzer into his own .h and .cpp files? Rename Symbol.h,Symbol.cpp to SymbolTable? <----
         -Missing Type Checking
         -For more types->redefinition to happen must be same name and type
-        -main can be a variable but you cant have two identifiers with type function
+         main can be a variable but you cant have two identifiers with type function
 */
