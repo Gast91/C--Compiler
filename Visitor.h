@@ -18,6 +18,7 @@ class DoWhileNode;
 class StatementBlockNode;
 class CompoundStatementNode;
 class DeclareStatementNode;
+class DeclareAssignNode;
 class AssignStatementNode;
 class ReturnStatementNode;
 class EmptyStatementNode;
@@ -46,6 +47,7 @@ public:
     virtual void Visit(StatementBlockNode& n) = 0;
     virtual void Visit(CompoundStatementNode& n) = 0;
     virtual void Visit(DeclareStatementNode& n) = 0;
+    virtual void Visit(DeclareAssignNode& n) = 0;
     virtual void Visit(AssignStatementNode& n) = 0;
     virtual void Visit(ReturnStatementNode& n) = 0;
     virtual void Visit(EmptyStatementNode& n) = 0;

@@ -30,6 +30,7 @@ public:
     void Visit(StatementBlockNode& n)    override;
     void Visit(CompoundStatementNode& n) override;
     void Visit(DeclareStatementNode& n)  override;
+    void Visit(DeclareAssignNode& n)     override;
     void Visit(AssignStatementNode& n)   override;
     void Visit(ReturnStatementNode& n)   override;
     void Visit(EmptyStatementNode& n)    override;

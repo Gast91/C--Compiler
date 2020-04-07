@@ -216,6 +216,14 @@ public:
     void SetChildrenPrintID(const std::string& pID) override {identifier->parentID = pID; }
 };
 
+class DeclareAssignNode : public BinaryASTNode
+{
+public:
+    DeclareAssignNode(DeclareStatementNode* decl, ASTNode* expr) noexcept : BinaryASTNode(decl, { "=", Token::ASSIGN }, expr) {}
+
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+};
+
 class AssignStatementNode : public BinaryASTNode
 {
 public:

@@ -10,8 +10,8 @@ SemanticAnalyzer::SemanticAnalyzer()
 
 SemanticAnalyzer::~SemanticAnalyzer() { for (const auto& scope : symbolTable) delete scope; }
 
-void SemanticAnalyzer::Visit(ASTNode& n) { assert(("Semantic Analyzer visited base ASTNode class?!", false)); }
-void SemanticAnalyzer::Visit(UnaryASTNode& n) { assert(("Semantic Analyzer visited base UnaryASTNode class?!", false)); }
+void SemanticAnalyzer::Visit(ASTNode& n)       { assert(("Semantic Analyzer visited base ASTNode class?!"      , false)); }
+void SemanticAnalyzer::Visit(UnaryASTNode& n)  { assert(("Semantic Analyzer visited base UnaryASTNode class?!" , false)); }
 void SemanticAnalyzer::Visit(BinaryASTNode& n) { assert(("Semantic Analyzer visited base BinaryASTNode class?!", false)); }
 void SemanticAnalyzer::Visit(IntegerNode& n) {}
 
@@ -173,6 +173,12 @@ void SemanticAnalyzer::Visit(DeclareStatementNode& n)
         throw SymbolRedefinitionException("Redefinition of identifier '" + variableName + "' at line " + line + " in scope '"
             + currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
     }
+}
+
+void SemanticAnalyzer::Visit(DeclareAssignNode& n)
+{
+    n.left->Accept(*this);
+    n.right->Accept(*this);
 }
 
 void SemanticAnalyzer::Visit(AssignStatementNode& n)

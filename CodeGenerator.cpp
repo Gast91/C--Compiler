@@ -28,8 +28,8 @@ void CodeGenerator::GenerateAssembly(ASTNode* n)
     }
 }
 
-void CodeGenerator::Visit(ASTNode& n)        { assert(("Code Generator visited base ASTNode class?!", false)); }
-void CodeGenerator::Visit(UnaryASTNode& n)   { assert(("Code Generator visited base UnaryASTNode class?!", false)); }
+void CodeGenerator::Visit(ASTNode& n)        { assert(("Code Generator visited base ASTNode class?!"      , false)); }
+void CodeGenerator::Visit(UnaryASTNode& n)   { assert(("Code Generator visited base UnaryASTNode class?!" , false)); }
 void CodeGenerator::Visit(BinaryASTNode& n)  { assert(("Code Generator visited base BinaryASTNode class?!", false)); }
 // Integer and Identifier Leaf Nodes. A throwaway Quadruple is returned that effectively passes back their value or name
 void CodeGenerator::Visit(IntegerNode& n)    { Return({ std::nullopt, std::nullopt, std::nullopt, std::to_string(n.value) }); }
@@ -93,9 +93,15 @@ void CodeGenerator::Visit(StatementBlockNode& n) { for (const auto& statement : 
 
 void CodeGenerator::Visit(DeclareStatementNode& n)
 {
-    // no visiting probs
-    // just visit? or do nothing? Semantic Analyzer has taken care of variables being declared etc
-    // it will need to do type checking also (in the future) and tell code generator size of var?
+    // it will need to do type checking also (in the future) and tell code generator size of var? here or in semantic analysis?
+    Return(GetValue(n.identifier));  // might change but for now this returns its identifier, used only for declare-assign
+}
+
+void CodeGenerator::Visit(DeclareAssignNode& n)
+{
+    // Get the temporary or literal or identifier from the expression to the right and push an assignment
+    // instruction using the identifier from the left as the destination
+    instructions.push_back({ n.op.first, GetValue(n.right).dest, std::nullopt, GetValue(n.left).dest });
 }
 
 void CodeGenerator::Visit(AssignStatementNode& n)
@@ -114,8 +120,7 @@ void CodeGenerator::Visit(EmptyStatementNode& n) {}
 // TODO:
 /*
     -Fix/Add Nodes into the ast to accomodate main/entry point - potentially more? 
-    -Start filling out the functions - output TAC into the console for start (if else's next, if needs modifying)
-    -Rename+cpp+h to CodeGeneratorIR?
+    -Rename+cpp+h to IRGenerator || IRCGenerator || CodeGeneratorIR -- Last will be AssemblyGenerator(not a visitor this time?)
 
     check asserts if work - dont care?
     conserve temporaries - the t0 = a * b --> c = t0 is annoying!!!

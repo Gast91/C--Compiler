@@ -230,18 +230,28 @@ ASTNode* Parser::ParseStatement()                                               
     else throw UnexpectedTokenException("Encountered unexpected token '" + lexer.GetCurrentToken().first + "' at line " + lexer.GetLine());
 }
 
-// DECLARATION_STATEMENT := INT/FLOAT/.. IDENTIFIER SEMI
+// DECLARATION_STATEMENT := TYPE_SPECIFIER IDENTIFIER SEMI |
+                          //TYPE_SPECIFIER ASSIGN_STATEMENT
 ASTNode* Parser::ParseDeclarationStatement()
 {
-    // Type Specifier is next (int, float, char etc..)
-    const auto currentToken = lexer.GetCurrentToken();
-    lexer.Consume(currentToken.second);
-
-    // Next is the identifier
-    IdentifierNode* ident = new IdentifierNode(lexer.GetCurrentToken().first, lexer.GetLine(), currentToken.second);
+    // Get the type specifier (int, float, char etc..) and consume it
+    const auto typeToken = lexer.GetCurrentToken();
+    lexer.Consume(typeToken.second);
+    // Next is identifier so process it
+    IdentifierNode* ident = new IdentifierNode(lexer.GetCurrentToken().first, lexer.GetLine(), typeToken.second);
     lexer.Consume(Token::IDENTIFIER);
+    // If there is an assignment following this is a declaration and assignment statement in one
+    if (lexer.GetCurrentToken().second == Token::ASSIGN)
+    {
+        // Process the rest as a declare and assign statement
+        lexer.Consume(Token::ASSIGN);
+        DeclareAssignNode* node = new DeclareAssignNode(new DeclareStatementNode(ident, typeToken), ParseExpr());
+        lexer.Consume(Token::SEMI);
+        return node;
+    }
+    // Or is was just a declare statement
     lexer.Consume(Token::SEMI);
-    return new DeclareStatementNode(ident, currentToken);
+    return new DeclareStatementNode(ident, typeToken);
 }
 
 // ASSIGN_STATEMENT := IDENTIFIER ASSIGN EXPRESSION
@@ -268,7 +278,6 @@ ASTNode* Parser::ParseReturn()
 
 ASTNode* Parser::ParseEmpty() { return new EmptyStatementNode(); }  // OBSOLETE - REMOVE HERE AND FROM VISITOR CLASSES FOR REMOVAL
 
-// COMPLETE IF'S - MAKE DECLARE ASSIGN
 // FEATURES MISSING TODO:
 /*
     MUST:
@@ -285,7 +294,6 @@ ASTNode* Parser::ParseEmpty() { return new EmptyStatementNode(); }  // OBSOLETE 
 
 // GRAMMARS TODO :
 /*
-NO DECL AND ASSIGN IN ONE - NOT REALLY IMPORTANT ATM
 FOR_STATEMENT := FOR LPAR (ASSIGN_STATEMENT | EMPTY_STATEMENT) (CONDITION | EMPTY_STATEMENT) (STEP | EMPTY_STATEMENT) RPAR { COMPOUND_STATEMENT }
 FUNCTION := TYPE IDENTIFIER (  comma separated list of type identifiers ) { COMPOUND_STATEMENT }
 ARRAYS?

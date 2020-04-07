@@ -205,6 +205,24 @@ void ASTVisualizer::Visit(DeclareStatementNode& n)
     }
 }
 
+void ASTVisualizer::Visit(DeclareAssignNode& n)
+{
+    if (consoleOutput)
+    {
+        std::cout << '\n' << "DECL_ASSIGN: [L: ";
+        n.left->Accept(*this);
+        std::cout << " R: ";
+        n.right->Accept(*this);
+        std::cout << "]";
+    }
+    else
+    {
+        n.SetChildrenPrintID(GenerateJSON(out, &n, "DECL_ASSIGN", n.parentID, n.op.first, config));
+        n.left->Accept(*this);
+        n.right->Accept(*this);
+    }
+}
+
 void ASTVisualizer::Visit(AssignStatementNode& n)
 {
     if (consoleOutput)

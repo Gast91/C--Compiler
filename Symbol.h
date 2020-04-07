@@ -70,7 +70,3 @@ public:
 
     void Print();
 };
-
-/*
-    -Visitor parameters const? dont think it conflicts with anything
-*/
