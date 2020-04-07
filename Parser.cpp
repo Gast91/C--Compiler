@@ -114,14 +114,39 @@ ASTNode* Parser::ParseCond()
 // IF_STATEMENT =: IF_KEY LPAR CONDITION RPAR { COMPOUND_STATEMENT }  [MORE NEEDED HERE]
 ASTNode* Parser::ParseIf()                      // split parseIfCondition and ParseIfStatement() will also work with IfStatementNode and IfNode (i think)
 {
+    // OLD WORKING WAY
     // We already know the token is an if, begin parsing the statement
-    lexer.Consume(Token::IF);
-    lexer.Consume(Token::LPAR);
-    ASTNode* conditionNode = ParseCond();
-    lexer.Consume(Token::RPAR);
+    //lexer.Consume(Token::IF);
+    //lexer.Consume(Token::LPAR);
+    //ASTNode* conditionNode = ParseCond();
+    //lexer.Consume(Token::RPAR);
+    //// Body of If statement can be a collection of statements
+    //return new IfNode(conditionNode, ParseCompoundStatement());
 
-    // Body of If statement can be a collection of statements
-    return new IfNode(conditionNode, ParseCompoundStatement());
+    IfStatementNode* ifStatement = new IfStatementNode();
+    lexer.Consume(Token::IF);               // THIS SHOULD BE A SEPERATE PARSEIF() - MAYBE INVERT PARAMS ALSO TO CALL FUNCS IN THE IFSTATEMENT?
+    lexer.Consume(Token::LPAR);             // THIS SHOULD BE A SEPERATE PARSEIF() - MAYBE INVERT PARAMS ALSO TO CALL FUNCS IN THE IFSTATEMENT?
+    ASTNode* conditionNode = ParseCond();   // THIS SHOULD BE A SEPERATE PARSEIF() - MAYBE INVERT PARAMS ALSO TO CALL FUNCS IN THE IFSTATEMENT?
+    lexer.Consume(Token::RPAR);             // THIS SHOULD BE A SEPERATE PARSEIF() - MAYBE INVERT PARAMS ALSO TO CALL FUNCS IN THE IFSTATEMENT?
+    ifStatement->AddNode(new IfNode(conditionNode, ParseCompoundStatement()));
+    while (lexer.GetCurrentToken().second == Token::ELSE)
+    {
+        lexer.Consume(Token::ELSE);
+        if (lexer.GetCurrentToken().second == Token::IF)  // this is an if else
+        {
+            lexer.Consume(Token::IF);             // PARSEIF()!!
+            lexer.Consume(Token::LPAR);           // PARSEIF()!!
+            ASTNode* conditionNode = ParseCond(); // PARSEIF()!!
+            lexer.Consume(Token::RPAR);           // PARSEIF()!!
+            ifStatement->AddNode(new IfNode(conditionNode, ParseCompoundStatement()));
+        }
+        else // this is just an else, process and return (cant have 2 else!)
+        {
+            ifStatement->elseBody = ParseCompoundStatement();
+            return ifStatement;
+        }
+    }
+    return ifStatement;
 
     //IfNode* ifStatement = new IfNode(conditionNode, ParseCompoundStatement());
     //while (lexer.GetCurrentToken().second == Token::ELSE)

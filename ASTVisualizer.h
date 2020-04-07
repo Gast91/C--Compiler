@@ -27,6 +27,7 @@ public:
     void Visit(BinaryOperationNode& n)   override;
     void Visit(ConditionNode& n)         override;
     void Visit(IfNode& n)                override;
+    void Visit(IfStatementNode& n)       override;
     void Visit(IterationNode& n)         override;
     void Visit(WhileNode& n)             override;
     void Visit(DoWhileNode& n)           override;

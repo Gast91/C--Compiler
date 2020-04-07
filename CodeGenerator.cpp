@@ -51,10 +51,14 @@ void CodeGenerator::Visit(ConditionNode& n) { assert(("Code Generator visited Co
 
 void CodeGenerator::Visit(IfNode& n)   // no else etc - would be nice, probably no if else - but first parser must be able to understand it
 {
-    const auto falseLabel = Label::NewLabel();
-    instructions.push_back({ "IfZ", GetValue(n.condition).dest, std::nullopt, falseLabel });  // better encoding here? can be others than IfFalse(Z) based on cond operator?
-    if (n.body) PlainVisit(n.body);
-    instructions.push_back({ "Label", std::nullopt, std::nullopt, falseLabel });
+    //const auto falseLabel = Label::NewLabel();
+    //instructions.push_back({ "IfZ", GetValue(n.condition).dest, std::nullopt, falseLabel });  // better encoding here? can be others than IfFalse(Z) based on cond operator?
+    //if (n.body) PlainVisit(n.body);
+    //instructions.push_back({ "Label", std::nullopt, std::nullopt, falseLabel });
+}
+void CodeGenerator::Visit(IfStatementNode& n)
+{
+    // nothing for now
 }
 void CodeGenerator::Visit(IterationNode& n) { assert(("Code Generator visited base IterationNode class?!", false)); }
 

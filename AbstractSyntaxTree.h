@@ -105,47 +105,49 @@ public:
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
 
-// this should inherit from a ternary ASTNode   // IFStatementNode with multiple IfNodes under it and an elseBody
+// Node representing an IF condition body or an ELSE_IF condition body. Part of an umbrella IfStatementNode
 class IfNode : public ASTNode
 {
 public:
     ASTNode* condition;
     ASTNode* body;
-    /*std::vector<std::pair<ASTNode*, ASTNode*>> ifStatements;
-    ASTNode* elseBody;*/
+    std::string type;     // IF or ELSE_IF
 public:
     IfNode(ASTNode* cond, ASTNode* b) noexcept : condition(cond), body(b) {}
-    /*IfNode(ASTNode* condition, ASTNode* body) noexcept { ifStatements.push_back(std::make_pair(condition, body)); }
-    ~IfNode()
-    {
-        for (const auto& ifStatement : ifStatements) 
-        { 
-            delete ifStatement.first; 
-            if (ifStatement.second) delete ifStatement.second; 
-        }
-        if (elseBody) delete elseBody;
-    }*/
     ~IfNode()
     {
         delete condition;
         if (body) delete body;
     }
-    //void AddElseIf(ASTNode* condition, ASTNode* body) { ifStatements.push_back(std::make_pair(condition, body)); }
-    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
-    /*void SetChildrenPrintID(const std::string& pID) override
-    {
-        for (const auto& ifStatement : ifStatements)
-        {
-            ifStatement.first->parentID = pID;
-            ifStatement.second->parentID = pID;
-        }
-        elseBody->parentID = pID;
-    }*/
-    void SetChildrenPrintID(const std::string& pID) override { condition->parentID = pID; body->parentID = pID; }
 
-    // vector of Ifs containing pair of condition and body. First is the if and subsequent is elseif
-    // func that pushes back condition and body nodes for each if/elseif parsed
-    // another node that is elseBody - compound
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+    void SetChildrenPrintID(const std::string& pID) override { condition->parentID = pID; body->parentID = pID; }
+};
+
+// Node representing a collection of an IFNode, several ELSE_IF and an ELSE CompoundStatementNode
+class IfStatementNode : public ASTNode
+{
+public:
+    std::vector<IfNode*> ifNodes;
+    ASTNode* elseBody;
+public:
+    ~IfStatementNode()
+    {
+        for (const auto& ifN : ifNodes)  delete ifN;
+        if (elseBody) delete elseBody;
+    }
+
+    void AddNode(IfNode* node)
+    {
+        ifNodes.empty() ? node->type = "IF" : node->type = "ELSEIF";
+        ifNodes.push_back(node);
+    }
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+    void SetChildrenPrintID(const std::string& pID) override
+    {
+        for (const auto& ifN : ifNodes) ifN->parentID = pID;
+        elseBody->parentID = pID;
+    }
 };
 
 class IterationNode : public ASTNode
@@ -239,6 +241,5 @@ public:
 };
 
 /*
-Fix/Add:  -IFNode should be ternary - condition, else, vector of elseIf's (can be IfNodes)
-          -Store type in literals?
+Fix/Add:    -Store type in literals?
 */

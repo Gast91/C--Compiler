@@ -112,7 +112,7 @@ void SemanticAnalyzer::Visit(IfNode& n)
 
     // Semantic Analysis up unti the condition has been performed, body belongs to a different, nested scope
     // Generate a name for it and add the nested scope as a symbol into the parent scope (current)
-    std::string nestedScopeName = GenerateID(&n, "IF_");
+    std::string nestedScopeName = GenerateID(&n, (n.type + "_").c_str());//"IF_");
     currentScope->DefineSymbol(new NestedScope(nestedScopeName));
 
     // New nested scope with the nested scope name, at a greater depth than the current with the current scope as its parent
@@ -124,6 +124,30 @@ void SemanticAnalyzer::Visit(IfNode& n)
 
     // Perform Semantic Analysis to the "contents" of this new scope
     n.body->Accept(*this);
+
+    // After we are done with the body of this nested statement we go back to the parent scope
+    currentScope = nestedScope->parentScope;
+}
+
+void SemanticAnalyzer::Visit(IfStatementNode& n)
+{
+    // Visit all if-else if statements under this umbrella if statement and perform semantic analysis
+    for (const auto& ifN : n.ifNodes) ifN->Accept(*this);
+
+    // Else body belongs to a different, nested scope. Generate name for it
+    // and add the nested scope as a symbol into the parent scope (current)
+    std::string nestedScopeName = GenerateID(&n, "ELSE_");
+    currentScope->DefineSymbol(new NestedScope(nestedScopeName));
+
+    // New nested scope with the nested scope name, at a greater depth than the current with the current scope as its parent
+    SymbolTable* nestedScope = new SymbolTable(nestedScopeName, currentScope->scopeLevel + 1, currentScope);
+
+    // Current scope becomes this new scope
+    symbolTable.push_back(nestedScope);
+    currentScope = nestedScope;
+
+    // Perform Semantic Analysis to the "contents" of this new scope
+    n.elseBody->Accept(*this);
 
     // After we are done with the body of this nested statement we go back to the parent scope
     currentScope = nestedScope->parentScope;
@@ -219,7 +243,7 @@ void SemanticAnalyzer::Visit(DeclareStatementNode& n)
 
 void SemanticAnalyzer::Visit(AssignStatementNode& n)
 {
-    IdentifierNode* identifier = dynamic_cast<IdentifierNode*>(n.left);
+    const IdentifierNode* identifier = dynamic_cast<IdentifierNode*>(n.left);
     if (!currentScope->LookUpSymbol(identifier->name))
     {
         failState = true;
