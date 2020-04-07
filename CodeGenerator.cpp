@@ -49,16 +49,17 @@ void CodeGenerator::Visit(BinaryOperationNode& n)
 
 void CodeGenerator::Visit(ConditionNode& n) { assert(("Code Generator visited ConditionNode class?!", false)); }
 
-void CodeGenerator::Visit(IfNode& n)   // no else etc - would be nice, probably no if else - but first parser must be able to understand it
+void CodeGenerator::Visit(IfNode& n)
 {
-    //const auto falseLabel = Label::NewLabel();
-    //instructions.push_back({ "IfZ", GetValue(n.condition).dest, std::nullopt, falseLabel });  // better encoding here? can be others than IfFalse(Z) based on cond operator?
-    //if (n.body) PlainVisit(n.body);
-    //instructions.push_back({ "Label", std::nullopt, std::nullopt, falseLabel });
+    const auto falseLabel = Label::NewLabel();                                                // are all relational operators allowed? do i need more spliting or something?
+    instructions.push_back({ "IfZ", GetValue(n.condition).dest, std::nullopt, falseLabel });  // better encoding here? can be others than IfFalse(Z) based on cond operator?
+    if (n.body) PlainVisit(n.body);
+    instructions.push_back({ "Label", std::nullopt, std::nullopt, falseLabel });
 }
 void CodeGenerator::Visit(IfStatementNode& n)
 {
-    // nothing for now
+    for (const auto& ifN : n.ifNodes) PlainVisit(ifN);
+    if (n.elseBody) PlainVisit(n.elseBody);
 }
 void CodeGenerator::Visit(IterationNode& n) { assert(("Code Generator visited base IterationNode class?!", false)); }
 
