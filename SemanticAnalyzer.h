@@ -1,21 +1,17 @@
-#pragma once
-#include <vector>
-#include <fstream>
-
+#include "Symbol.h"
 #include "Visitor.h"
-#include "Utility.h"
+#include "Error.h"
 
-class ASTVisualizer : public ASTNodeVisitor
+class SemanticAnalyzer : public ASTNodeVisitor
 {
 private:
-    std::vector<std::string> config;
-    std::ofstream out;
-    bool consoleOutput;
-public:
-    ASTVisualizer(bool console = true) noexcept;
-    ~ASTVisualizer() = default;
+    std::vector<SymbolTable*> symbolTable;
+    SymbolTable* currentScope;
 
-    void PrintAST(ASTNode& n);
+    bool failState = false;
+public:
+    SemanticAnalyzer();
+    ~SemanticAnalyzer();
 
     // Inherited via ASTNodeVisitor
     void Visit(ASTNode& n)               override;
@@ -37,4 +33,7 @@ public:
     void Visit(AssignStatementNode& n)   override;
     void Visit(ReturnStatementNode& n)   override;
     void Visit(EmptyStatementNode& n)    override;
+
+    void PrintAnalysisInfo() const;
+    bool Success() const;
 };

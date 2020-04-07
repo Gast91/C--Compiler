@@ -27,20 +27,20 @@ void ASTVisualizer::PrintAST(ASTNode& n)
     std::cout << "\n\nAST Visualisation File Successfully created\n";
 }
 
-void ASTVisualizer::Visit(ASTNode& n)       { assert(("ASTVisualizer visited base ASTNode class?!", false)); }
-void ASTVisualizer::Visit(UnaryASTNode& n)  { assert(("ASTVisualizer visited base UnaryASTNode class?!", false)); }
+void ASTVisualizer::Visit(ASTNode& n)       { assert(("ASTVisualizer visited base ASTNode class?!"      , false)); }
+void ASTVisualizer::Visit(UnaryASTNode& n)  { assert(("ASTVisualizer visited base UnaryASTNode class?!" , false)); }
 void ASTVisualizer::Visit(BinaryASTNode& n) { assert(("ASTVisualizer visited base BinaryASTNode class?!", false)); }
 
 void ASTVisualizer::Visit(IntegerNode& n)
 {
     if   (consoleOutput) std::cout << "Int: " << n.value;
-    else GenerateJSON(out, &n, "INT", n.parentID, std::to_string(n.value), config);
+    else (void)GenerateJSON(out, &n, "INT", n.parentID, std::to_string(n.value), config);
 }
 
 void ASTVisualizer::Visit(IdentifierNode& n)
 {
     if    (consoleOutput) std::cout << "Ident: " << n.name;
-    else  GenerateJSON(out, &n, "ID", n.parentID, n.name, config);
+    else  (void)GenerateJSON(out, &n, "ID", n.parentID, n.name, config);
 }
 
 void ASTVisualizer::Visit(UnaryOperationNode& n)
@@ -98,7 +98,7 @@ void ASTVisualizer::Visit(IfNode& n)
 {
     if (consoleOutput)
     {
-        std::cout << "\nIF: " << "[";
+        std::cout << '\n' << n.type << ": [";
         n.condition->Accept(*this);
         std::cout << " BODY: ";
         // If body can be empty
@@ -107,11 +107,34 @@ void ASTVisualizer::Visit(IfNode& n)
     }
     else
     {
-        n.SetChildrenPrintID(GenerateJSON(out, &n, "IF", n.parentID, "IF", config));
+        n.SetChildrenPrintID(GenerateJSON(out, &n, n.type.c_str(), n.parentID, n.type.c_str(), config));
         n.condition->Accept(*this);
         if (n.body) n.body->Accept(*this);
     }
 }
+
+void ASTVisualizer::Visit(IfStatementNode& n)
+{
+    if (consoleOutput)
+    {
+        std::cout << "\nIF_STATEMENT: [";
+        for (const auto& ifN : n.ifNodes) ifN->Accept(*this);
+        std::cout << "]";
+        if (n.elseBody)
+        {
+            std::cout << "\nELSE: [ BODY: ";
+            n.elseBody->Accept(*this);
+            std::cout << "]";
+        }
+    }
+    else
+    {
+        n.SetChildrenPrintID(GenerateJSON(out, &n, "_IF_", n.parentID, "_IF_", config));  // else is compound so parent automatically becomes _IF_ shows no else!
+        for (const auto& ifN : n.ifNodes) ifN->Accept(*this);
+        n.elseBody->Accept(*this);
+    }
+}
+
 void ASTVisualizer::Visit(IterationNode& n) { assert(("ASTVisualizer visited base IterationNode class?!", false)); }
 void ASTVisualizer::Visit(WhileNode& n)
 {
@@ -136,7 +159,7 @@ void ASTVisualizer::Visit(DoWhileNode& n)
 {
     if (consoleOutput)
     {
-        std::cout << "\nDO: " << "[";
+        std::cout << "\nDO: [ BODY: ";
         if (n.body) n.body->Accept(*this);
         std::cout << " WHILE: ";
         // While-body can be empty

@@ -111,21 +111,33 @@ ASTNode* Parser::ParseCond()
     return node;
 }
 
-// IF_STATEMENT =: IF_KEY LPAR CONDITION RPAR { COMPOUND_STATEMENT }  [MORE NEEDED HERE]
-ASTNode* Parser::ParseIf()
+ASTNode* Parser::ParseIfCond()
 {
-    // We already know the token is an if, begin parsing the statement
     lexer.Consume(Token::IF);
     lexer.Consume(Token::LPAR);
     ASTNode* conditionNode = ParseCond();
     lexer.Consume(Token::RPAR);
+    return conditionNode;
+}
 
-    // Body of If statement can be a collection of statements
-    ASTNode* ifBody = ParseCompoundStatement();
-
-    return new IfNode(conditionNode, ifBody);  // if here must have slots of multiple ifelse and 1 else, how? vector?
-
-    // if has a vector of pair? condition body and a ASTNode* elseBody check online
+// IF_STATEMENT =: IF_KEY LPAR CONDITION RPAR { COMPOUND_STATEMENT }  [MORE NEEDED HERE]
+ASTNode* Parser::ParseIfStatement()
+{
+    IfStatementNode* ifStatement = new IfStatementNode();
+    ifStatement->AddNode(new IfNode(ParseCompoundStatement(), ParseIfCond()));
+    while (lexer.GetCurrentToken().second == Token::ELSE)  // Can be 0 or more else if's and 0 or 1 else
+    {
+        // Is there an else if coming?
+        lexer.Consume(Token::ELSE);
+        if (lexer.GetCurrentToken().second == Token::IF) { ifStatement->AddNode(new IfNode(ParseCompoundStatement(), ParseIfCond())); }
+        else // or just an else?
+        {
+            ifStatement->elseBody = ParseCompoundStatement();
+            // Cant have more than one else
+            return ifStatement;
+        }
+    }
+    return ifStatement;
 }
 
 // WHILE_STATEMENT := WHILE LPAR CONDITION RPAR { COMPOUND_STATEMENT }
@@ -155,7 +167,7 @@ ASTNode* Parser::ParseDoWhile()
 }
 
 // PROGRAM := int main LPAR RPAR { COMPOUND_STATEMENT }
-ASTNode* Parser::ParseProgram()                                // hacky way for only main now
+ASTNode* Parser::ParseProgram()                                // hacky way for only main now - ParseTranslationUnit-> ParseFunction or ParseDeclaration
 {
     lexer.Consume(Token::INT_TYPE);
     lexer.Consume(Token::MAIN);                                // hack here as well
@@ -206,7 +218,7 @@ std::vector<ASTNode*> Parser::ParseStatementList()
 ASTNode* Parser::ParseStatement()                                                        // FOR/OTHER STAMENTS..etc go here
 {
     const auto currentToken = lexer.GetCurrentToken().second;
-    if         (currentToken == Token::IF)         return ParseIf();
+    if         (currentToken == Token::IF)         return ParseIfStatement();
     else if    (currentToken == Token::WHILE)      return ParseWhile();                  // Merge Loop Statements?
     else if    (currentToken == Token::DO)         return ParseDoWhile();
     else if    (currentToken == Token::RET)        return ParseReturn();

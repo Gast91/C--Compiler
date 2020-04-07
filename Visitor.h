@@ -11,6 +11,7 @@ class UnaryOperationNode;
 class BinaryOperationNode;
 class ConditionNode;
 class IfNode;
+class IfStatementNode;
 class IterationNode;
 class WhileNode;
 class DoWhileNode;
@@ -38,6 +39,7 @@ public:
     virtual void Visit(BinaryOperationNode& n) = 0;
     virtual void Visit(ConditionNode& n) = 0;
     virtual void Visit(IfNode& n) = 0;
+    virtual void Visit(IfStatementNode& n) = 0;
     virtual void Visit(IterationNode& n) = 0;
     virtual void Visit(WhileNode& n) = 0;
     virtual void Visit(DoWhileNode& n) = 0;

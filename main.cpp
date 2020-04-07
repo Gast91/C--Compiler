@@ -1,6 +1,6 @@
 #include "Parser.h"
-#include "Symbol.h"
 #include "ASTVisualizer.h"
+#include "SemanticAnalyzer.h"
 #include "CodeGenerator.h"
 
 int main(int argc, char* argv[])
@@ -21,11 +21,17 @@ int main(int argc, char* argv[])
         try { parser.GetAST()->Accept(semanticAnalyzer); }
         catch (const std::exception& ex) { std::cout << '\n' << ex.what(); }
         // Show symbol table info gathered by the semantic analysis
-        semanticAnalyzer.PrintAnalysisInfo();
 
-        // If semantic analysis was a success then go forward
-        CodeGenerator codeGenerator;
-        codeGenerator.GenerateAssembly(parser.GetAST());
+        if (semanticAnalyzer.Success())
+        {
+            semanticAnalyzer.PrintAnalysisInfo();
+            // If semantic analysis was a success then generate intermediate code
+            CodeGenerator codeGenerator;
+            codeGenerator.GenerateAssembly(parser.GetAST());
+            // Transform intermediate code to assembly
+            // Print|Output to file
+            // Pass assembly to assembler?!
+        }   
     }
     std::cin.get(); // Debug Only - Get rid for actual
     _CrtSetDbgFlag(_CRTDBG_LEAK_CHECK_DF);  // _CrtDumpMemoryLeaks() will be called AFTER main has been exited

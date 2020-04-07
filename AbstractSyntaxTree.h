@@ -105,14 +105,15 @@ public:
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
 
-// this should inherit from a ternary ASTNode
+// Node representing an IF condition body or an ELSE_IF condition body. Part of an umbrella IfStatementNode
 class IfNode : public ASTNode
 {
 public:
     ASTNode* condition;
     ASTNode* body;
+    std::string type;  // IF or ELSE_IF used only for visualization
 public:
-    IfNode(ASTNode* cond, ASTNode* b) noexcept : condition(cond), body(b) {}
+    IfNode(ASTNode* b, ASTNode* cond) noexcept : body(b),  condition(cond) {}
     ~IfNode()
     {
         delete condition;
@@ -121,6 +122,32 @@ public:
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
     void SetChildrenPrintID(const std::string& pID) override { condition->parentID = pID; body->parentID = pID; }
+};
+
+// Node representing a collection of an IFNode, several ELSE_IF and an ELSE CompoundStatementNode
+class IfStatementNode : public ASTNode
+{
+public:
+    std::vector<IfNode*> ifNodes;
+    ASTNode* elseBody;
+public:
+    ~IfStatementNode()
+    {
+        for (const auto& ifN : ifNodes)  delete ifN;
+        if (elseBody) delete elseBody;
+    }
+
+    void AddNode(IfNode* node)
+    {
+        ifNodes.empty() ? node->type = "IF" : node->type = "ELSEIF";
+        ifNodes.push_back(node);
+    }
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+    void SetChildrenPrintID(const std::string& pID) override
+    {
+        for (const auto& ifN : ifNodes) ifN->parentID = pID;
+        elseBody->parentID = pID;
+    }
 };
 
 class IterationNode : public ASTNode
@@ -156,7 +183,7 @@ public:
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
 
-class CompoundStatementNode : public ASTNode   // make BlockNode inheriting from this to accomodate for scope { }
+class CompoundStatementNode : public ASTNode
 {
 public:
     std::vector<ASTNode*> statements;
@@ -214,6 +241,5 @@ public:
 };
 
 /*
-Fix/Add:  -IFNode should be ternary - condition, else, vector of elseIf's (can be IfNodes)
-          -Store type in literals?
+Fix/Add:    -Store type in literals?
 */
