@@ -5,12 +5,27 @@
 #include "Token.h"
 #include "Visitor.h"
 
+#define OPTIMIZE   // This global somehow?
+#ifdef OPTIMIZE
+#define obtain_source(x) Temporary::CheckAndRecycle(GetValue(x).dest)
+#else
+#define obtain_source(x) GetValue(x).dest
+#endif // OPTIMIZE
+
 class Temporary
 {
 private:
     static int tempCount;
 public:
     static const std::string NewTemporary() { return "_t" + std::to_string(tempCount++);  }
+    // If a temporary is passed to it, it drops the counter effectively recycling that temporary
+    // This should never be called by itself and rather through the obtain_source macro. I know bad design...
+    static const std::optional<std::string>& CheckAndRecycle(const std::optional<std::string>& potentialTemporary)
+    { 
+        // What if an identifier starting with _t is passed to it...
+        if (!potentialTemporary.value().compare(0, 2, "_t")) --tempCount;
+        return potentialTemporary;
+    }
 };
 
 class Label

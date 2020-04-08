@@ -39,13 +39,22 @@ void CodeGenerator::Visit(IdentifierNode& n) { Return({ std::nullopt, std::nullo
 
 void CodeGenerator::Visit(UnaryOperationNode& n)
 {
-    instructions.push_back({ n.op.first, GetValue(n.expr).dest, std::nullopt, Temporary::NewTemporary() });
+    instructions.push_back({ n.op.first, obtain_source(n.expr), std::nullopt, Temporary::NewTemporary() });
     Return(instructions.back());
 }
 
 void CodeGenerator::Visit(BinaryOperationNode& n)
 {
-    instructions.push_back({ n.op.first, GetValue(n.left).dest, GetValue(n.right).dest, Temporary::NewTemporary() });
+#ifdef  OPTIMIZE
+    const auto src1 = obtain_source(n.left);
+    const auto dest = Temporary::NewTemporary();
+    const auto src2 = obtain_source(n.right);
+#else
+    const auto src1 = obtain_source(n.left);
+    const auto src2 = obtain_source(n.right);
+    const auto dest = Temporary::NewTemporary();
+#endif //  OPTIMIZE
+    instructions.push_back({ n.op.first, src1, src2, dest });
     Return(instructions.back());
 }
 
@@ -53,8 +62,8 @@ void CodeGenerator::Visit(ConditionNode& n) { assert(("Code Generator visited Co
 
 void CodeGenerator::Visit(IfNode& n)
 {
-    const auto falseLabel = Label::NewLabel();                                                    // are all relational operators allowed? do i need more spliting or something?
-    instructions.push_back({ "IfFalse", GetValue(n.condition).dest, std::nullopt, falseLabel });  // better encoding here? can be others than IfFalse(Z) based on cond operator?
+    const auto falseLabel = Label::NewLabel();    // are all relational operators allowed? do i need more spliting or something?
+    instructions.push_back({ "IfFalse", obtain_source(n.condition), std::nullopt, falseLabel });
     if (n.body) PlainVisit(n.body);
     instructions.push_back({ "Label", std::nullopt, std::nullopt, falseLabel });
 }
@@ -70,7 +79,7 @@ void CodeGenerator::Visit(WhileNode& n)
     const auto startLabel = Label::NewLabel();
     instructions.push_back({ "Label", std::nullopt, std::nullopt, startLabel });
     const auto endLabel = Label::NewLabel();
-    instructions.push_back({ "IfFalse", GetValue(n.condition).dest, std::nullopt, endLabel });
+    instructions.push_back({ "IfFalse", obtain_source(n.condition), std::nullopt, endLabel });
     if (n.body) PlainVisit(n.body);
     instructions.push_back({ "Goto", std::nullopt, std::nullopt, startLabel });
     instructions.push_back({ "Label", std::nullopt, std::nullopt, endLabel });
@@ -81,7 +90,7 @@ void CodeGenerator::Visit(DoWhileNode& n)
     const auto startLabel = Label::NewLabel();
     instructions.push_back({ "Label", std::nullopt, std::nullopt, startLabel });
     if (n.body) PlainVisit(n.body);
-    instructions.push_back({ "If", GetValue(n.condition).dest, std::nullopt, startLabel });
+    instructions.push_back({ "If", obtain_source(n.condition), std::nullopt, startLabel });
 }
 
 void CodeGenerator::Visit(CompoundStatementNode& n)
@@ -103,12 +112,12 @@ void CodeGenerator::Visit(DeclareAssignNode& n)
 {
     // Get the temporary or literal or identifier from the expression to the right and push an assignment
     // instruction using the identifier from the left as the destination
-    instructions.push_back({ n.op.first, GetValue(n.right).dest, std::nullopt, GetValue(n.left).dest });
+    instructions.push_back({ n.op.first, obtain_source(n.right), std::nullopt, GetValue(n.left).dest });
 }
 
 void CodeGenerator::Visit(AssignStatementNode& n)
 {
-    instructions.push_back({ n.op.first, GetValue(n.right).dest, std::nullopt, GetValue(n.left).dest });
+    instructions.push_back({ n.op.first, obtain_source(n.right), std::nullopt, GetValue(n.left).dest });
 }
 
 void CodeGenerator::Visit(ReturnStatementNode& n)
@@ -125,8 +134,7 @@ void CodeGenerator::Visit(EmptyStatementNode& n) {}
     -Rename+cpp+h to IRGenerator || IRCGenerator || CodeGeneratorIR -- Last will be AssemblyGenerator(not a visitor this time?)
 
     check asserts if work - dont care?
-    conserve temporaries - the t0 = a * b --> c = t0 is annoying!!!
-    make each node make a temporary if its previous has no dest?
+    temporaries now get recycled but it can even be better by avoiding some assignments
     need beginfunc and endfunc, jump for return to the end and allocating space at begin func?
 
     -CHECK STD::VISITOR-VARIANT - nah
