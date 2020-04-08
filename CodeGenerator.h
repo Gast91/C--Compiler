@@ -6,11 +6,21 @@
 #include "Visitor.h"
 
 #define OPTIMIZE   // This global somehow?
+// Optimization flag enables the recycling of already processed temporary variables
+// and prevents -> _t0 = a * b -> c = _t0 and instead optimizes to c = a * b.
 #ifdef OPTIMIZE
-#define obtain_source(x) Temporary::CheckAndRecycle(GetValue(x).dest)
+#define obtain_source(x) Temporary::CheckAndRecycle(GetValue(x))
 #else
-#define obtain_source(x) GetValue(x).dest
+#define obtain_source(x) GetValue(x)
 #endif // OPTIMIZE
+
+struct Quadruples
+{
+    std::optional<std::string> op;
+    std::optional<std::string> src1;
+    std::optional<std::string> src2;
+    std::optional<std::string> dest;
+};
 
 class Temporary
 {
@@ -20,10 +30,10 @@ public:
     static const std::string NewTemporary() { return "_t" + std::to_string(tempCount++);  }
     // If a temporary is passed to it, it drops the counter effectively recycling that temporary
     // This should never be called by itself and rather through the obtain_source macro. I know bad design...
-    static const std::optional<std::string>& CheckAndRecycle(const std::optional<std::string>& potentialTemporary)
+    static const Quadruples& CheckAndRecycle(const Quadruples& potentialTemporary)
     { 
         // What if an identifier starting with _t is passed to it...
-        if (!potentialTemporary.value().compare(0, 2, "_t")) --tempCount;
+        if (!potentialTemporary.dest.value().compare(0, 2, "_t")) --tempCount;
         return potentialTemporary;
     }
 };
@@ -36,14 +46,6 @@ public:
     static const std::string NewLabel() { return "_L" + std::to_string(labelCount++); }
 };
 
-struct Quadruples
-{
-    std::optional<std::string> op;
-    std::optional<std::string> src1;
-    std::optional<std::string> src2;
-    std::optional<std::string> dest;
-};
-
 using ThreeAddressCode = std::vector<Quadruples>;
 
 // CodeGenerator derives from ValueGetter by the 'Curiously Recurring Template Pattern' so that 
@@ -53,6 +55,8 @@ class CodeGenerator : public ValueGetter<CodeGenerator, ASTNode*, Quadruples>, p
 {
 private:
     static ThreeAddressCode instructions;
+
+    void ProcessAssignment(const BinaryASTNode& n);
 public:
     void GenerateAssembly(ASTNode* n);
 

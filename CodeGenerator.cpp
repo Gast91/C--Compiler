@@ -39,21 +39,21 @@ void CodeGenerator::Visit(IdentifierNode& n) { Return({ std::nullopt, std::nullo
 
 void CodeGenerator::Visit(UnaryOperationNode& n)
 {
-    instructions.push_back({ n.op.first, obtain_source(n.expr), std::nullopt, Temporary::NewTemporary() });
+    instructions.push_back({ n.op.first, obtain_source(n.expr).dest, std::nullopt, Temporary::NewTemporary() });
     Return(instructions.back());
 }
 
 void CodeGenerator::Visit(BinaryOperationNode& n)
 {
 #ifdef  OPTIMIZE
-    const auto src1 = obtain_source(n.left);
+    const auto src1 = obtain_source(n.left).dest;
     const auto dest = Temporary::NewTemporary();
-    const auto src2 = obtain_source(n.right);
+    const auto src2 = obtain_source(n.right).dest;
 #else
-    const auto src1 = obtain_source(n.left);
-    const auto src2 = obtain_source(n.right);
+    const auto src1 = obtain_source(n.left).dest;
+    const auto src2 = obtain_source(n.right).dest;
     const auto dest = Temporary::NewTemporary();
-#endif //  OPTIMIZE
+#endif // OPTIMIZE
     instructions.push_back({ n.op.first, src1, src2, dest });
     Return(instructions.back());
 }
@@ -63,7 +63,7 @@ void CodeGenerator::Visit(ConditionNode& n) { assert(("Code Generator visited Co
 void CodeGenerator::Visit(IfNode& n)
 {
     const auto falseLabel = Label::NewLabel();    // are all relational operators allowed? do i need more spliting or something?
-    instructions.push_back({ "IfFalse", obtain_source(n.condition), std::nullopt, falseLabel });
+    instructions.push_back({ "IfFalse", obtain_source(n.condition).dest, std::nullopt, falseLabel });
     if (n.body) PlainVisit(n.body);
     instructions.push_back({ "Label", std::nullopt, std::nullopt, falseLabel });
 }
@@ -79,7 +79,7 @@ void CodeGenerator::Visit(WhileNode& n)
     const auto startLabel = Label::NewLabel();
     instructions.push_back({ "Label", std::nullopt, std::nullopt, startLabel });
     const auto endLabel = Label::NewLabel();
-    instructions.push_back({ "IfFalse", obtain_source(n.condition), std::nullopt, endLabel });
+    instructions.push_back({ "IfFalse", obtain_source(n.condition).dest, std::nullopt, endLabel });
     if (n.body) PlainVisit(n.body);
     instructions.push_back({ "Goto", std::nullopt, std::nullopt, startLabel });
     instructions.push_back({ "Label", std::nullopt, std::nullopt, endLabel });
@@ -90,7 +90,7 @@ void CodeGenerator::Visit(DoWhileNode& n)
     const auto startLabel = Label::NewLabel();
     instructions.push_back({ "Label", std::nullopt, std::nullopt, startLabel });
     if (n.body) PlainVisit(n.body);
-    instructions.push_back({ "If", obtain_source(n.condition), std::nullopt, startLabel });
+    instructions.push_back({ "If", obtain_source(n.condition).dest, std::nullopt, startLabel });
 }
 
 void CodeGenerator::Visit(CompoundStatementNode& n)
@@ -108,17 +108,30 @@ void CodeGenerator::Visit(DeclareStatementNode& n)
     Return(GetValue(n.identifier));  // might change but for now this returns its identifier, used only for declare-assign
 }
 
-void CodeGenerator::Visit(DeclareAssignNode& n)
+void CodeGenerator::ProcessAssignment(const BinaryASTNode& n)
 {
-    // Get the temporary or literal or identifier from the expression to the right and push an assignment
-    // instruction using the identifier from the left as the destination
-    instructions.push_back({ n.op.first, obtain_source(n.right), std::nullopt, GetValue(n.left).dest });
+#ifdef OPTIMIZE
+    // Get the instruction from the expression (temporary with expression, literal or identifier) from the right
+    const auto src2 = obtain_source(n.right);
+    // If its an operation (not just an identifier or literal)
+    if (src2.op.has_value())
+    {
+        // Remove the previous instruction
+        instructions.pop_back();
+        // And reform it as a direct assignment of the operation to your left operand
+        instructions.push_back({ src2.op, src2.src1, src2.src2, GetValue(n.left).dest });
+    }
+    // Just a literal or identifier, assign it to your left
+    else instructions.push_back({ n.op.first, src2.dest, std::nullopt, GetValue(n.left).dest });
+#else
+    // Assign the expression to your left
+    instructions.push_back({ n.op.first, obtain_source(n.right).dest, std::nullopt, GetValue(n.left).dest });
+#endif // OPTIMIZE
 }
 
-void CodeGenerator::Visit(AssignStatementNode& n)
-{
-    instructions.push_back({ n.op.first, obtain_source(n.right), std::nullopt, GetValue(n.left).dest });
-}
+void CodeGenerator::Visit(DeclareAssignNode& n)   { ProcessAssignment(n); }
+
+void CodeGenerator::Visit(AssignStatementNode& n) {  ProcessAssignment(n); }
 
 void CodeGenerator::Visit(ReturnStatementNode& n)
 {
