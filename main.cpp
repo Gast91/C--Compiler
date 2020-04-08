@@ -31,7 +31,7 @@ int main(int argc, char* argv[])
             // Transform intermediate code to assembly
             // Print|Output to file
             // Pass assembly to assembler?!
-        }   
+        }
     }
     std::cin.get(); // Debug Only - Get rid for actual
     _CrtSetDbgFlag(_CRTDBG_LEAK_CHECK_DF);  // _CrtDumpMemoryLeaks() will be called AFTER main has been exited
