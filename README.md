@@ -14,8 +14,8 @@ the name C--. This project has nothing to do with the C-- proramming language de
 
 ### Current Features
 
-- Lexical Analysis (Mostly Complete, some tokens, while they will be tokenized, they wont be recongized leading the parser to throw an error.)
-- Parsing (Declaration, Declaration Assignment, If-elseif-else, while-dowhile, arithmetic-logical expressions, return statements)
+- Lexical Analysis (Mostly complete but some tokens, while they will be tokenized, they wont be recongized leading the parser to throw an error)
+- Parsing (declaration, declaration-assignment, assignment, if-elseif-else, while-dowhile, arithmetic-logical expressions, return statements)
 - Semantic Analysis (Checks for variable being declared or redefined in the current scope, nested scopes, symbols, symbol tables)
 - Intermediate code generation (TAC) for the language constructs mentioned above.
 
@@ -23,14 +23,14 @@ the name C--. This project has nothing to do with the C-- proramming language de
 
 - Assembly Generation
 - Various other improvements and additions to the features mentioned above, removal of limitations mentioned below or other language features that are present in C++ but the current project version can not deal with.
-- Addition of Unit Tests
+- Addition of Unit Tests.
 
 ### Current Limitations
-- If-elseif-else, while-dowhile inner statements must be enclosed by {} even if they only contain a single line
-- Keywords not added to the lexer's token table will be categorized as identifiers allowing the variables declarations or assignments in the form of * **int throw = 5**.
+- If-elseif-else, while-dowhile inner statements must be enclosed by {} even if they only contain a single statement.
+- Keywords not currently present in the token table accessed by the lexer will be categorized as identifiers allowing variable declarations or assignments in the form of **int throw = 5**. Easily fixed by added all the symbols present in the language that are not already in the table but the parser cannot deal with them yet anyway.
 - At the moment everything must be written inside the main function meaning that there is no function parsing, global variables etc.
-- No type checking at the moment. Only available type is integers and the use of other C++ built-in types will lead the parser to complain.
-- Intermediate code generation on some occasions use more temporary variables than needed.
+- No type checking at the moment. Only available/recognized type is integers and the use of any other C++ built-in type will lead the parser to complain.
+- Intermediate code generation on some occasions uses more temporary variables than needed.
 - No intermediate code instruction for jumping to the end after a return statement.
 - No plans at the moment for linking and the ability to process more than one translation unit, code optimization and C++ standards.
 
