@@ -124,8 +124,8 @@ ASTNode* Parser::ParseIfCond()
 ASTNode* Parser::ParseIfStatement()
 {
     IfStatementNode* ifStatement = new IfStatementNode();
-    ifStatement->AddNode(new IfNode(ParseCompoundStatement(), ParseIfCond()));
-    while (lexer.GetCurrentToken().second == Token::ELSE)  // Can be 0 or more else if's and 0 or 1 else
+    ifStatement->AddNode(new IfNode(ParseCompoundStatement(), ParseIfCond())); // Note argument inversion here to accomodate calling convention
+    while (lexer.GetCurrentToken().second == Token::ELSE)                      // Can be 0 or more else if's and 0 or 1 else
     {
         // Is there an else if coming?
         lexer.Consume(Token::ELSE);
@@ -223,7 +223,7 @@ ASTNode* Parser::ParseStatement()                                               
     else if    (currentToken == Token::DO)         return ParseDoWhile();
     else if    (currentToken == Token::RET)        return ParseReturn();
     else if    (currentToken == Token::INT_TYPE)   return ParseDeclarationStatement();   // lexer.isType()? the same will happen for all types - and functions + void
-    else if    (currentToken == Token::IDENTIFIER) return ParseAssignStatement();
+    else if    (currentToken == Token::IDENTIFIER) return ParseAssignStatement();        // Can parse an assign statement or a declare and assign statement
     else if    (currentToken == Token::LCURLY)	   return ParseStatementBlock();         // Specifically parses free floating statement blocks (enclosed by { })
     else if    (currentToken == Token::RCURLY)	   return ParseEmpty();
     else if    (currentToken == Token::FILE_END)   return ParseEmpty();
@@ -249,7 +249,7 @@ ASTNode* Parser::ParseDeclarationStatement()
         lexer.Consume(Token::SEMI);
         return node;
     }
-    // Or is was just a declare statement
+    // Or is was just a declaration statement
     lexer.Consume(Token::SEMI);
     return new DeclareStatementNode(ident, typeToken);
 }
@@ -276,7 +276,7 @@ ASTNode* Parser::ParseReturn()
     return node;
 }
 
-ASTNode* Parser::ParseEmpty() { return new EmptyStatementNode(); }  // OBSOLETE - REMOVE HERE AND FROM VISITOR CLASSES FOR REMOVAL
+ASTNode* Parser::ParseEmpty() { return new EmptyStatementNode(); }
 
 // FEATURES MISSING TODO:
 /*
