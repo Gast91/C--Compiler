@@ -39,14 +39,10 @@ void SemanticAnalyzer::Visit(ConditionNode& n)
     n.right->Accept(*this);
 }
 
-void SemanticAnalyzer::Visit(IfNode& n)
+SymbolTable* SemanticAnalyzer::CreateNewScope(ASTNode* n, const char* tag)
 {
-    // Visit Condition, Identifiers in the condition belong to the current scope
-    n.condition->Accept(*this);
-
-    // Semantic Analysis up unti the condition has been performed, body belongs to a different, nested scope
-    // Generate a name for it and add the nested scope as a symbol into the parent scope (current)
-    std::string nestedScopeName = GenerateID(&n, (n.type + "_").c_str());//"IF_");
+    // Generate a name for the new nested scope and add it as a symbol into the parent scope (current)
+    std::string nestedScopeName = GenerateID(n, tag);
     currentScope->DefineSymbol(new NestedScope(nestedScopeName));
 
     // New nested scope with the nested scope name, at a greater depth than the current with the current scope as its parent
@@ -55,6 +51,17 @@ void SemanticAnalyzer::Visit(IfNode& n)
     // Current scope becomes this new scope
     symbolTable.push_back(nestedScope);
     currentScope = nestedScope;
+
+    return nestedScope;
+}
+
+void SemanticAnalyzer::Visit(IfNode& n)
+{
+    // Visit Condition, Identifiers in the condition belong to the current scope
+    n.condition->Accept(*this);
+
+    // Make a new nested scope for the body of this if (or else_if)
+    SymbolTable* nestedScope = CreateNewScope(&n, (n.type + "_").c_str());
 
     // Perform Semantic Analysis to the "contents" of this new scope
     n.body->Accept(*this);
@@ -68,17 +75,8 @@ void SemanticAnalyzer::Visit(IfStatementNode& n)
     // Visit all if-else if statements under this umbrella if statement and perform semantic analysis
     for (const auto& ifN : n.ifNodes) ifN->Accept(*this);
 
-    // Else body belongs to a different, nested scope. Generate name for it
-    // and add the nested scope as a symbol into the parent scope (current)
-    std::string nestedScopeName = GenerateID(&n, "ELSE_");
-    currentScope->DefineSymbol(new NestedScope(nestedScopeName));
-
-    // New nested scope with the nested scope name, at a greater depth than the current with the current scope as its parent
-    SymbolTable* nestedScope = new SymbolTable(nestedScopeName, currentScope->scopeLevel + 1, currentScope);
-
-    // Current scope becomes this new scope
-    symbolTable.push_back(nestedScope);
-    currentScope = nestedScope;
+    // Make a new nested scope for the body of the else
+    SymbolTable* nestedScope = CreateNewScope(&n, "ELSE_");
 
     // Perform Semantic Analysis to the "contents" of this new scope
     n.elseBody->Accept(*this);
@@ -94,17 +92,8 @@ void SemanticAnalyzer::Visit(WhileNode& n)
     // Visit Condition, Identifiers in the condition belong to the current scope
     n.condition->Accept(*this);
 
-    // Semantic Analysis up unti the condition has been performed, body belongs to a different, nested scope
-    // Generate a name for it and add the nested scope as a symbol into the parent scope (current)
-    std::string nestedScopeName = GenerateID(&n, "WHILE_");
-    currentScope->DefineSymbol(new NestedScope(nestedScopeName));
-
-    // New nested scope with the nested scope name, at a greater depth than the current with the current scope as its parent
-    SymbolTable* nestedScope = new SymbolTable(nestedScopeName, currentScope->scopeLevel + 1, currentScope);
-
-    // Current scope becomes this new scope
-    symbolTable.push_back(nestedScope);
-    currentScope = nestedScope;
+    // Make a new nested scope for the body of this while
+    SymbolTable* nestedScope = CreateNewScope(&n, "WHILE_");
 
     // Perform Semantic Analysis to the "contents" of this new scope
     n.body->Accept(*this);
@@ -115,22 +104,13 @@ void SemanticAnalyzer::Visit(WhileNode& n)
 
 void SemanticAnalyzer::Visit(DoWhileNode& n)
 {
-    // Do-while's body belongs to a different, nested scope
-    // Generate a name for it and add the nested scope as a symbol into the parent scope (current)
-    std::string nestedScopeName = GenerateID(&n, "DO");
-    currentScope->DefineSymbol(new NestedScope(nestedScopeName));
-
-    // New nested scope with the nested scope name, at a greater depth than the current with the current scope as its parent
-    SymbolTable* nestedScope = new SymbolTable(nestedScopeName, currentScope->scopeLevel + 1, currentScope);
-
-    // Current scope becomes this new scope
-    symbolTable.push_back(nestedScope);
-    currentScope = nestedScope;
+    // Make a new nested scope for the body of this do_while
+    SymbolTable* nestedScope = CreateNewScope(&n, "DO_");
 
     // After we are done with the body of this nested statement we go back to the parent scope
     currentScope = nestedScope->parentScope;
 
-    // Visit Condition, Identifiers in the condition belong to the parent scope (wset back above)
+    // Visit Condition. Identifiers in the condition belong to the parent scope (set back above)
     n.condition->Accept(*this);
 }
 
@@ -138,16 +118,8 @@ void SemanticAnalyzer::Visit(CompoundStatementNode& n) { for (const auto& statem
 
 void SemanticAnalyzer::Visit(StatementBlockNode& n)
 {
-    // Beginning of a free floating block of statements (i.e inside { } that dont belong to a statement) that is a nested scope
-    std::string nestedScopeName = GenerateID(&n, "BLOCK");
-    currentScope->DefineSymbol(new NestedScope(nestedScopeName));
-
-    // New nested scope with the nested scope name, at a greater depth than the current with the current scope as its parent
-    SymbolTable* nestedScope = new SymbolTable(nestedScopeName, currentScope->scopeLevel + 1, currentScope);
-
-    // Current scope becomes this new scope
-    symbolTable.push_back(nestedScope);
-    currentScope = nestedScope;
+    // Make a new nested scope for the body of this block
+    SymbolTable* nestedScope = CreateNewScope(&n, "BLOCK_");
 
     // Visit all the statements in this block
     for (const auto& statement : n.statements) statement->Accept(*this);
