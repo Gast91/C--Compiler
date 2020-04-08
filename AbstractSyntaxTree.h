@@ -88,7 +88,7 @@ public:
     void SetChildrenPrintID(const std::string& pID) noexcept override { /* No children */ }
 };
 
-// Node representing a binary operation (Addition, Subtraction, Multiplication or Division)
+// Node representing a binary operation
 class BinaryOperationNode : public BinaryASTNode
 {
 public:
@@ -97,7 +97,7 @@ public:
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
 
-class ConditionNode : public BinaryASTNode  // maybe we need it to be an actual node? that holds all conditional expr ? right now its only one binaryOP
+class ConditionNode : public BinaryASTNode
 {
 public:
     ConditionNode(ASTNode* l, TokenPair& o, ASTNode* r) noexcept : BinaryASTNode(l, o, r) {}
