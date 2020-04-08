@@ -9,7 +9,7 @@ the name C--. This project has nothing to do with the C-- proramming language de
 
 ### Prerequisites
 
--For the ability to visualize the abstract syntax tree, the library treant-js is required - [treant-js](https://github.com/fperucic     /treant-js).
+-For the ability to visualize the abstract syntax tree, the library treant-js is required [treant-js](https://github.com/fperucic     /treant-js).
 
 -To compile a C++17 version is required.
 
