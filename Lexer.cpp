@@ -1,5 +1,21 @@
 #include "Lexer.h"
 
+Lexer::Lexer(const char* sourcePath)
+{
+    std::ifstream infile;
+
+    infile.open(sourcePath);
+
+    if (!infile)
+    {
+        std::cout << "Cannot open file\n";
+        return;
+    }
+
+    TokenizeSource(infile);
+    infile.close();
+}
+
 void Lexer::TokenizeSource(std::ifstream& infile)
 {
     std::string srcLine;
@@ -64,7 +80,7 @@ bool Lexer::IsDiscardableCharacter(const std::string& delimiter) const noexcept 
 
 bool Lexer::IsCompoundOperator(const std::string& delimiter, const std::string& next) const
 {
-    switch (delimiter.front())  // shiftleft and shiftright missing - get rid of front's etc 
+    switch (delimiter.front())  // shiftleft and shiftright missing
     {
     case '*': case '/': case '!': case '=': case '%': case '^': return next == "=";
     case '+': return next == "=" || next == "+";
@@ -77,19 +93,13 @@ bool Lexer::IsCompoundOperator(const std::string& delimiter, const std::string& 
     }
 }
 
-bool Lexer::IsComment(const std::string& delimiter, const std::string& next) const // - get rid of front's etc
+bool Lexer::IsComment(const std::string& delimiter, const std::string& next) const
 {
     return delimiter.front() == '/' && next == "/";
 }
 
-bool Lexer::IsDigit(const char c) const noexcept
-{
-    return c == '0' || c == '1' ||
-           c == '2' || c == '3' ||
-           c == '4' || c == '5' ||
-           c == '6' || c == '7' ||
-           c == '8' || c == '9';
-}
+// Checks if the character passed to is is one of 0...9
+constexpr bool Lexer::IsDigit(const char c) const noexcept { return c >= 48 && c <= 57; }
 
 bool Lexer::IsInteger(const std::string& num) const
 {
@@ -103,20 +113,10 @@ bool Lexer::IsInteger(const std::string& num) const
     return false;
 }
 
-bool Lexer::IsCharacter(const char c) const noexcept
-{
-    return c == 'a' || c == 'b' || c == 'c' || c == 'd' || c == 'e' || c == 'f' || c == 'g' ||
-           c == 'h' || c == 'i' || c == 'j' || c == 'k' || c == 'l' || c == 'm' || c == 'n' ||
-           c == 'o' || c == 'p' || c == 'q' || c == 'r' || c == 's' || c == 't' || c == 'u' ||
-           c == 'v' || c == 'w' || c == 'x' || c == 'y' || c == 'z' || c == 'A' || c == 'B' ||
-           c == 'C' || c == 'D' || c == 'E' || c == 'F' || c == 'G' || c == 'H' || c == 'I' ||
-           c == 'J' || c == 'K' || c == 'L' || c == 'M' || c == 'N' || c == 'O' || c == 'P' ||
-           c == 'Q' || c == 'R' || c == 'S' || c == 'T' || c == 'U' || c == 'V' || c == 'W' ||
-           c == 'X' || c == 'Y' || c == 'z' || c == '_' || IsDigit(c);
-    return false;
-}
+// Checks if the character pass to it is one of the alphabet characters (lower or upper) or a digit or underscore
+constexpr bool Lexer::IsCharacter(const char c) const noexcept { return (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == 95 || IsDigit(c); }
 
-bool Lexer::IsIdentifier(const std::string& identifier, const bool firstCall) const  // - get rid of front's etc
+constexpr bool Lexer::IsIdentifier(const std::string& identifier, const bool firstCall) const
 {
     if (firstCall) if (IsDigit(identifier.front())) return false;
     unsigned int i = 0;
@@ -135,22 +135,6 @@ bool Lexer::IsIdentifier(const std::string& identifier, const bool firstCall) co
 //	return keyword == "int" || keyword == "if" || keyword == "else" ||
 //		   keyword == "while" || keyword == "for" || keyword == "return";
 //}
-
-Lexer::Lexer(const char* sourcePath)
-{
-    std::ifstream infile;
-
-    infile.open(sourcePath);
-
-    if (!infile)
-    {
-        std::cout << "Cannot open file\n";
-        return;
-    }
-
-    TokenizeSource(infile);
-    infile.close();
-}
 
 void Lexer::PrintTokens() const
 {
