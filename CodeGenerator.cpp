@@ -18,8 +18,10 @@ void CodeGenerator::GenerateAssembly(ASTNode* n)
         // if there is a second operand then the instruction represent's a full three address code (3 addresses, 2 max operands on the right)
         if (instruction.src2.has_value())
             std::cout << '\t' << instruction.dest.value() << " = " << instruction.src1.value() << ' ' << instruction.op.value() << ' ' << instruction.src2.value() << ";\n";
-        else if (instruction.op.value() == "=")       std::cout << '\t' << instruction.dest.value() << ' ' << instruction.op.value() << ' ' << instruction.src1.value() << ";\n";
-        else if (instruction.op.value() == "IfZ")     std::cout << '\t' << instruction.op.value() << ' ' << instruction.src1.value() << " Goto " << instruction.dest.value() << ";\n";
+        else if (instruction.op.value() == "=")       
+            std::cout << '\t' << instruction.dest.value() << ' ' << instruction.op.value() << ' ' << instruction.src1.value() << ";\n";
+        else if (!instruction.op.value().compare(0, 2, "If"))   
+            std::cout << '\t' << instruction.op.value() << ' ' << instruction.src1.value() << " Goto " << instruction.dest.value() << ";\n";
         else if (instruction.op.value() == "Label")   std::cout << instruction.dest.value() << ":\n";
         else if (instruction.op.value() == "Return")  std::cout << '\t' << instruction.op.value() << ' ' << instruction.dest.value() << ";\n";
         else if (instruction.op.value() == "Goto")    std::cout << '\t' << instruction.op.value() << ' ' << instruction.dest.value() << ":\n";
@@ -51,8 +53,8 @@ void CodeGenerator::Visit(ConditionNode& n) { assert(("Code Generator visited Co
 
 void CodeGenerator::Visit(IfNode& n)
 {
-    const auto falseLabel = Label::NewLabel();                                                // are all relational operators allowed? do i need more spliting or something?
-    instructions.push_back({ "IfZ", GetValue(n.condition).dest, std::nullopt, falseLabel });  // better encoding here? can be others than IfFalse(Z) based on cond operator?
+    const auto falseLabel = Label::NewLabel();                                                    // are all relational operators allowed? do i need more spliting or something?
+    instructions.push_back({ "IfFalse", GetValue(n.condition).dest, std::nullopt, falseLabel });  // better encoding here? can be others than IfFalse(Z) based on cond operator?
     if (n.body) PlainVisit(n.body);
     instructions.push_back({ "Label", std::nullopt, std::nullopt, falseLabel });
 }
@@ -68,7 +70,7 @@ void CodeGenerator::Visit(WhileNode& n)
     const auto startLabel = Label::NewLabel();
     instructions.push_back({ "Label", std::nullopt, std::nullopt, startLabel });
     const auto endLabel = Label::NewLabel();
-    instructions.push_back({ "IfZ", GetValue(n.condition).dest, std::nullopt, endLabel });
+    instructions.push_back({ "IfFalse", GetValue(n.condition).dest, std::nullopt, endLabel });
     if (n.body) PlainVisit(n.body);
     instructions.push_back({ "Goto", std::nullopt, std::nullopt, startLabel });
     instructions.push_back({ "Label", std::nullopt, std::nullopt, endLabel });
@@ -79,7 +81,7 @@ void CodeGenerator::Visit(DoWhileNode& n)
     const auto startLabel = Label::NewLabel();
     instructions.push_back({ "Label", std::nullopt, std::nullopt, startLabel });
     if (n.body) PlainVisit(n.body);
-    instructions.push_back({ "IfZ", GetValue(n.condition).dest, std::nullopt, startLabel });  // jump if true not false! hmm. You can negate it here?
+    instructions.push_back({ "If", GetValue(n.condition).dest, std::nullopt, startLabel });
 }
 
 void CodeGenerator::Visit(CompoundStatementNode& n)
@@ -124,6 +126,7 @@ void CodeGenerator::Visit(EmptyStatementNode& n) {}
 
     check asserts if work - dont care?
     conserve temporaries - the t0 = a * b --> c = t0 is annoying!!!
+    make each node make a temporary if its previous has no dest?
     need beginfunc and endfunc, jump for return to the end and allocating space at begin func?
 
     -CHECK STD::VISITOR-VARIANT - nah
