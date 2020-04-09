@@ -15,12 +15,19 @@
 #define fetch_instr(x) GetValue(x)
 #endif // OPTIMIZE_TEMPS
 
+struct Operand
+{
+    Token type;
+    std::string name;
+    std::string address;
+};
+
 struct Quadruples
 {
     std::optional<std::string> op;
-    std::optional<std::string> src1;
-    std::optional<std::string> src2;
-    std::optional<std::string> dest;
+    std::optional<Operand> src1;
+    std::optional<Operand> src2;
+    std::optional<Operand> dest;
 };
 
 class Temporary
@@ -28,13 +35,15 @@ class Temporary
 private:
     static int tempCount;
 public:
-    static const std::string NewTemporary() { return "_t" + std::to_string(tempCount++);  }
+    //static const std::string NewTemporary() { return "_t" + std::to_string(tempCount++);  }
+    static const Operand NewTemporary() { return Operand{ Token::TEMPORARY, "_t" + std::to_string(tempCount++), "" }; } // address? const?
     // If a temporary is passed to it, it drops the counter effectively recycling that temporary
     // This should never be called by itself and rather through the obtain_source macro. I know bad design...
     static const Quadruples CheckAndRecycle(const Quadruples& potentialTemporary)
     { 
         // What if an identifier starting with _t is passed to it...
-        if (!potentialTemporary.dest.value().compare(0, 2, "_t")) --tempCount;
+        //if (!potentialTemporary.dest.value().compare(0, 2, "_t")) --tempCount;
+        if (potentialTemporary.dest.value().type == Token::TEMPORARY) --tempCount;
         return potentialTemporary;
     }
 };
@@ -44,7 +53,8 @@ class Label
 private:
     static int labelCount;
 public:
-    static const std::string NewLabel() { return "_L" + std::to_string(labelCount++); }
+    //static const std::string NewLabel() { return "_L" + std::to_string(labelCount++); }
+    static const Operand NewLabel() { return Operand{ Token::LABEL, "_L" + std::to_string(labelCount++), "" }; }
 };
 
 using ThreeAddressCode = std::vector<Quadruples>;

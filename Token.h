@@ -8,6 +8,8 @@
    will be inserted into the map in the form of { VALUE , UNKNOWN } */
 enum class Token
 {
+    LABEL,
+    TEMPORARY,
     IDENTIFIER,
 // Literals
     INT_LITERAL,

@@ -15,14 +15,15 @@ void SemanticAnalyzer::Visit(UnaryASTNode& n)  { assert(("Semantic Analyzer visi
 void SemanticAnalyzer::Visit(BinaryASTNode& n) { assert(("Semantic Analyzer visited base BinaryASTNode class?!", false)); }
 void SemanticAnalyzer::Visit(IntegerNode& n) {}
 
-void SemanticAnalyzer::Visit(IdentifierNode& n)
+void SemanticAnalyzer::Visit(IdentifierNode& n)   // Every identifier will be hit here, so the address must be set here to the one in the symbol table
 {
-    if (!currentScope->LookUpSymbol(n.name))
+    if (const auto sym = currentScope->LookUpSymbol(n.name); !sym)
     {
         failState = true;
         throw SymbolNotFoundException("\nUse of undeclared identifier '" + n.name + "' at line " + n.lineNo + " in scope '"
             + currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
     }
+    else n.offset = sym->offset;
 }
 
 void SemanticAnalyzer::Visit(UnaryOperationNode& n) { n.expr->Accept(*this); }
@@ -135,8 +136,11 @@ void SemanticAnalyzer::Visit(DeclareStatementNode& n)
     // Get the variable name from the Declaration's Identifier Node
     const std::string variableName = n.identifier->name;
     const std::string line = n.identifier->lineNo;
+    addressOffset -= 4;  // symbol table must have each symbols offset at the creation so in here you move the val to the symbol table so subsequent id accesses can set theirs
+    //n.identifier->offset = addressOffset;  // this shouldnt be hardcoded - based on type! also addressOffset depends on function (different stacks for diff functions)
     // Define a new VarSymbol using variable name and symbolType
-    Symbol* variableSymbol = new VariableSymbol(variableName, symbolType);
+    Symbol* variableSymbol = new VariableSymbol(variableName, std::to_string(addressOffset), symbolType);
+    n.identifier->offset = std::to_string(addressOffset);
     if (!currentScope->DefineSymbol(variableSymbol))
     {
         failState = true;
@@ -155,13 +159,14 @@ void SemanticAnalyzer::Visit(DeclareAssignNode& n)
 
 void SemanticAnalyzer::Visit(AssignStatementNode& n)
 {
-    const IdentifierNode* identifier = dynamic_cast<IdentifierNode*>(n.left.get());
-    if (!currentScope->LookUpSymbol(identifier->name))
+    IdentifierNode* identifier = dynamic_cast<IdentifierNode*>(n.left.get());
+    if (const auto sym = currentScope->LookUpSymbol(identifier->name); !sym)
     {
         failState = true;
         throw SymbolNotFoundException("\nUse of undeclared identifier '" + identifier->name + "' at line " + identifier->lineNo + " in scope '"
             + currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
     }
+    else identifier->offset = sym->offset;
     // Identifier's name (left) has been extracted. If we reached here we know the symbol's in the table so no need to visit left node
     n.right->Accept(*this);
 }

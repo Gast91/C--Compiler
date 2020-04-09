@@ -22,35 +22,36 @@ void CodeGenerator::GenerateTAC(ASTNode* n)
     {
         // if there is a second operand then the instruction represent's a full three address code (3 addresses, 2 max operands on the right)
         if (instruction.src2.has_value())
-            std::cout << '\t' << instruction.dest.value() << " = " << instruction.src1.value() << ' ' << instruction.op.value() << ' ' << instruction.src2.value() << ";\n";
+            std::cout << '\t' << instruction.dest.value().name << " = " << instruction.src1.value().name << ' ' << instruction.op.value() << ' ' << instruction.src2.value().name << ";\n";
         else if (instruction.op.value() == "=")       
-            std::cout << '\t' << instruction.dest.value() << ' ' << instruction.op.value() << ' ' << instruction.src1.value() << ";\n";
+            std::cout << '\t' << instruction.dest.value().name << ' ' << instruction.op.value() << ' ' << instruction.src1.value().name << ";\n";
         else if (!instruction.op.value().compare(0, 2, "If"))   
-            std::cout << '\t' << instruction.op.value() << ' ' << instruction.src1.value() << " Goto " << instruction.dest.value() << ";\n";
-        else if (instruction.op.value() == "Label")   std::cout << instruction.dest.value() << ":\n";
-        else if (instruction.op.value() == "Return")  std::cout << '\t' << instruction.op.value() << ' ' << instruction.dest.value() << ";\n";
-        else if (instruction.op.value() == "Goto")    std::cout << '\t' << instruction.op.value() << ' ' << instruction.dest.value() << ":\n";
+            std::cout << '\t' << instruction.op.value() << ' ' << instruction.src1.value().name << " Goto " << instruction.dest.value().name << ";\n";
+        else if (instruction.op.value() == "Label")   std::cout << instruction.dest.value().name << ":\n";
+        else if (instruction.op.value() == "Return")  std::cout << '\t' << instruction.op.value() << ' ' << instruction.dest.value().name << ";\n";  // if it works fix comps
+        else if (instruction.op.value() == "Goto")    std::cout << '\t' << instruction.op.value() << ' ' << instruction.dest.value().name << ":\n";
         // Unary Operation Instruction
-        else std::cout << '\t' << instruction.dest.value() << " = " << instruction.op.value() << ' ' << instruction.src1.value() << ";\n";
+        else std::cout << '\t' << instruction.dest.value().name << " = " << instruction.op.value() << ' ' << instruction.src1.value().name << ";\n";
     }
     GenerateAssembly();
 }
 
-void CodeGenerator::GenerateAssembly()
+void CodeGenerator::GenerateAssembly()  // variable names must be their stack offset
 {
     std::cout << "\nx86 Assembly??: \n";
-    std::cout << "main:\n\tpush rbp\n\tmove rbp, rsp\n";
+    std::cout << "main:\n\tpush ebp\n\tmov ebp, esp\n";
     for (const auto& instruction : instructions)
     {
         auto[op, src1, src2, dest] = instruction;
-        const auto operand1 = registers.find(src1.value()) != registers.end() ? registers.at(src1.value()) : src1.value();
-        const auto destination = registers.find(dest.value()) != registers.end() ? registers.at(dest.value()) : dest.value();
+        const auto operand1 = registers.find(src1.value().name) != registers.end() ? registers.at(src1.value().name) : src1.value().address;    // at the end operand 2 must be a register or address
+        const auto destination = registers.find(dest.value().name) != registers.end() ? registers.at(dest.value().name) : dest.value().address; // at the end operand 2 must be a register or address
         if (src2.has_value())
         {
-            const auto operand2 = registers.find(src2.value()) != registers.end() ? registers.at(src2.value()) : src2.value();
-            if (!dest.value().compare(0, 2, "_t"))
+            const auto operand2 = registers.find(src2.value().name) != registers.end() ? registers.at(src2.value().name) : src2.value().address; // at the end operand 2 must be a register or address
+            //if (!dest.value().compare(0, 2, "_t"))
+            if (dest.value().type == Token::TEMPORARY)
             {
-                if (src1.value() != dest.value()) std::cout << "\tmov " << destination << ", " << operand1 << '\n';   // what if src1 and/or two are registers!
+                if (src1.value().name != dest.value().name) std::cout << "\tmov " << destination << ", " << operand1 << '\n';   // what if src1 and/or two are registers!
                 if (op.value() == "*")      std::cout << "\timul " << destination << ", " << operand2 << '\n';
                 else if (op.value() == "+") std::cout << "\tadd "  << destination << ", " << operand2 << '\n';
                 else if (op.value() == "-") std::cout << "\tsub "  << destination << ", " << operand2 << '\n';
@@ -67,22 +68,21 @@ void CodeGenerator::GenerateAssembly()
         }
         else
         {
-            if (op.value() == "-")
-            {
-                std::cout << "\tmov " << destination << ", " << operand1 << '\n';
-                std::cout << "\tneg " << destination << '\n';
-            }
+            std::cout << "\tmov " << destination << ", " << operand1 << '\n';
+            if (op.value() == "-") std::cout << "\tneg " << destination << '\n';
         }
     }
-    std::cout << "\tpop rbp\n\tret";
+    std::cout << "\tpop ebp\n\tret";
 }
 
 void CodeGenerator::Visit(ASTNode& n)        { assert(("Code Generator visited base ASTNode class?!"      , false)); }
 void CodeGenerator::Visit(UnaryASTNode& n)   { assert(("Code Generator visited base UnaryASTNode class?!" , false)); }
 void CodeGenerator::Visit(BinaryASTNode& n)  { assert(("Code Generator visited base BinaryASTNode class?!", false)); }
 // Integer and Identifier Leaf Nodes. A throwaway Quadruple is returned that effectively passes back their value or name
-void CodeGenerator::Visit(IntegerNode& n)    { Return({ std::nullopt, std::nullopt, std::nullopt, std::to_string(n.value) }); }
-void CodeGenerator::Visit(IdentifierNode& n) { Return({ std::nullopt, std::nullopt,  std::nullopt, n.name }); }
+//void CodeGenerator::Visit(IntegerNode& n)    { Return({ std::nullopt, std::nullopt, std::nullopt, std::to_string(n.value) }); }
+void CodeGenerator::Visit(IntegerNode& n) { Return({ std::nullopt, std::nullopt, std::nullopt, Operand{Token::INT_LITERAL, std::to_string(n.value), std::to_string(n.value)} }); }
+//void CodeGenerator::Visit(IdentifierNode& n) { Return({ std::nullopt, std::nullopt,  std::nullopt, n.name }); }
+void CodeGenerator::Visit(IdentifierNode& n) { Return({ std::nullopt, std::nullopt,  std::nullopt, Operand{Token::IDENTIFIER, n.name, "[ebp" + n.offset + "]"} }); }
 
 void CodeGenerator::Visit(UnaryOperationNode& n)
 {

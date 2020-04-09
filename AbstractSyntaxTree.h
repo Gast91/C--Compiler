@@ -82,6 +82,7 @@ class IdentifierNode : public ASTNode
 {
 public:
     Token type;
+    std::string offset;
     const std::string name;
     const std::string lineNo;
 public:

@@ -8,6 +8,7 @@ private:
     std::vector<SymbolTable*> symbolTable;
     SymbolTable* currentScope;
 
+    int addressOffset = 0;
     bool failState = false;
 
     SymbolTable* CreateNewScope(const ASTNode* n, const char* tag);

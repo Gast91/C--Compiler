@@ -8,12 +8,13 @@ class Symbol
 {
 public:
     std::string name;
+    std::string offset;
     // The Symbol of an identifier - not all identifiers have a symbol
     // BuiltIn Type Definitions and Nested Scopes in a symbol table dont have a type, just a name
     Symbol* type;             
     friend class SymbolTable;
 
-    Symbol(std::string n, Symbol* t = nullptr);
+    Symbol(std::string n, std::string off = "0", Symbol* t = nullptr);
     virtual ~Symbol() = default;  // SymbolTable class will handle the deleting of Symbols
 
     virtual void Print() = 0;
@@ -34,7 +35,7 @@ public:
 class VariableSymbol : public Symbol
 {
 public:
-    VariableSymbol(std::string n, Symbol* t);
+    VariableSymbol(std::string n, std::string off, Symbol* t);
 
     void Print() override;
 };
