@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <optional>
+#include <map>
 
 #include "Token.h"
 #include "Visitor.h"

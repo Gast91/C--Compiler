@@ -10,7 +10,7 @@ private:
 
     bool failState = false;
 
-    SymbolTable* CreateNewScope(ASTNode* n, const char* tag);
+    SymbolTable* CreateNewScope(const ASTNode* n, const char* tag);
 public:
     SemanticAnalyzer();
     ~SemanticAnalyzer();

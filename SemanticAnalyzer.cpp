@@ -39,10 +39,10 @@ void SemanticAnalyzer::Visit(ConditionNode& n)
     n.right->Accept(*this);
 }
 
-SymbolTable* SemanticAnalyzer::CreateNewScope(ASTNode* n, const char* tag)
+SymbolTable* SemanticAnalyzer::CreateNewScope(const ASTNode* n, const char* tag)
 {
     // Generate a name for the new nested scope and add it as a symbol into the parent scope (current)
-    std::string nestedScopeName = GenerateID(n, tag);
+    const std::string nestedScopeName = GenerateID(n, tag);
     currentScope->DefineSymbol(new NestedScope(nestedScopeName));
 
     // New nested scope with the nested scope name, at a greater depth than the current with the current scope as its parent

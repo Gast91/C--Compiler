@@ -5,6 +5,15 @@ ThreeAddressCode CodeGenerator::instructions;
 int Temporary::tempCount = 0;
 int Label::labelCount = 0;
 
+static const std::map<std::string, std::string> registers =
+{
+    {"_t0", "eax" },
+    {"_t1", "edx" },
+    {"_t2", "ebx" },
+    {"_t3", "ecx" }
+};
+
+
 void CodeGenerator::GenerateTAC(ASTNode* n)
 {
     std::cout << "Intermediate Language Representation:\nmain:\n";
@@ -21,14 +30,51 @@ void CodeGenerator::GenerateTAC(ASTNode* n)
         else if (instruction.op.value() == "Label")   std::cout << instruction.dest.value() << ":\n";
         else if (instruction.op.value() == "Return")  std::cout << '\t' << instruction.op.value() << ' ' << instruction.dest.value() << ";\n";
         else if (instruction.op.value() == "Goto")    std::cout << '\t' << instruction.op.value() << ' ' << instruction.dest.value() << ":\n";
-        // Unary Instruction
+        // Unary Operation Instruction
         else std::cout << '\t' << instruction.dest.value() << " = " << instruction.op.value() << ' ' << instruction.src1.value() << ";\n";
     }
+    GenerateAssembly();
 }
 
 void CodeGenerator::GenerateAssembly()
 {
-
+    std::cout << "\nx86 Assembly??: \n";
+    std::cout << "main:\n\tpush rbp\n\tmove rbp, rsp\n";
+    for (const auto& instruction : instructions)
+    {
+        auto[op, src1, src2, dest] = instruction;
+        const auto operand1 = registers.find(src1.value()) != registers.end() ? registers.at(src1.value()) : src1.value();
+        const auto destination = registers.find(dest.value()) != registers.end() ? registers.at(dest.value()) : dest.value();
+        if (src2.has_value())
+        {
+            const auto operand2 = registers.find(src2.value()) != registers.end() ? registers.at(src2.value()) : src2.value();
+            if (!dest.value().compare(0, 2, "_t"))
+            {
+                if (src1.value() != dest.value()) std::cout << "\tmov " << destination << ", " << operand1 << '\n';   // what if src1 and/or two are registers!
+                if (op.value() == "*")      std::cout << "\timul " << destination << ", " << operand2 << '\n';
+                else if (op.value() == "+") std::cout << "\tadd "  << destination << ", " << operand2 << '\n';
+                else if (op.value() == "-") std::cout << "\tsub "  << destination << ", " << operand2 << '\n';
+                else if (op.value() == "/") std::cout << "\tdiv "  << destination << ", " << operand2 << '\n';
+            }
+            else
+            {
+                if (op.value() == "*")      std::cout << "\timul " << operand1 << ", " << operand2 << '\n';
+                else if (op.value() == "+") std::cout << "\tadd "  << operand1 << ", " << operand2 << '\n';
+                else if (op.value() == "-") std::cout << "\tsub "  << operand1 << ", " << operand2 << '\n';
+                else if (op.value() == "/") std::cout << "\tdiv "  << operand1 << ", " << operand2 << '\n';
+                std::cout << "\tmov " << destination << ", " << operand1 << '\n';
+            }
+        }
+        else
+        {
+            if (op.value() == "-")
+            {
+                std::cout << "\tmov " << destination << ", " << operand1 << '\n';
+                std::cout << "\tneg " << destination << '\n';
+            }
+        }
+    }
+    std::cout << "\tpop rbp\n\tret";
 }
 
 void CodeGenerator::Visit(ASTNode& n)        { assert(("Code Generator visited base ASTNode class?!"      , false)); }
