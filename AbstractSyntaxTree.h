@@ -1,9 +1,19 @@
 #pragma once
 #include <iostream>
+#include <memory>
 
 #include "Utility.h"
 #include "Visitor.h"
 #include "Token.h"
+
+using ASTNodePtr               = std::unique_ptr<ASTNode>;
+using IfNodePtr                = std::unique_ptr<IfNode>;
+using IdentifierNodePtr        = std::unique_ptr<IdentifierNode>;
+using DeclareStatementNodePtr  = std::unique_ptr<DeclareStatementNode>;
+using IfStatementNodePtr       = std::unique_ptr<IfStatementNode>;
+using StatementBlockNodePtr    = std::unique_ptr<StatementBlockNode>;
+using CompoundStatementNodePtr = std::unique_ptr<CompoundStatementNode>;
+using DeclareAssignNodePtr     = std::unique_ptr<DeclareAssignNode>;
 
 // Base Node class
 class ASTNode
@@ -11,7 +21,6 @@ class ASTNode
 public:
     std::string parentID;
 public:
-    ASTNode() = default;
     virtual ~ASTNode() = default;
 
     // Function allowing the implementation of the visitor pattern
@@ -23,10 +32,9 @@ public:
 class UnaryASTNode : public ASTNode
 {
 public:
-    ASTNode* expr;
+    ASTNodePtr expr;
 public:
-    UnaryASTNode(ASTNode* n) noexcept : expr(n) {}
-    ~UnaryASTNode() { delete expr; }
+    UnaryASTNode(ASTNodePtr n) noexcept : expr(std::move(n)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
     void SetChildrenPrintID(const std::string& pID) override { expr->parentID = pID; }
@@ -37,7 +45,7 @@ class UnaryOperationNode : public UnaryASTNode
 public:
     TokenPair op;
 public:
-    UnaryOperationNode(TokenPair t, ASTNode* n) noexcept : UnaryASTNode(n), op(t) {}
+    UnaryOperationNode(TokenPair t, ASTNodePtr n) noexcept : UnaryASTNode(std::move(n)), op(t) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
     void SetChildrenPrintID(const std::string& pID) override { expr->parentID = pID; }
@@ -47,16 +55,11 @@ public:
 class BinaryASTNode : public ASTNode
 {
 public:
-    ASTNode*   left;
-    ASTNode*   right;
+    ASTNodePtr left;
+    ASTNodePtr right;
     TokenPair  op;
 public:
-    BinaryASTNode(ASTNode* l, TokenPair o, ASTNode* r) noexcept : left(l), op(o), right(r) {}
-    ~BinaryASTNode()
-    {
-        delete left;
-        delete right;
-    }
+    BinaryASTNode(ASTNodePtr l, TokenPair o, ASTNodePtr r) noexcept : left(std::move(l)), op(o), right(std::move(r)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
     void SetChildrenPrintID(const std::string& pID) override { left->parentID = pID; right->parentID = pID; }
@@ -66,7 +69,7 @@ public:
 class IntegerNode : public ASTNode       // this doesnt have a token anymore - does it need one for the future?
 {
 public:
-    int value;
+    int value;  // should this just be a string for ease?
 public:
     IntegerNode(const std::string& val) : value(std::stoi(val)) {}
 
@@ -92,7 +95,7 @@ public:
 class BinaryOperationNode : public BinaryASTNode
 {
 public:
-    BinaryOperationNode(ASTNode* l, TokenPair o, ASTNode* r) noexcept : BinaryASTNode(l, o, r) {}
+    BinaryOperationNode(ASTNodePtr l, TokenPair o, ASTNodePtr r) noexcept : BinaryASTNode(std::move(l), o, std::move(r)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
@@ -100,7 +103,7 @@ public:
 class ConditionNode : public BinaryASTNode
 {
 public:
-    ConditionNode(ASTNode* l, TokenPair& o, ASTNode* r) noexcept : BinaryASTNode(l, o, r) {}
+    ConditionNode(ASTNodePtr l, TokenPair& o, ASTNodePtr r) noexcept : BinaryASTNode(std::move(l), o, std::move(r)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
@@ -109,16 +112,11 @@ public:
 class IfNode : public ASTNode
 {
 public:
-    ASTNode* condition;
-    ASTNode* body;
+    ASTNodePtr condition;
+    ASTNodePtr body;
     std::string type;  // IF or ELSE_IF used only for visualization
 public:
-    IfNode(ASTNode* b, ASTNode* cond) noexcept : body(b),  condition(cond) {}
-    ~IfNode()
-    {
-        delete condition;
-        if (body) delete body;
-    }
+    IfNode(ASTNodePtr b, ASTNodePtr cond) noexcept : body(std::move(b)),  condition(std::move(cond)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
     void SetChildrenPrintID(const std::string& pID) override { condition->parentID = pID; body->parentID = pID; }
@@ -128,19 +126,14 @@ public:
 class IfStatementNode : public ASTNode
 {
 public:
-    std::vector<IfNode*> ifNodes;
-    ASTNode* elseBody;
+    std::vector<IfNodePtr> ifNodes;
+    ASTNodePtr elseBody;
 public:
-    ~IfStatementNode()
-    {
-        for (const auto& ifN : ifNodes)  delete ifN;
-        if (elseBody) delete elseBody;
-    }
 
-    void AddNode(IfNode* node)
+    void AddNode(IfNodePtr node)
     {
         ifNodes.empty() ? node->type = "IF" : node->type = "ELSEIF";
-        ifNodes.push_back(node);
+        ifNodes.push_back(std::move(node));
     }
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
     void SetChildrenPrintID(const std::string& pID) override
@@ -153,15 +146,10 @@ public:
 class IterationNode : public ASTNode
 {
 public:
-    ASTNode* condition;
-    ASTNode* body;
+    ASTNodePtr condition;
+    ASTNodePtr body;
 public:
-    IterationNode(ASTNode* cond, ASTNode* b) noexcept : condition(cond), body(b) {}
-    ~IterationNode()
-    {
-        delete condition;
-        if (body) delete body;
-    }
+    IterationNode(ASTNodePtr cond, ASTNodePtr b) noexcept : condition(std::move(cond)), body(std::move(b)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
     void SetChildrenPrintID(const std::string& pID) override { condition->parentID = pID; body->parentID = pID; }
@@ -170,7 +158,7 @@ public:
 class WhileNode : public IterationNode
 {
 public:
-    WhileNode(ASTNode* cond, ASTNode* b) noexcept : IterationNode(cond, b) {}
+    WhileNode(ASTNodePtr cond, ASTNodePtr b) noexcept : IterationNode(std::move(cond), std::move(b)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
@@ -178,7 +166,7 @@ public:
 class DoWhileNode : public IterationNode
 {
 public:
-    DoWhileNode(ASTNode* cond, ASTNode* b) noexcept : IterationNode(cond, b) {}
+    DoWhileNode(ASTNodePtr cond, ASTNodePtr b) noexcept : IterationNode(std::move(cond), std::move(b)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
@@ -186,15 +174,12 @@ public:
 class CompoundStatementNode : public ASTNode
 {
 public:
-    std::vector<ASTNode*> statements;
+    std::vector<ASTNodePtr> statements;
 public:
-    CompoundStatementNode() = default;
-    ~CompoundStatementNode() { for (const auto& statement : statements) delete statement; }
-
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
     void SetChildrenPrintID(const std::string& pID) override { for (const auto& statement : statements) statement->parentID = pID; }
 
-    void Push(ASTNode* statement) { statements.push_back(statement); }
+    void Push(ASTNodePtr statement) { statements.push_back(std::move(statement)); }
 };
 
 class StatementBlockNode : public CompoundStatementNode
@@ -206,11 +191,10 @@ public:
 class DeclareStatementNode : public ASTNode
 {
 public:
-    IdentifierNode* identifier;
+    IdentifierNodePtr identifier;
     TokenPair type;
 public:
-    DeclareStatementNode(IdentifierNode* ident, TokenPair t) noexcept : identifier(ident), type(t) { identifier->type = t.second; }
-    ~DeclareStatementNode() { delete identifier; }
+    DeclareStatementNode(IdentifierNodePtr ident, TokenPair t) noexcept : identifier(std::move(ident)), type(t) { identifier->type = t.second; }
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
     void SetChildrenPrintID(const std::string& pID) override {identifier->parentID = pID; }
@@ -219,7 +203,7 @@ public:
 class DeclareAssignNode : public BinaryASTNode
 {
 public:
-    DeclareAssignNode(DeclareStatementNode* decl, ASTNode* expr) noexcept : BinaryASTNode(decl, { "=", Token::ASSIGN }, expr) {}
+    DeclareAssignNode(DeclareStatementNodePtr decl, ASTNodePtr expr) noexcept : BinaryASTNode(std::move(decl), { "=", Token::ASSIGN }, std::move(expr)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
@@ -227,7 +211,7 @@ public:
 class AssignStatementNode : public BinaryASTNode
 {
 public:
-    AssignStatementNode(IdentifierNode* ident, ASTNode* expr) noexcept : BinaryASTNode(ident, { "=", Token::ASSIGN }, expr) {}
+    AssignStatementNode(IdentifierNodePtr ident, ASTNodePtr expr) noexcept : BinaryASTNode(std::move(ident), { "=", Token::ASSIGN }, std::move(expr)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
@@ -235,7 +219,7 @@ public:
 class ReturnStatementNode : public UnaryASTNode
 {
 public:
-    ReturnStatementNode(ASTNode* n) noexcept : UnaryASTNode(n) {}
+    ReturnStatementNode(ASTNodePtr n) noexcept : UnaryASTNode(std::move(n)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
     void SetChildrenPrintID(const std::string& pID) override { expr->parentID = pID; }
