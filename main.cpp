@@ -27,7 +27,7 @@ int main(int argc, char* argv[])
             semanticAnalyzer.PrintAnalysisInfo();
             // If semantic analysis was a success then generate intermediate code
             CodeGenerator codeGenerator;
-            codeGenerator.GenerateAssembly(parser.GetAST());
+            codeGenerator.GenerateTAC(parser.GetAST());
             // Transform intermediate code to assembly
             // Print|Output to file
             // Pass assembly to assembler?!
