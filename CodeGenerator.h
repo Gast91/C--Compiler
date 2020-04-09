@@ -5,14 +5,14 @@
 #include "Token.h"
 #include "Visitor.h"
 
-#define OPTIMIZE   // This global somehow?
+#define OPTIMIZE_TEMPS  // This global somehow?
 // Optimization flag enables the recycling of already processed temporary variables
 // and prevents -> _t0 = a * b -> c = _t0 and instead optimizes to c = a * b.
-#ifdef OPTIMIZE
-#define obtain_source(x) Temporary::CheckAndRecycle(GetValue(x))
+#ifdef OPTIMIZE_TEMPS
+#define fetch_instr(x) Temporary::CheckAndRecycle(GetValue(x))
 #else
-#define obtain_source(x) GetValue(x)
-#endif // OPTIMIZE
+#define fetch_instr(x) GetValue(x)
+#endif // OPTIMIZE_TEMPS
 
 struct Quadruples
 {
@@ -30,7 +30,7 @@ public:
     static const std::string NewTemporary() { return "_t" + std::to_string(tempCount++);  }
     // If a temporary is passed to it, it drops the counter effectively recycling that temporary
     // This should never be called by itself and rather through the obtain_source macro. I know bad design...
-    static const Quadruples& CheckAndRecycle(const Quadruples& potentialTemporary)
+    static const Quadruples CheckAndRecycle(const Quadruples& potentialTemporary)
     { 
         // What if an identifier starting with _t is passed to it...
         if (!potentialTemporary.dest.value().compare(0, 2, "_t")) --tempCount;
@@ -58,7 +58,8 @@ private:
 
     void ProcessAssignment(const BinaryASTNode& n);
 public:
-    void GenerateAssembly(ASTNode* n);
+    void GenerateTAC(ASTNode* n);
+    void GenerateAssembly();
 
     // Inherited via ASTNodeVisitor
     void Visit(ASTNode& n)               override;
