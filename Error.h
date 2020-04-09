@@ -4,7 +4,7 @@
 class UnexpectedTokenException : public std::exception
 {
 public:
-    UnexpectedTokenException(const std::string& msg) : exception(("PARSER ERROR: " + msg).c_str()) {}
+    UnexpectedTokenException(const std::string& msg) : exception(("\nPARSER ERROR: " + msg).c_str()) {}
 };
 
 class SymbolNotFoundException : public std::exception
