@@ -13,7 +13,6 @@ private:
     bool consoleOutput;
 public:
     ASTVisualizer(bool console = true) noexcept;
-    ~ASTVisualizer() = default;
 
     void PrintAST(ASTNode& n);
 
