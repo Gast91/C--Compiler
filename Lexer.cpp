@@ -98,14 +98,11 @@ bool Lexer::IsComment(const std::string& delimiter, const std::string& next) con
     return delimiter.front() == '/' && next == "/";
 }
 
-// Checks if the character passed to is is one of 0...9
-constexpr bool Lexer::IsDigit(const char c) const noexcept { return c >= 48 && c <= 57; }
-
 bool Lexer::IsInteger(const std::string& num) const
 {
     unsigned int i = 0;
-    const char digit = num.front();
-    if (IsDigit(digit))
+    const unsigned char digit = num.front();
+    if (isdigit(digit))
     {
         if (++i >= num.length()) return true;
         else return IsInteger(num.substr(i, std::string::npos));
@@ -114,11 +111,11 @@ bool Lexer::IsInteger(const std::string& num) const
 }
 
 // Checks if the character pass to it is one of the alphabet characters (lower or upper) or a digit or underscore
-constexpr bool Lexer::IsCharacter(const char c) const noexcept { return (c >= 65 && c <= 90) || (c >= 97 && c <= 122) || c == 95 || IsDigit(c); }
+bool Lexer::IsCharacter(const unsigned char c) const noexcept { return isalpha(c) || c == '_' || isdigit(c); }
 
 constexpr bool Lexer::IsIdentifier(const std::string& identifier, const bool firstCall) const
 {
-    if (firstCall) if (IsDigit(identifier.front())) return false;
+    if (firstCall) if (isdigit(identifier.front())) return false;
     unsigned int i = 0;
     const char character = identifier.front();
     if (IsCharacter(character))
@@ -128,13 +125,6 @@ constexpr bool Lexer::IsIdentifier(const std::string& identifier, const bool fir
     }
     return false;
 }
-
-// Not needed anymore/for now with the updated token processing
-//bool Lexer::IsKeyword(const std::string& keyword) const
-//{
-//	return keyword == "int" || keyword == "if" || keyword == "else" ||
-//		   keyword == "while" || keyword == "for" || keyword == "return";
-//}
 
 void Lexer::PrintTokens() const
 {
@@ -150,7 +140,7 @@ const std::string Lexer::GetLine() const { return std::to_string(line); }
 void Lexer::Consume(const Token token)
 {
     if (token == sourceTokens.at(currentTokenIndex).second && currentTokenIndex + 1 < sourceTokens.size()) ++currentTokenIndex;
-    else throw UnexpectedTokenException("Encountered unexpected token at line " + GetLine() + ", Expected: " + sourceTokens.at(currentTokenIndex).first);
+    else throw UnexpectedTokenException("Encountered unexpected token at line " + GetLine());
     while (sourceTokens.at(currentTokenIndex).second == Token::NLINE) { ++line; ++currentTokenIndex; }
 }
 
