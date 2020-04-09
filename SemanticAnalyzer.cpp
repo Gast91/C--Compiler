@@ -155,7 +155,7 @@ void SemanticAnalyzer::Visit(DeclareAssignNode& n)
 
 void SemanticAnalyzer::Visit(AssignStatementNode& n)
 {
-    const IdentifierNode* identifier = dynamic_cast<IdentifierNode*>(n.left);
+    const IdentifierNode* identifier = dynamic_cast<IdentifierNode*>(n.left.get());
     if (!currentScope->LookUpSymbol(identifier->name))
     {
         failState = true;
