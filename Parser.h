@@ -18,7 +18,7 @@ private:
     ASTNodePtr ParseIfStatement();
     ASTNodePtr ParseWhile();
     ASTNodePtr ParseDoWhile();
-    ASTNodePtr ParseProgram();                      // main and functions and assignments/declarations - just main now - entry point
+    ASTNodePtr ParseProgram();
     ASTNodePtr ParseStatementBlock();
     ASTNodePtr ParseCompoundStatement();
     std::vector<ASTNodePtr> ParseStatementList();
@@ -32,7 +32,6 @@ private:
     bool parsingCond = false;
 public:
     Parser(const Lexer& lex);
-    //~Parser();
 
     ASTNode* GetAST() const noexcept { return failState ? nullptr : root.get(); }  // ?????
     bool Success()    const noexcept { return !failState; }
