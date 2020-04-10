@@ -18,74 +18,60 @@ void CodeGenerator::GenerateTAC(ASTNode* n)
 {
     std::cout << "Intermediate Language Representation:\nmain:\n";
     PlainVisit(n);  // Start Traversing the AST
-    for (const auto& instruction : instructions)   // no string comparisons pls - how about string_view or something else - merge stuff
+    for (auto& [op, src1, src2, dest] : instructions)
     {
         // if there is a second operand then the instruction represent's a full three address code (3 addresses, 2 max operands on the right)
-        if (instruction.src2.has_value())
-            std::cout << '\t' << instruction.dest.value().name << " = " << instruction.src1.value().name << ' ' << instruction.op.value() << ' ' << instruction.src2.value().name << ";\n";
-        else if (instruction.op.value() == "=")       
-            std::cout << '\t' << instruction.dest.value().name << ' ' << instruction.op.value() << ' ' << instruction.src1.value().name << ";\n";
-        else if (!instruction.op.value().compare(0, 2, "If"))   
-            std::cout << '\t' << instruction.op.value() << ' ' << instruction.src1.value().name << " Goto " << instruction.dest.value().name << ";\n";
-        else if (instruction.op.value() == "Label")   std::cout << instruction.dest.value().name << ":\n";
-        else if (instruction.op.value() == "Return")  std::cout << '\t' << instruction.op.value() << ' ' << instruction.dest.value().name << ";\n";  // if it works fix comps
-        else if (instruction.op.value() == "Goto")    std::cout << '\t' << instruction.op.value() << ' ' << instruction.dest.value().name << ":\n";
+        if (src2.has_value())
+            std::cout << '\t' << dest->name << " = " << src1->name << ' ' << *op << ' ' << src2->name << ";\n";
+        else if (op == "=")       
+            std::cout << '\t' << dest->name << ' ' << *op << ' ' << src1->name << ";\n";
+        else if (!op->compare(0, 2, "If"))   
+            std::cout << '\t' << *op << ' ' << src1->name << " Goto " << dest->name << ";\n";
+        else if (op == "Label") std::cout << dest->name << ":\n";
+        else if (op == "Return" || op == "Goto")  std::cout << '\t' << *op << ' ' << dest->name << ";\n";  // if it works fix comps
         // Unary Operation Instruction
-        else std::cout << '\t' << instruction.dest.value().name << " = " << instruction.op.value() << ' ' << instruction.src1.value().name << ";\n";
+        else std::cout << '\t' << dest->name << " = " << *op << ' ' << src1->name << ";\n";
     }
     GenerateAssembly();
 }
 
-void CodeGenerator::GenerateAssembly()  // variable names must be their stack offset
+void CodeGenerator::GenerateAssembly()
 {
-    std::cout << "\nx86 Assembly??: \n";
-    std::cout << "main:\n\tpush ebp\n\tmov ebp, esp\n";
-    for (const auto& instruction : instructions)
+    std::cout << "\nx86 Assembly: \n";
+    //std::cout << "main:\n\tpush ebp\n\tmov ebp, esp\n";  // No point atm since we dont have multiple functions, the way this is handled will change at the future
+    for (auto& [op, src1, src2, dest] : instructions)
     {
-        auto[op, src1, src2, dest] = instruction;
-        const auto operand1 = registers.find(src1.value().name) != registers.end() ? registers.at(src1.value().name) : src1.value().address;    // at the end operand 2 must be a register or address
-        const auto destination = registers.find(dest.value().name) != registers.end() ? registers.at(dest.value().name) : dest.value().address; // at the end operand 2 must be a register or address
+        const auto operand1 = registers.find(src1->name) != registers.end() ? registers.at(src1->name) : src1->address;    // at the end operand 2 must be a register or address
+        const auto destination = registers.find(dest->name) != registers.end() ? registers.at(dest->name) : dest->address; // at the end operand 2 must be a register or address
         if (src2.has_value())
         {
-            const auto operand2 = registers.find(src2.value().name) != registers.end() ? registers.at(src2.value().name) : src2.value().address; // at the end operand 2 must be a register or address
-            //if (!dest.value().compare(0, 2, "_t"))
+            const auto operand2 = registers.find(src2->name) != registers.end() ? registers.at(src2->name) : src2->address; // at the end operand 2 must be a register or address
             if (dest.value().type == Token::TEMPORARY)
             {
-/*is this needed now?*/if (src1.value().name != dest.value().name) std::cout << "\tmov " << destination << ", " << operand1 << '\n';   // what if src1 and/or two are registers!
-                if (op.value() == "*")      std::cout << "\timul " << destination << ", " << operand2 << '\n';    // multiply must always be the eax
-                else if (op.value() == "+") std::cout << "\tadd "  << destination << ", " << operand2 << '\n';
-                else if (op.value() == "-") std::cout << "\tsub "  << destination << ", " << operand2 << '\n';
-                else if (op.value() == "/") std::cout << "\tdiv "  << destination << ", " << operand2 << '\n';
+                if (operand1 != destination) std::cout << "\tmov " << destination << ", " << operand1 << '\n';   // what if src1 and/or two are registers!
+                if (op == "*")      std::cout << "\timul " << destination << ", " << operand2 << '\n';           // multiply must always be in the eax
+                else if (op == "+") std::cout << "\tadd "  << destination << ", " << operand2 << '\n';           // check if operand1 is eax and then ok if not move it there?
+                else if (op == "-") std::cout << "\tsub "  << destination << ", " << operand2 << '\n';
+                else if (op == "/") std::cout << "\tdiv "  << destination << ", " << operand2 << '\n';    // something weird here?
             }
-            else if (!op.value().compare(0, 2, "If"));  // <---  we have taken care of the condition, so we need to compare and jump to destination depending
-            else if (op.value() == "Goto") std::cout << "\tjmp" << destination << '\n';
-            else if (dest.value().type == Token::LABEL) std::cout << destination << ":\n";
-            //else
-            //{
-            //    // we still need to move to a reg fuck the opt fucked me?
-            //    if (op.value() == "*")      std::cout << "\timul " << operand1 << ", " << operand2 << '\n';      // multiply must always be the eax
-            //    else if (op.value() == "+") std::cout << "\tadd "  << operand1 << ", " << operand2 << '\n';
-            //    else if (op.value() == "-") std::cout << "\tsub "  << operand1 << ", " << operand2 << '\n';
-            //    else if (op.value() == "/") std::cout << "\tdiv "  << operand1 << ", " << operand2 << '\n';
-            //    std::cout << "\tmov " << destination << ", " << operand1 << '\n';
-            //}
+            else if (!op->compare(0, 2, "If"));  // <---  comparisons and jmps happen at each logical expression? maybe even TAC needs changing
+            else if (op == "Goto") std::cout << "\tjmp" << destination << '\n';
+            else if (dest->type == Token::LABEL) std::cout << destination << ":\n";
         }
         else
         {
             std::cout << "\tmov " << destination << ", " << operand1 << '\n';   // this only for assigns and unaries so far - return for example does other things
-            if (op.value() == "-") std::cout << "\tneg " << destination << '\n';
+            if (op == "-") std::cout << "\tneg " << destination << '\n';
         }
     }
-    std::cout << "\tpop ebp\n\tret";
+    //std::cout << "\tpop ebp\n\tret";  // No point atm since we dont have multiple functions, the way this is handled will change at the future
 }
 
 void CodeGenerator::Visit(ASTNode& n)        { assert(("Code Generator visited base ASTNode class?!"      , false)); }
 void CodeGenerator::Visit(UnaryASTNode& n)   { assert(("Code Generator visited base UnaryASTNode class?!" , false)); }
 void CodeGenerator::Visit(BinaryASTNode& n)  { assert(("Code Generator visited base BinaryASTNode class?!", false)); }
 // Integer and Identifier Leaf Nodes. A throwaway Quadruple is returned that effectively passes back their value or name
-//void CodeGenerator::Visit(IntegerNode& n)    { Return({ std::nullopt, std::nullopt, std::nullopt, std::to_string(n.value) }); }
 void CodeGenerator::Visit(IntegerNode& n) { Return({ std::nullopt, std::nullopt, std::nullopt, Operand{Token::INT_LITERAL, std::to_string(n.value), std::to_string(n.value)} }); }
-//void CodeGenerator::Visit(IdentifierNode& n) { Return({ std::nullopt, std::nullopt,  std::nullopt, n.name }); }
 void CodeGenerator::Visit(IdentifierNode& n) { Return({ std::nullopt, std::nullopt,  std::nullopt, Operand{Token::IDENTIFIER, n.name, " DWORD PTR [ebp" + n.offset + "]"} }); }
 
 void CodeGenerator::Visit(UnaryOperationNode& n)

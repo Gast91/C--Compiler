@@ -42,7 +42,6 @@ public:
     static const Quadruples CheckAndRecycle(const Quadruples& potentialTemporary)
     { 
         // What if an identifier starting with _t is passed to it...
-        //if (!potentialTemporary.dest.value().compare(0, 2, "_t")) --tempCount;
         if (potentialTemporary.dest.value().type == Token::TEMPORARY) --tempCount;
         return potentialTemporary;
     }
@@ -53,7 +52,6 @@ class Label
 private:
     static int labelCount;
 public:
-    //static const std::string NewLabel() { return "_L" + std::to_string(labelCount++); }
     static const Operand NewLabel() { return Operand{ Token::LABEL, "_L" + std::to_string(labelCount++), "" }; }
 };
 
