@@ -136,8 +136,7 @@ void SemanticAnalyzer::Visit(DeclareStatementNode& n)
     // Get the variable name from the Declaration's Identifier Node
     const std::string variableName = n.identifier->name;
     const std::string line = n.identifier->lineNo;
-    addressOffset -= 4;  // symbol table must have each symbols offset at the creation so in here you move the val to the symbol table so subsequent id accesses can set theirs
-    //n.identifier->offset = addressOffset;  // this shouldnt be hardcoded - based on type! also addressOffset depends on function (different stacks for diff functions)
+    addressOffset -= 4;  // This shouldnt be hardcoded for int32's but for now we only have ints
     // Define a new VarSymbol using variable name and symbolType
     Symbol* variableSymbol = new VariableSymbol(variableName, std::to_string(addressOffset), symbolType);
     n.identifier->offset = std::to_string(addressOffset);
