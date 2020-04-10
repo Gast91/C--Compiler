@@ -51,24 +51,28 @@ void CodeGenerator::GenerateAssembly()  // variable names must be their stack of
             //if (!dest.value().compare(0, 2, "_t"))
             if (dest.value().type == Token::TEMPORARY)
             {
-                if (src1.value().name != dest.value().name) std::cout << "\tmov " << destination << ", " << operand1 << '\n';   // what if src1 and/or two are registers!
-                if (op.value() == "*")      std::cout << "\timul " << destination << ", " << operand2 << '\n';
+/*is this needed now?*/if (src1.value().name != dest.value().name) std::cout << "\tmov " << destination << ", " << operand1 << '\n';   // what if src1 and/or two are registers!
+                if (op.value() == "*")      std::cout << "\timul " << destination << ", " << operand2 << '\n';    // multiply must always be the eax
                 else if (op.value() == "+") std::cout << "\tadd "  << destination << ", " << operand2 << '\n';
                 else if (op.value() == "-") std::cout << "\tsub "  << destination << ", " << operand2 << '\n';
                 else if (op.value() == "/") std::cout << "\tdiv "  << destination << ", " << operand2 << '\n';
             }
-            else
-            {
-                if (op.value() == "*")      std::cout << "\timul " << operand1 << ", " << operand2 << '\n';
-                else if (op.value() == "+") std::cout << "\tadd "  << operand1 << ", " << operand2 << '\n';
-                else if (op.value() == "-") std::cout << "\tsub "  << operand1 << ", " << operand2 << '\n';
-                else if (op.value() == "/") std::cout << "\tdiv "  << operand1 << ", " << operand2 << '\n';
-                std::cout << "\tmov " << destination << ", " << operand1 << '\n';
-            }
+            else if (!op.value().compare(0, 2, "If"));  // <---  we have taken care of the condition, so we need to compare and jump to destination depending
+            else if (op.value() == "Goto") std::cout << "\tjmp" << destination << '\n';
+            else if (dest.value().type == Token::LABEL) std::cout << destination << ":\n";
+            //else
+            //{
+            //    // we still need to move to a reg fuck the opt fucked me?
+            //    if (op.value() == "*")      std::cout << "\timul " << operand1 << ", " << operand2 << '\n';      // multiply must always be the eax
+            //    else if (op.value() == "+") std::cout << "\tadd "  << operand1 << ", " << operand2 << '\n';
+            //    else if (op.value() == "-") std::cout << "\tsub "  << operand1 << ", " << operand2 << '\n';
+            //    else if (op.value() == "/") std::cout << "\tdiv "  << operand1 << ", " << operand2 << '\n';
+            //    std::cout << "\tmov " << destination << ", " << operand1 << '\n';
+            //}
         }
         else
         {
-            std::cout << "\tmov " << destination << ", " << operand1 << '\n';
+            std::cout << "\tmov " << destination << ", " << operand1 << '\n';   // this only for assigns and unaries so far - return for example does other things
             if (op.value() == "-") std::cout << "\tneg " << destination << '\n';
         }
     }
@@ -82,7 +86,7 @@ void CodeGenerator::Visit(BinaryASTNode& n)  { assert(("Code Generator visited b
 //void CodeGenerator::Visit(IntegerNode& n)    { Return({ std::nullopt, std::nullopt, std::nullopt, std::to_string(n.value) }); }
 void CodeGenerator::Visit(IntegerNode& n) { Return({ std::nullopt, std::nullopt, std::nullopt, Operand{Token::INT_LITERAL, std::to_string(n.value), std::to_string(n.value)} }); }
 //void CodeGenerator::Visit(IdentifierNode& n) { Return({ std::nullopt, std::nullopt,  std::nullopt, n.name }); }
-void CodeGenerator::Visit(IdentifierNode& n) { Return({ std::nullopt, std::nullopt,  std::nullopt, Operand{Token::IDENTIFIER, n.name, "[ebp" + n.offset + "]"} }); }
+void CodeGenerator::Visit(IdentifierNode& n) { Return({ std::nullopt, std::nullopt,  std::nullopt, Operand{Token::IDENTIFIER, n.name, " DWORD PTR [ebp" + n.offset + "]"} }); }
 
 void CodeGenerator::Visit(UnaryOperationNode& n)
 {
@@ -155,23 +159,23 @@ void CodeGenerator::Visit(DeclareStatementNode& n)
 
 void CodeGenerator::ProcessAssignment(const BinaryASTNode& n)
 {
-#ifdef OPTIMIZE_TEMPS
-    // Get the instruction from the expression (temporary with expression, literal or identifier) from the right
-    const auto src2 = fetch_instr(n.right.get());
-    // If its an operation (not just an identifier or literal)
-    if (src2.op.has_value())
-    {
-        // Remove the previous instruction
-        instructions.pop_back();
-        // And reform it as a direct assignment of the operation to your left operand
-        instructions.push_back({ src2.op, src2.src1, src2.src2, GetValue(n.left.get()).dest });
-    }
-    // Just a literal or identifier, assign it to your left
-    else instructions.push_back({ n.op.first, src2.dest, std::nullopt, GetValue(n.left.get()).dest });
-#else
+//#ifdef OPTIMIZE_TEMPS
+//    // Get the instruction from the expression (temporary with expression, literal or identifier) from the right
+//    const auto src2 = fetch_instr(n.right.get());
+//    // If its an operation (not just an identifier or literal)
+//    if (src2.op.has_value())
+//    {
+//        // Remove the previous instruction
+//        instructions.pop_back();
+//        // And reform it as a direct assignment of the operation to your left operand
+//        instructions.push_back({ src2.op, src2.src1, src2.src2, GetValue(n.left.get()).dest });
+//    }
+//    // Just a literal or identifier, assign it to your left
+//    else instructions.push_back({ n.op.first, src2.dest, std::nullopt, GetValue(n.left.get()).dest });
+//#else
     // Assign the expression to your left
-    instructions.push_back({ n.op.first, fetch_instr(n.right).dest, std::nullopt, GetValue(n.left).dest });
-#endif // OPTIMIZE_TEMPS
+    instructions.push_back({ n.op.first, fetch_instr(n.right.get()).dest, std::nullopt, GetValue(n.left.get()).dest });
+//#endif // OPTIMIZE_TEMPS
 }
 
 void CodeGenerator::Visit(DeclareAssignNode& n)   { ProcessAssignment(n); }
