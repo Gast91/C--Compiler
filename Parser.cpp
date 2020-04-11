@@ -13,37 +13,38 @@ Parser::Parser(const Lexer& lex) : lexer(lex)
 // FACTOR := (ADD | SUB ) FACTOR | INTEGER | IDENTIFIER | LPAR EXPRESSION RPAR
 ASTNodePtr Parser::ParseFactor()
 {
-    const auto currentToken = lexer.GetCurrentToken();
+    //const auto currentToken = lexer.GetCurrentToken();
+    const auto&[tokValue, tokType] = lexer.GetCurrentToken();
     // Just an add operator before a number literal or identifier
-    if (currentToken.second == Token::ADD)
+    if (tokType == Token::ADD)
     {
         lexer.Consume(Token::ADD);
-        return std::make_unique<UnaryOperationNode>(currentToken, ParseFactor());
+        return std::make_unique<UnaryOperationNode>(TokenPair{ tokValue, tokType }, ParseFactor());
     }
     // Just a minus operator before a number literal or identifier (negation)
-    else if (currentToken.second == Token::SUB)
+    else if (tokType == Token::SUB)
     {
         lexer.Consume(Token::SUB);
-        return std::make_unique<UnaryOperationNode>(currentToken, ParseFactor());
+        return std::make_unique<UnaryOperationNode>(TokenPair{ tokValue, tokType }, ParseFactor());
     }
-    else if (currentToken.second == Token::INT_LITERAL)
+    else if (tokType == Token::INT_LITERAL)
     {
         lexer.Consume(Token::INT_LITERAL);
-        return std::make_unique<IntegerNode>(currentToken.first);
+        return std::make_unique<IntegerNode>(tokValue);
     }
-    else if (currentToken.second == Token::IDENTIFIER)
+    else if (tokType == Token::IDENTIFIER)
     {
         lexer.Consume(Token::IDENTIFIER);
-        return std::make_unique<IdentifierNode>(currentToken.first, lexer.GetLine());
+        return std::make_unique<IdentifierNode>(tokValue, lexer.GetLine());
     }
-    else if (currentToken.second == Token::LPAR)
+    else if (tokType == Token::LPAR)
     {
         lexer.Consume(Token::LPAR);
         ASTNodePtr node = parsingCond ? ParseCond() : ParseExpr();
         lexer.Consume(Token::RPAR);
         return node;
     }
-    else throw UnexpectedTokenException("Unexpected token '" + currentToken.first + "' at line " + lexer.GetLine());
+    else throw UnexpectedTokenException("Unexpected token '" + tokValue + "' at line " + lexer.GetLine());
 }
 
 // TERM := FACTOR ((MUL | DIV) FACTOR)*
@@ -103,7 +104,7 @@ ASTNodePtr Parser::ParseCond()
     {
         const auto currentToken = lexer.GetCurrentToken();
         lexer.Consume(lexer.GetCurrentToken().second);
-        node = std::make_unique<BinaryOperationNode>(std::move(node), currentToken, ParseBoolExpr());
+        node = std::make_unique<BinaryOperationNode>(std::move(node), currentToken, ParseBoolExpr());  // make it conditionNode? then it will be visited in code gen (but also sem!!)
     }
     parsingCond = false;
     return node;
@@ -214,24 +215,24 @@ std::vector<ASTNodePtr> Parser::ParseStatementList()
 }
 
 // STATEMENT : COMPOUND_STATEMENT | ASSIGN_STATEMENT | EMPTY_STATEMENT
-ASTNodePtr Parser::ParseStatement()                                                        // FOR/OTHER STAMENTS..etc go here
+ASTNodePtr Parser::ParseStatement()                                                  // FOR/OTHER STAMENTS..etc go here
 {
-    const auto currentToken = lexer.GetCurrentToken().second;
-    if         (currentToken == Token::IF)         return ParseIfStatement();
-    else if    (currentToken == Token::WHILE)      return ParseWhile();                  // Merge Loop Statements?
-    else if    (currentToken == Token::DO)         return ParseDoWhile();
-    else if    (currentToken == Token::RET)        return ParseReturn();
-    else if    (currentToken == Token::INT_TYPE)   return ParseDeclarationStatement();   // lexer.isType()? the same will happen for all types - and functions + void
-    else if    (currentToken == Token::IDENTIFIER) return ParseAssignStatement();        // Can parse an assign statement or a declare and assign statement
-    else if    (currentToken == Token::LCURLY)	   return ParseStatementBlock();         // Specifically parses free floating statement blocks (enclosed by { })
-    else if    (currentToken == Token::RCURLY)	   return ParseEmpty();
-    else if    (currentToken == Token::FILE_END)   return ParseEmpty();
-    else throw UnexpectedTokenException("Encountered unexpected token '" + lexer.GetCurrentToken().first + "' at line " + lexer.GetLine());
+    const auto&[tokenValue, tokenType] = lexer.GetCurrentToken();
+    if         (tokenType == Token::IF)         return ParseIfStatement();
+    else if    (tokenType == Token::WHILE)      return ParseWhile();                 // Merge Loop Statements?
+    else if    (tokenType == Token::DO)         return ParseDoWhile();
+    else if    (tokenType == Token::RET)        return ParseReturn();
+    else if    (tokenType == Token::INT_TYPE)   return ParseDeclarationStatement();  // lexer.isType()? the same will happen for all types - and functions + void
+    else if    (tokenType == Token::IDENTIFIER) return ParseAssignStatement();       // Can parse an assign statement or a declare and assign statement
+    else if    (tokenType == Token::LCURLY)	   return ParseStatementBlock();         // Specifically parses free floating statement blocks (enclosed by { })
+    else if    (tokenType == Token::RCURLY)	   return ParseEmpty();
+    else if    (tokenType == Token::FILE_END)   return ParseEmpty();
+    else throw UnexpectedTokenException("Encountered unexpected token '" + tokenValue + "' at line " + lexer.GetLine());
 }
 
 // DECLARATION_STATEMENT := TYPE_SPECIFIER IDENTIFIER SEMI |
                           //TYPE_SPECIFIER ASSIGN_STATEMENT
-ASTNodePtr Parser::ParseDeclarationStatement()
+ASTNodePtr Parser::ParseDeclarationStatement() // in the future it should accommodate function declarations also
 {
     // Get the type specifier (int, float, char etc..) and consume it
     const auto typeToken = lexer.GetCurrentToken();
