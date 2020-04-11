@@ -80,7 +80,7 @@ void SemanticAnalyzer::Visit(IfStatementNode& n)
     SymbolTable* nestedScope = CreateNewScope(&n, "ELSE_");
 
     // Perform Semantic Analysis to the "contents" of this new scope
-    n.elseBody->Accept(*this);
+    if (n.elseBody) n.elseBody->Accept(*this);
 
     // After we are done with the body of this nested statement we go back to the parent scope
     currentScope = nestedScope->parentScope;

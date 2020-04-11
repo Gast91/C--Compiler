@@ -131,7 +131,7 @@ void ASTVisualizer::Visit(IfStatementNode& n)
     {
         n.SetChildrenPrintID(GenerateJSON(out, &n, "_IF_", n.parentID, "_IF_", config));  // else is compound so parent automatically becomes _IF_ shows no else!
         for (const auto& ifN : n.ifNodes) ifN->Accept(*this);
-        n.elseBody->Accept(*this);
+        if (n.elseBody) n.elseBody->Accept(*this);
     }
 }
 

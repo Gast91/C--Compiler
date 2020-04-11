@@ -104,7 +104,7 @@ public:
 class ConditionNode : public BinaryASTNode
 {
 public:
-    ConditionNode(ASTNodePtr l, TokenPair& o, ASTNodePtr r) noexcept : BinaryASTNode(std::move(l), o, std::move(r)) {}
+    ConditionNode(ASTNodePtr l, TokenPair o, ASTNodePtr r) noexcept : BinaryASTNode(std::move(l), o, std::move(r)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
@@ -140,7 +140,7 @@ public:
     void SetChildrenPrintID(const std::string& pID) override
     {
         for (const auto& ifN : ifNodes) ifN->parentID = pID;
-        elseBody->parentID = pID;
+        if (elseBody) elseBody->parentID = pID;
     }
 };
 
