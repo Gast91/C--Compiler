@@ -8,9 +8,6 @@
    will be inserted into the map in the form of { VALUE , UNKNOWN } */
 enum class Token
 {
-// Code Generation Tokens - Might be temporary solutions
-    LABEL,
-    TEMPORARY,
 // Variable/Function Names
     IDENTIFIER,
 // Literals
