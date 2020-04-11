@@ -42,7 +42,6 @@ class Temporary
 private:
     static int tempCount;
 public:
-    //static const std::string NewTemporary() { return "_t" + std::to_string(tempCount++);  }
     static const Operand NewTemporary() { return Operand{ CmdType::REG, "_t" + std::to_string(tempCount++), "" }; } // address? const?
     // If a temporary is passed to it, it drops the counter effectively recycling that temporary
     // This should never be called by itself and rather through the obtain_source macro. I know bad design...
@@ -71,10 +70,11 @@ class CodeGenerator : public ValueGetter<CodeGenerator, ASTNode*, Quadruples>, p
 {
 private:
     static ThreeAddressCode instructions;
+    std::vector<std::pair<std::string, std::string>> inUseLabels;  // is this just the end always? get rid of one string?
+    unsigned int labelIndex = 0;
 
     void ProcessAssignment(const BinaryASTNode& n);
-    /*unsigned int labelTracker = 0;
-    std::vector<std::pair<std::string, std::string>> labels;*/
+    const std::string ReverseOp(const std::string& op);
 public:
     void GenerateTAC(ASTNode* n);
     void GenerateAssembly();

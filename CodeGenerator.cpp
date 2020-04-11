@@ -53,17 +53,25 @@ void CodeGenerator::GenerateAssembly()
     //std::cout << "main:\n\tpush ebp\n\tmov ebp, esp\n";  // No point atm since we dont have multiple functions, the way this is handled will change at the future
     for (auto& [op, src1, src2, dest] : instructions)
     {
-        const auto operand1    = asmLookup.find(src1->name) != asmLookup.end() ? asmLookup.at(src1->name) : src1->address; // at the end operand 2 must be a register or address
-        const auto destination = asmLookup.find(dest->name) != asmLookup.end() ? asmLookup.at(dest->name) : dest->address; // at the end operand 2 must be a register or address
+        const auto operand1    = asmLookup.find(src1->name) != asmLookup.end() ? asmLookup.at(src1->name) : src1->address;
+        const auto destination = asmLookup.find(dest->name) != asmLookup.end() ? asmLookup.at(dest->name) : dest->address;
         if (src2)
         {
-            const auto operand2 = asmLookup.find(src2->name) != asmLookup.end() ? asmLookup.at(src2->name) : src2->address; // at the end operand 2 must be a register or address
-            if (dest->type == CmdType::REG)  // should be the operator that decides what this is?
+            const auto operand2 = asmLookup.find(src2->name) != asmLookup.end() ? asmLookup.at(src2->name) : src2->address;
+            if (op->type == CmdType::RELAT)  // no move? first can be reg or mem, second imm, reg, mem
+            {
+                if (operand1 != destination) std::cout << "\tmov " << destination << ", " << operand1 << '\n';
+                std::cout << "\tcmp " << destination << ", " << operand2 << '\n';
+                std::cout << ReverseOp(op->value) << ' ' << inUseLabels.at(labelIndex).second << '\n';
+            }
+            // if oper is relative we need to do the mov (if needed) cmp to second or cmp first second and jmp to label
+            // else if arithm (do below) etc etc
+            else if (dest->type == CmdType::REG)
             {
                 if (operand1 != destination) std::cout << "\tmov " << destination << ", " << operand1 << '\n';
                 std::cout << asmLookup.at(op->value) << destination << ", " << operand2 << '\n';                 // multiply must always be in the eax| weird rules for DIV also
             }
-            else if (op->type == CmdType::IF);  // <---  comparisons and jmps happen at each logical expression? if should be processed, increment the label count
+            else if (op->type == CmdType::IF)    ++labelIndex; // The condition(s) have been processed and the label(s) used
             else if (op->type == CmdType::GOTO)  std::cout << asmLookup.at("Goto") << destination << '\n';
             else if (op->type == CmdType::LABEL) std::cout << destination << ":\n";
         }
@@ -74,6 +82,17 @@ void CodeGenerator::GenerateAssembly()
         }
     }
     //std::cout << "\tpop ebp\n\tret";  // No point atm since we dont have multiple functions, the way this is handled will change at the future
+}
+
+const std::string CodeGenerator::ReverseOp(const std::string& op)
+{
+    if (op == ">")       return asmLookup.at("<=");
+    else if (op == "<")  return asmLookup.at(">=");
+    else if (op == ">=") return asmLookup.at("<");
+    else if (op == "<=") return asmLookup.at(">");
+    else if (op == "!=") return asmLookup.at("==");
+    else if (op == "==") return asmLookup.at("!=");
+    else                 return "WHAT";
 }
 
 void CodeGenerator::Visit(ASTNode& n)        { assert(("Code Generator visited base ASTNode class?!"      , false)); }
@@ -89,7 +108,7 @@ void CodeGenerator::Visit(UnaryOperationNode& n)
     Return(instructions.back());
 }
 
-void CodeGenerator::Visit(BinaryOperationNode& n)
+void CodeGenerator::Visit(BinaryOperationNode& n)   // condense when done
 {
 #ifdef OPTIMIZE_TEMPS
     const auto src1 = fetch_instr(n.left.get()).dest;
@@ -103,17 +122,16 @@ void CodeGenerator::Visit(BinaryOperationNode& n)
 }
 
 void CodeGenerator::Visit(ConditionNode& n) 
-{ 
+{
 #ifdef OPTIMIZE_TEMPS
     const auto src1 = fetch_instr(n.left.get()).dest;
     const auto dest = Temporary::NewTemporary();
     const auto src2 = fetch_instr(n.right.get()).dest;
     instructions.push_back({ Command{n.op.first, CmdType::RELAT }, src1, src2, dest });
 #else
-instructions.push_back({ Command{n.op.first, CmdType::RELAT }, fetch_instr(n.left).dest, fetch_instr(n.right).dest, Temporary::NewTemporary() });
+    instructions.push_back({ Command{n.op.first, CmdType::RELAT }, fetch_instr(n.left).dest, fetch_instr(n.right).dest, Temporary::NewTemporary() });
 #endif // OPTIMIZE_TEMPS
-Return(instructions.back());
-    //assert(("Code Generator visited ConditionNode class?!", false));
+    Return(instructions.back());
 }
 
 void CodeGenerator::Visit(IfNode& n)
@@ -123,7 +141,7 @@ void CodeGenerator::Visit(IfNode& n)
     if (n.body) PlainVisit(n.body.get());
     instructions.push_back({ Command{"Label", CmdType::LABEL }, std::nullopt, std::nullopt, falseLabel });
     
-    //labels.push_back({ "", falseLabel.name });  // ???
+    inUseLabels.push_back({ "", falseLabel.name });
 }
 void CodeGenerator::Visit(IfStatementNode& n)
 {
@@ -141,6 +159,8 @@ void CodeGenerator::Visit(WhileNode& n)
     if (n.body) PlainVisit(n.body.get());
     instructions.push_back({ Command{"Goto", CmdType::GOTO }, std::nullopt, std::nullopt, startLabel });
     instructions.push_back({ Command{"Label", CmdType::LABEL }, std::nullopt, std::nullopt, endLabel });
+
+    inUseLabels.push_back({ startLabel.name, endLabel.name });
 }
 
 void CodeGenerator::Visit(DoWhileNode& n)
@@ -149,6 +169,8 @@ void CodeGenerator::Visit(DoWhileNode& n)
     instructions.push_back({ Command{"Label", CmdType::LABEL }, std::nullopt, std::nullopt, startLabel });
     if (n.body) PlainVisit(n.body.get());
     instructions.push_back({ Command{"If", CmdType::IF }, fetch_instr(n.condition.get()).dest, std::nullopt, startLabel });
+
+    inUseLabels.push_back({ startLabel.name, "" });
 }
 
 void CodeGenerator::Visit(CompoundStatementNode& n)
