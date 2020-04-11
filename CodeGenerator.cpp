@@ -10,16 +10,16 @@ static const std::map<std::string, std::string> asmLookup =
 {
 //------Arithm Op--------
     {"+"  , "\tadd "  },
-    {"-"  , "\tsub "  },        // what about negate
+    {"-"  , "\tsub "  },
     {"/"  , "\tdiv "  },
     {"*"  , "\timul " },
 //------Rel Oper---------
-    {">"  , "\tjle "  },        // Note the inversion
-    {"<"  , "\tjge "  },
-    {">=" , "\tjl "   },
-    {"<=" , "\tjg "   },
-    {"!=" , "\tje "   },
-    {"==" , "\tjne "  },
+    {">"  , "\tjg "   },
+    {"<"  , "\tjl "   },
+    {">=" , "\tjge "  },
+    {"<=" , "\tjle "  },
+    {"!=" , "\tjne "  },
+    {"==" , "\tje "   },
 //------Flow Control-----
     {"Goto", "\tjmp " },
 //------Registers--------
@@ -48,26 +48,23 @@ void CodeGenerator::GenerateTAC(ASTNode* n)
     GenerateAssembly();
 }
 
-void CodeGenerator::GenerateAssembly()         // not handling && and || - Refactor this - previous might also work!!
+void CodeGenerator::GenerateAssembly()         // not handling && and | complete return | look into mul/div
 {
-    std::cout << "\nx86 Assembly: \n";
+    std::cout << "\nx86 Assembly:\nmain:\n";
     //std::cout << "main:\n\tpush ebp\n\tmov ebp, esp\n";  // No point atm since we dont have multiple functions, the way this is handled will change at the future
     for (auto& [op, src1, src2, dest] : instructions)
     {
-        std::string operand1;
         const auto destination = asmLookup.find(dest->name) != asmLookup.end() ? asmLookup.at(dest->name) : dest->address;
-        if (src1 && !src2)
+        if (op->type == CmdType::GOTO)  std::cout << asmLookup.at("Goto") << destination << '\n';
+        else if (op->type == CmdType::LABEL) std::cout << destination << ":\n";
+        else if (op->type == CmdType::IF) ++labelIndex;                             // at the end of the if or else if body we need to jump to the end of the if label
+        else if (const auto operand1 = asmLookup.find(src1->name) != asmLookup.end() ? asmLookup.at(src1->name) : src1->address; src1 && !src2)
         {
-            if (op->type == CmdType::IF) {
-                ++labelIndex; continue;
-            }// The condition(s) have been processed and the label(s) used
-            operand1 = asmLookup.find(src1->name) != asmLookup.end() ? asmLookup.at(src1->name) : src1->address;
             std::cout << "\tmov " << destination << ", " << operand1 << '\n';   // this only for assigns and unaries so far - return for example does other things
-            if (op->value == "-") std::cout << "\tneg " << destination << '\n';
+            if (op->type == CmdType::UNARY) std::cout << "\tneg " << destination << '\n';
         }
         else if (src2)
         {
-            operand1 = asmLookup.find(src1->name) != asmLookup.end() ? asmLookup.at(src1->name) : src1->address;
             const auto operand2 = asmLookup.find(src2->name) != asmLookup.end() ? asmLookup.at(src2->name) : src2->address;
             if (op->type == CmdType::RELAT)  // no move? first can be reg or mem, second imm, reg, mem
             {
@@ -81,40 +78,6 @@ void CodeGenerator::GenerateAssembly()         // not handling && and || - Refac
                 std::cout << asmLookup.at(op->value) << destination << ", " << operand2 << '\n';                 // multiply must always be in the eax| weird rules for DIV also
             }
         }
-        else
-        {
-            if (op->type == CmdType::GOTO)  std::cout << asmLookup.at("Goto") << destination << '\n';
-            else if (op->type == CmdType::LABEL) std::cout << destination << ":\n";
-        }
-
-
-
-        //const auto operand1    = asmLookup.find(src1->name) != asmLookup.end() ? asmLookup.at(src1->name) : src1->address;
-        //if (src2)
-        //{
-        //    const auto operand2 = asmLookup.find(src2->name) != asmLookup.end() ? asmLookup.at(src2->name) : src2->address;
-        //    if (op->type == CmdType::RELAT)  // no move? first can be reg or mem, second imm, reg, mem
-        //    {
-        //        if (operand1 != destination) std::cout << "\tmov " << destination << ", " << operand1 << '\n';
-        //        std::cout << "\tcmp " << destination << ", " << operand2 << '\n';
-        //        std::cout << ReverseOp(op->value) << ' ' << inUseLabels.at(labelIndex).second << '\n';
-        //    }
-        //    // if oper is relative we need to do the mov (if needed) cmp to second or cmp first second and jmp to label
-        //    // else if arithm (do below) etc etc
-        //    else if (dest->type == CmdType::REG)
-        //    {
-        //        if (operand1 != destination) std::cout << "\tmov " << destination << ", " << operand1 << '\n';
-        //        std::cout << asmLookup.at(op->value) << destination << ", " << operand2 << '\n';                 // multiply must always be in the eax| weird rules for DIV also
-        //    }
-        //    else if (op->type == CmdType::IF)    ++labelIndex; // The condition(s) have been processed and the label(s) used
-        //    else if (op->type == CmdType::GOTO)  std::cout << asmLookup.at("Goto") << destination << '\n';
-        //    else if (op->type == CmdType::LABEL) std::cout << destination << ":\n";
-        //}
-        //else
-        //{
-        //    std::cout << "\tmov " << destination << ", " << operand1 << '\n';   // this only for assigns and unaries so far - return for example does other things
-        //    if (op->value == "-") std::cout << "\tneg " << destination << '\n';
-        //}
     }
     //std::cout << "\tpop ebp\n\tret";  // No point atm since we dont have multiple functions, the way this is handled will change at the future
 }
@@ -173,7 +136,11 @@ void CodeGenerator::Visit(IfNode& n)
 {
     const auto falseLabel = Label::NewLabel();
     instructions.push_back({ Command{"IfFalse", CmdType::IF }, fetch_instr(n.condition.get()).dest, std::nullopt, falseLabel });
-    if (n.body) PlainVisit(n.body.get());
+    if (n.body)
+    {
+        PlainVisit(n.body.get()); // Processed the body of the if or else-if, we skip the rest (via goto) and go to the end
+        instructions.push_back({ Command{"Goto", CmdType::GOTO }, std::nullopt, std::nullopt, falseLabel });
+    }
     instructions.push_back({ Command{"Label", CmdType::LABEL }, std::nullopt, std::nullopt, falseLabel });
     
     inUseLabels.push_back({ "", falseLabel.name });
@@ -181,7 +148,7 @@ void CodeGenerator::Visit(IfNode& n)
 void CodeGenerator::Visit(IfStatementNode& n)
 {
     for (const auto& ifN : n.ifNodes) PlainVisit(ifN.get());
-    if (n.elseBody) PlainVisit(n.elseBody.get());
+    if (n.elseBody) PlainVisit(n.elseBody.get());  // No need to attach a goto end here, this is end of the if-else-if-else chain anyway
 }
 void CodeGenerator::Visit(IterationNode& n) { assert(("Code Generator visited base IterationNode class?!", false)); }
 
@@ -191,8 +158,11 @@ void CodeGenerator::Visit(WhileNode& n)
     instructions.push_back({ Command{"Label", CmdType::LABEL }, std::nullopt, std::nullopt, startLabel });
     const auto endLabel = Label::NewLabel();
     instructions.push_back({ Command{"IfFalse", CmdType::IF }, fetch_instr(n.condition.get()).dest, std::nullopt, endLabel });
-    if (n.body) PlainVisit(n.body.get());
-    instructions.push_back({ Command{"Goto", CmdType::GOTO }, std::nullopt, std::nullopt, startLabel });
+    if (n.body)
+    {
+        PlainVisit(n.body.get()); // Processed the body of the while, we go back to the condition
+        instructions.push_back({ Command{"Goto", CmdType::GOTO }, std::nullopt, std::nullopt, startLabel });
+    }
     instructions.push_back({ Command{"Label", CmdType::LABEL }, std::nullopt, std::nullopt, endLabel });
 
     inUseLabels.push_back({ startLabel.name, endLabel.name });
@@ -202,8 +172,11 @@ void CodeGenerator::Visit(DoWhileNode& n)
 {
     const auto startLabel = Label::NewLabel();
     instructions.push_back({ Command{"Label", CmdType::LABEL }, std::nullopt, std::nullopt, startLabel });
-    if (n.body) PlainVisit(n.body.get());
-    instructions.push_back({ Command{"If", CmdType::IF }, fetch_instr(n.condition.get()).dest, std::nullopt, startLabel });
+    if (n.body)
+    {
+        PlainVisit(n.body.get());
+        instructions.push_back({ Command{"If", CmdType::IF }, fetch_instr(n.condition.get()).dest, std::nullopt, startLabel });
+    }
 
     inUseLabels.push_back({ startLabel.name, "" });
 }
