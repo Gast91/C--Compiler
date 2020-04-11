@@ -102,9 +102,9 @@ ASTNodePtr Parser::ParseCond()
 
     while (lexer.GetCurrentToken().second == Token::AND || lexer.GetCurrentToken().second == Token::OR)
     {
-        const auto currentToken = lexer.GetCurrentToken();
+        auto currentToken = lexer.GetCurrentToken();
         lexer.Consume(lexer.GetCurrentToken().second);
-        node = std::make_unique<BinaryOperationNode>(std::move(node), currentToken, ParseBoolExpr());  // make it conditionNode? then it will be visited in code gen (but also sem!!)
+        node = std::make_unique<ConditionNode>(std::move(node), currentToken, ParseBoolExpr());  // make it conditionNode? then it will be visited in code gen (but also sem!!)
     }
     parsingCond = false;
     return node;
