@@ -181,3 +181,7 @@ void SemanticAnalyzer::PrintAnalysisInfo() const
 }
 
 bool SemanticAnalyzer::Success() const { return !failState; }
+
+/*
+    -Type Checking (no types other than ints atm but for the future)
+*/
