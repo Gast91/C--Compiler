@@ -83,9 +83,9 @@ ASTNodePtr Parser::ParseBoolExpr()
            lexer.GetCurrentToken().second == Token::LTE || lexer.GetCurrentToken().second == Token::GTE ||
            lexer.GetCurrentToken().second == Token::EQ  || lexer.GetCurrentToken().second == Token::NEQ)
     {
-        const auto currentToken = lexer.GetCurrentToken();
+        auto currentToken = lexer.GetCurrentToken();
         lexer.Consume(lexer.GetCurrentToken().second);
-        node = std::make_unique<BinaryOperationNode>(std::move(node), currentToken, ParseExpr());
+        node = std::make_unique<ConditionNode>(std::move(node), currentToken, ParseExpr());
     }
     return node;
 }
