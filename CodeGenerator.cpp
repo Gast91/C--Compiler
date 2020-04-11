@@ -1,7 +1,8 @@
 #include "CodeGenerator.h"
 #include "AbstractSyntaxTree.h"
 
-ThreeAddressCode CodeGenerator::instructions;
+std::vector<Quadruples> CodeGenerator::instructions;
+std::vector<std::pair<std::string, std::string>> CodeGenerator::inUseLabels;
 int Temporary::tempCount = 0;
 int Label::labelCount = 0;
 
@@ -47,16 +48,26 @@ void CodeGenerator::GenerateTAC(ASTNode* n)
     GenerateAssembly();
 }
 
-void CodeGenerator::GenerateAssembly()
+void CodeGenerator::GenerateAssembly()         // not handling && and || - Refactor this - previous might also work!!
 {
     std::cout << "\nx86 Assembly: \n";
     //std::cout << "main:\n\tpush ebp\n\tmov ebp, esp\n";  // No point atm since we dont have multiple functions, the way this is handled will change at the future
     for (auto& [op, src1, src2, dest] : instructions)
     {
-        const auto operand1    = asmLookup.find(src1->name) != asmLookup.end() ? asmLookup.at(src1->name) : src1->address;
+        std::string operand1;
         const auto destination = asmLookup.find(dest->name) != asmLookup.end() ? asmLookup.at(dest->name) : dest->address;
-        if (src2)
+        if (src1 && !src2)
         {
+            if (op->type == CmdType::IF) {
+                ++labelIndex; continue;
+            }// The condition(s) have been processed and the label(s) used
+            operand1 = asmLookup.find(src1->name) != asmLookup.end() ? asmLookup.at(src1->name) : src1->address;
+            std::cout << "\tmov " << destination << ", " << operand1 << '\n';   // this only for assigns and unaries so far - return for example does other things
+            if (op->value == "-") std::cout << "\tneg " << destination << '\n';
+        }
+        else if (src2)
+        {
+            operand1 = asmLookup.find(src1->name) != asmLookup.end() ? asmLookup.at(src1->name) : src1->address;
             const auto operand2 = asmLookup.find(src2->name) != asmLookup.end() ? asmLookup.at(src2->name) : src2->address;
             if (op->type == CmdType::RELAT)  // no move? first can be reg or mem, second imm, reg, mem
             {
@@ -64,22 +75,46 @@ void CodeGenerator::GenerateAssembly()
                 std::cout << "\tcmp " << destination << ", " << operand2 << '\n';
                 std::cout << ReverseOp(op->value) << ' ' << inUseLabels.at(labelIndex).second << '\n';
             }
-            // if oper is relative we need to do the mov (if needed) cmp to second or cmp first second and jmp to label
-            // else if arithm (do below) etc etc
             else if (dest->type == CmdType::REG)
             {
                 if (operand1 != destination) std::cout << "\tmov " << destination << ", " << operand1 << '\n';
                 std::cout << asmLookup.at(op->value) << destination << ", " << operand2 << '\n';                 // multiply must always be in the eax| weird rules for DIV also
             }
-            else if (op->type == CmdType::IF)    ++labelIndex; // The condition(s) have been processed and the label(s) used
-            else if (op->type == CmdType::GOTO)  std::cout << asmLookup.at("Goto") << destination << '\n';
-            else if (op->type == CmdType::LABEL) std::cout << destination << ":\n";
         }
         else
         {
-            std::cout << "\tmov " << destination << ", " << operand1 << '\n';   // this only for assigns and unaries so far - return for example does other things
-            if (op->value == "-") std::cout << "\tneg " << destination << '\n';
+            if (op->type == CmdType::GOTO)  std::cout << asmLookup.at("Goto") << destination << '\n';
+            else if (op->type == CmdType::LABEL) std::cout << destination << ":\n";
         }
+
+
+
+        //const auto operand1    = asmLookup.find(src1->name) != asmLookup.end() ? asmLookup.at(src1->name) : src1->address;
+        //if (src2)
+        //{
+        //    const auto operand2 = asmLookup.find(src2->name) != asmLookup.end() ? asmLookup.at(src2->name) : src2->address;
+        //    if (op->type == CmdType::RELAT)  // no move? first can be reg or mem, second imm, reg, mem
+        //    {
+        //        if (operand1 != destination) std::cout << "\tmov " << destination << ", " << operand1 << '\n';
+        //        std::cout << "\tcmp " << destination << ", " << operand2 << '\n';
+        //        std::cout << ReverseOp(op->value) << ' ' << inUseLabels.at(labelIndex).second << '\n';
+        //    }
+        //    // if oper is relative we need to do the mov (if needed) cmp to second or cmp first second and jmp to label
+        //    // else if arithm (do below) etc etc
+        //    else if (dest->type == CmdType::REG)
+        //    {
+        //        if (operand1 != destination) std::cout << "\tmov " << destination << ", " << operand1 << '\n';
+        //        std::cout << asmLookup.at(op->value) << destination << ", " << operand2 << '\n';                 // multiply must always be in the eax| weird rules for DIV also
+        //    }
+        //    else if (op->type == CmdType::IF)    ++labelIndex; // The condition(s) have been processed and the label(s) used
+        //    else if (op->type == CmdType::GOTO)  std::cout << asmLookup.at("Goto") << destination << '\n';
+        //    else if (op->type == CmdType::LABEL) std::cout << destination << ":\n";
+        //}
+        //else
+        //{
+        //    std::cout << "\tmov " << destination << ", " << operand1 << '\n';   // this only for assigns and unaries so far - return for example does other things
+        //    if (op->value == "-") std::cout << "\tneg " << destination << '\n';
+        //}
     }
     //std::cout << "\tpop ebp\n\tret";  // No point atm since we dont have multiple functions, the way this is handled will change at the future
 }
@@ -121,7 +156,7 @@ void CodeGenerator::Visit(BinaryOperationNode& n)   // condense when done
     Return(instructions.back());
 }
 
-void CodeGenerator::Visit(ConditionNode& n) 
+void CodeGenerator::Visit(ConditionNode& n)   // this doesnt get triggered....why the fuck, well it isnt a condition
 {
 #ifdef OPTIMIZE_TEMPS
     const auto src1 = fetch_instr(n.left.get()).dest;
@@ -184,7 +219,6 @@ void CodeGenerator::Visit(StatementBlockNode& n) { for (const auto& statement : 
 
 void CodeGenerator::Visit(DeclareStatementNode& n)
 {
-    // it will need to do type checking also (in the future) and tell code generator size of var? here or in semantic analysis?
     Return(GetValue(n.identifier.get()));  // might change but for now this returns its identifier, used only for declare-assign
 }
 
@@ -224,10 +258,6 @@ void CodeGenerator::Visit(EmptyStatementNode& n) {}
 // TODO:
 /*
     -Fix/Add Nodes into the ast to accomodate main/entry point - potentially more? 
-    -Rename+cpp+h to IRGenerator || IRCGenerator || CodeGeneratorIR -- Last will be AssemblyGenerator(not a visitor this time?)
 
     need beginfunc and endfunc, jump for return to the end and allocating space at begin func?
-
-    -CHECK STD::VISITOR-VARIANT - nah
-    https://web.stanford.edu/class/archive/cs/cs143/cs143.1128/handouts/240%20TAC%20Examples.pdf page 7-8 for reduced temporaries
 */

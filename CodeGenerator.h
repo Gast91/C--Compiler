@@ -42,7 +42,7 @@ class Temporary
 private:
     static int tempCount;
 public:
-    static const Operand NewTemporary() { return Operand{ CmdType::REG, "_t" + std::to_string(tempCount++), "" }; } // address? const?
+    static const Operand NewTemporary() { return Operand{ CmdType::REG, "_t" + std::to_string(tempCount), "_t" + std::to_string(tempCount++) }; } // address? const?
     // If a temporary is passed to it, it drops the counter effectively recycling that temporary
     // This should never be called by itself and rather through the obtain_source macro. I know bad design...
     static const Quadruples CheckAndRecycle(const Quadruples& potentialTemporary)
@@ -58,10 +58,8 @@ class Label
 private:
     static int labelCount;
 public:
-    static const Operand NewLabel() { return Operand{ CmdType::LABEL, "_L" + std::to_string(labelCount++), "" }; }
+    static const Operand NewLabel() { return Operand{ CmdType::LABEL, "_L" + std::to_string(labelCount), "_L" + std::to_string(labelCount++) }; }
 };
-
-using ThreeAddressCode = std::vector<Quadruples>;
 
 // CodeGenerator derives from ValueGetter by the 'Curiously Recurring Template Pattern' so that 
 // the ValueGetter can instantiate the Evaluator itself. It also implements INodeVisitor interface 
@@ -69,8 +67,8 @@ using ThreeAddressCode = std::vector<Quadruples>;
 class CodeGenerator : public ValueGetter<CodeGenerator, ASTNode*, Quadruples>, public ASTNodeVisitor
 {
 private:
-    static ThreeAddressCode instructions;
-    std::vector<std::pair<std::string, std::string>> inUseLabels;  // is this just the end always? get rid of one string?
+    static std::vector<Quadruples> instructions;
+    static std::vector<std::pair<std::string, std::string>> inUseLabels;  // is this just the end always? get rid of one string?
     unsigned int labelIndex = 0;
 
     void ProcessAssignment(const BinaryASTNode& n);
