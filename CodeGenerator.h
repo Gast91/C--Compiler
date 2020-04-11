@@ -2,8 +2,8 @@
 #include <string>
 #include <optional>
 #include <map>
+#include <vector>
 
-#include "Token.h"
 #include "Visitor.h"
 
 #define OPTIMIZE_TEMPS  // This global somehow?
@@ -15,16 +15,23 @@
 #define fetch_instr(x) GetValue(x)
 #endif // OPTIMIZE_TEMPS
 
+enum class CmdType { ARITHM, RELAT, UNARY, IF, LABEL, GOTO, COPY, RET, REG, NONE };
+struct Command
+{
+    std::string value;
+    CmdType type;
+};
+
 struct Operand
 {
-    Token type;
+    CmdType type;
     std::string name;
     std::string address;
 };
 
 struct Quadruples
 {
-    std::optional<std::string> op;
+    std::optional<Command> op;
     std::optional<Operand> src1;
     std::optional<Operand> src2;
     std::optional<Operand> dest;
@@ -36,13 +43,13 @@ private:
     static int tempCount;
 public:
     //static const std::string NewTemporary() { return "_t" + std::to_string(tempCount++);  }
-    static const Operand NewTemporary() { return Operand{ Token::TEMPORARY, "_t" + std::to_string(tempCount++), "" }; } // address? const?
+    static const Operand NewTemporary() { return Operand{ CmdType::REG, "_t" + std::to_string(tempCount++), "" }; } // address? const?
     // If a temporary is passed to it, it drops the counter effectively recycling that temporary
     // This should never be called by itself and rather through the obtain_source macro. I know bad design...
     static const Quadruples CheckAndRecycle(const Quadruples& potentialTemporary)
     { 
         // What if an identifier starting with _t is passed to it...
-        if (potentialTemporary.dest.value().type == Token::TEMPORARY) --tempCount;
+        if (potentialTemporary.dest.value().type == CmdType::REG) --tempCount;
         return potentialTemporary;
     }
 };
@@ -52,7 +59,7 @@ class Label
 private:
     static int labelCount;
 public:
-    static const Operand NewLabel() { return Operand{ Token::LABEL, "_L" + std::to_string(labelCount++), "" }; }
+    static const Operand NewLabel() { return Operand{ CmdType::LABEL, "_L" + std::to_string(labelCount++), "" }; }
 };
 
 using ThreeAddressCode = std::vector<Quadruples>;
@@ -66,6 +73,8 @@ private:
     static ThreeAddressCode instructions;
 
     void ProcessAssignment(const BinaryASTNode& n);
+    /*unsigned int labelTracker = 0;
+    std::vector<std::pair<std::string, std::string>> labels;*/
 public:
     void GenerateTAC(ASTNode* n);
     void GenerateAssembly();
