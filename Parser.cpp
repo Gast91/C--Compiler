@@ -85,7 +85,7 @@ ASTNodePtr Parser::ParseBoolExpr()
     {
         auto currentToken = lexer.GetCurrentToken();
         lexer.Consume(lexer.GetCurrentToken().second);
-        node = std::make_unique<ConditionNode>(std::move(node), currentToken, ParseExpr());
+        node = std::make_unique<ConditionNode>(std::move(node), currentToken, ParseExpr());  // shouldnt be a condition in the long run
     }
     return node;
 }
@@ -104,7 +104,7 @@ ASTNodePtr Parser::ParseCond()
     {
         auto currentToken = lexer.GetCurrentToken();
         lexer.Consume(lexer.GetCurrentToken().second);
-        node = std::make_unique<ConditionNode>(std::move(node), currentToken, ParseBoolExpr());  // make it conditionNode? then it will be visited in code gen (but also sem!!)
+        node = std::make_unique<ConditionNode>(std::move(node), currentToken, ParseBoolExpr());  // shouldnt be a condition in the long run
     }
     parsingCond = false;
     return node;
