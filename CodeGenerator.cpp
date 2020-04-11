@@ -80,6 +80,16 @@ void CodeGenerator::GenerateAssembly()         // not handling && and | complete
         }
     }
     //std::cout << "\tpop ebp\n\tret";  // No point atm since we dont have multiple functions, the way this is handled will change at the future
+
+
+    // Each condition jmp to endofBigIF or start of elseif or else
+    // Each ifBody at the end jmp to endofBigIf
+
+    // big if ->generate BigIFEND
+    // push into vec BigIFEND
+    // for every if ->PlainVisit(..) -> first if -> visit cond if its not correct label is either the next if end or bigend (based if there are more) so inuselabels.back?
+    // in between generate small if end? and push into
+    // then in condition you increase inside?
 }
 
 const std::string CodeGenerator::ReverseOp(const std::string& op)
@@ -97,7 +107,7 @@ void CodeGenerator::Visit(ASTNode& n)        { assert(("Code Generator visited b
 void CodeGenerator::Visit(UnaryASTNode& n)   { assert(("Code Generator visited base UnaryASTNode class?!" , false)); }
 void CodeGenerator::Visit(BinaryASTNode& n)  { assert(("Code Generator visited base BinaryASTNode class?!", false)); }
 // Integer and Identifier Leaf Nodes. A throwaway Quadruple is returned that effectively passes back their value or name
-void CodeGenerator::Visit(IntegerNode& n) { Return({ std::nullopt, std::nullopt, std::nullopt, Operand{CmdType::NONE, std::to_string(n.value), std::to_string(n.value)} }); }
+void CodeGenerator::Visit(IntegerNode& n)    { Return({ std::nullopt, std::nullopt, std::nullopt, Operand{CmdType::NONE, std::to_string(n.value), std::to_string(n.value)} }); }
 void CodeGenerator::Visit(IdentifierNode& n) { Return({ std::nullopt, std::nullopt,  std::nullopt, Operand{CmdType::NONE, n.name, "DWORD [ebp" + n.offset + "]"} }); }
 
 void CodeGenerator::Visit(UnaryOperationNode& n)
@@ -106,49 +116,41 @@ void CodeGenerator::Visit(UnaryOperationNode& n)
     Return(instructions.back());
 }
 
-void CodeGenerator::Visit(BinaryOperationNode& n)   // condense when done
+void CodeGenerator::ProcessBinOp(const BinaryASTNode& n, CmdType type)
 {
 #ifdef OPTIMIZE_TEMPS
     const auto src1 = fetch_instr(n.left.get()).dest;
     const auto dest = Temporary::NewTemporary();
     const auto src2 = fetch_instr(n.right.get()).dest;
-    instructions.push_back({ Command{n.op.first, CmdType::ARITHM }, src1, src2, dest });
+    instructions.push_back({ Command{n.op.first, type }, src1, src2, dest });
 #else
-    instructions.push_back({ Command{n.op.first, CmdType::ARITHM }, fetch_instr(n.left).dest, fetch_instr(n.right).dest, Temporary::NewTemporary() });
+    instructions.push_back({ Command{n.op.first, type }, fetch_instr(n.left).dest, fetch_instr(n.right).dest, Temporary::NewTemporary() });
 #endif // OPTIMIZE_TEMPS
     Return(instructions.back());
 }
 
-void CodeGenerator::Visit(ConditionNode& n)   // this doesnt get triggered....why the fuck, well it isnt a condition
-{
-#ifdef OPTIMIZE_TEMPS
-    const auto src1 = fetch_instr(n.left.get()).dest;
-    const auto dest = Temporary::NewTemporary();
-    const auto src2 = fetch_instr(n.right.get()).dest;
-    instructions.push_back({ Command{n.op.first, CmdType::RELAT }, src1, src2, dest });
-#else
-    instructions.push_back({ Command{n.op.first, CmdType::RELAT }, fetch_instr(n.left).dest, fetch_instr(n.right).dest, Temporary::NewTemporary() });
-#endif // OPTIMIZE_TEMPS
-    Return(instructions.back());
-}
+void CodeGenerator::Visit(BinaryOperationNode& n) { ProcessBinOp(n, CmdType::ARITHM); }
+void CodeGenerator::Visit(ConditionNode& n)       { ProcessBinOp(n, CmdType::RELAT);  }
 
 void CodeGenerator::Visit(IfNode& n)
 {
-    const auto falseLabel = Label::NewLabel();
-    instructions.push_back({ Command{"IfFalse", CmdType::IF }, fetch_instr(n.condition.get()).dest, std::nullopt, falseLabel });
+    const auto falseLabel = Label::NewLabel();      // CONDITION FALSE JUMP
+    instructions.push_back({ Command{"IfFalse", CmdType::IF }, fetch_instr(n.condition.get()).dest, std::nullopt, falseLabel });  // CONDITION FALSE JUMP
     if (n.body)
     {
         PlainVisit(n.body.get()); // Processed the body of the if or else-if, we skip the rest (via goto) and go to the end
-        instructions.push_back({ Command{"Goto", CmdType::GOTO }, std::nullopt, std::nullopt, falseLabel });
+        instructions.push_back({ Command{"Goto", CmdType::GOTO }, std::nullopt, std::nullopt, falseLabel });  // MUST BE GLOBAL_ENDIF JUMP
     }
-    instructions.push_back({ Command{"Label", CmdType::LABEL }, std::nullopt, std::nullopt, falseLabel });
+    instructions.push_back({ Command{"Label", CmdType::LABEL }, std::nullopt, std::nullopt, falseLabel });    // CONDITION FALSE JUMP
     
-    inUseLabels.push_back({ "", falseLabel.name });
+    inUseLabels.push_back({ "", falseLabel.name }); // CONDITION FALSE JUMP
 }
 void CodeGenerator::Visit(IfStatementNode& n)
 {
+    // NEED A GLOBAL IF JUMP TO END   ---> keep increasing the labels in use throughout and reset before processing??
     for (const auto& ifN : n.ifNodes) PlainVisit(ifN.get());
     if (n.elseBody) PlainVisit(n.elseBody.get());  // No need to attach a goto end here, this is end of the if-else-if-else chain anyway
+    // NEEDS TO BE PUSHED?
 }
 void CodeGenerator::Visit(IterationNode& n) { assert(("Code Generator visited base IterationNode class?!", false)); }
 

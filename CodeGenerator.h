@@ -58,7 +58,8 @@ class Label
 private:
     static int labelCount;
 public:
-    static const Operand NewLabel() { return Operand{ CmdType::LABEL, "_L" + std::to_string(labelCount), "_L" + std::to_string(labelCount++) }; }
+    static const Operand NewLabel()     { return Operand{ CmdType::LABEL, "_L" + std::to_string(labelCount), "_L" + std::to_string(labelCount++) }; }
+    static const Operand CurrentLabel()  { return Operand{ CmdType::LABEL, "_L" + std::to_string(labelCount), "_L" + std::to_string(labelCount) }; }
 };
 
 // CodeGenerator derives from ValueGetter by the 'Curiously Recurring Template Pattern' so that 
@@ -72,6 +73,7 @@ private:
     unsigned int labelIndex = 0;
 
     void ProcessAssignment(const BinaryASTNode& n);
+    void ProcessBinOp(const BinaryASTNode& n, CmdType type);
     const std::string ReverseOp(const std::string& op);
 public:
     void GenerateTAC(ASTNode* n);
