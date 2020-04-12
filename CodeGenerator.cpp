@@ -48,16 +48,20 @@ void CodeGenerator::GenerateTAC(ASTNode* n)
     GenerateAssembly();
 }
 
-void CodeGenerator::GenerateAssembly()         // not handling && and | complete return | look into mul/div
+void CodeGenerator::GenerateAssembly()         // not handling && and || - look into mul/div - mov mem, mem? - nested things and labels and then done??
 {
     std::cout << "\nx86 Assembly:\nmain:\n";
-    //std::cout << "main:\n\tpush ebp\n\tmov ebp, esp\n";  // No point atm since we dont have multiple functions, the way this is handled will change at the future
     for (auto& [op, src1, src2, dest] : instructions)
     {
         const auto destination = asmLookup.find(dest->name) != asmLookup.end() ? asmLookup.at(dest->name) : dest->address;
-        if (op->type == CmdType::GOTO)  std::cout << asmLookup.at("Goto") << destination << '\n';
+        if (op->type == CmdType::GOTO)       std::cout << asmLookup.at("Goto") << destination << '\n';
         else if (op->type == CmdType::LABEL) std::cout << destination << ":\n";
-        else if (op->type == CmdType::IF) ++labelIndex;                             // at the end of the if or else if body we need to jump to the end of the if label
+        else if (op->type == CmdType::IF)    ++labelIndex; // We processed condition(s) for this control flow, move to next label
+        else if (op->type == CmdType::RET)
+        {
+            std::cout << "\tmov eax, " << destination << '\n'; // EAX will always have the return value
+            std::cout << asmLookup.at("Goto") << "_END\n";     // Jump to the end label, since return might have been nested somewhere
+        }
         else if (const auto operand1 = asmLookup.find(src1->name) != asmLookup.end() ? asmLookup.at(src1->name) : src1->address; src1 && !src2)
         {
             std::cout << "\tmov " << destination << ", " << operand1 << '\n';   // this only for assigns and unaries so far - return for example does other things
@@ -66,7 +70,7 @@ void CodeGenerator::GenerateAssembly()         // not handling && and | complete
         else if (src2)
         {
             const auto operand2 = asmLookup.find(src2->name) != asmLookup.end() ? asmLookup.at(src2->name) : src2->address;
-            if (op->type == CmdType::RELAT)  // no move? first can be reg or mem, second imm, reg, mem
+            if (op->type == CmdType::RELAT)
             {
                 if (operand1 != destination) std::cout << "\tmov " << destination << ", " << operand1 << '\n';
                 std::cout << "\tcmp " << destination << ", " << operand2 << '\n';
@@ -79,17 +83,7 @@ void CodeGenerator::GenerateAssembly()         // not handling && and | complete
             }
         }
     }
-    //std::cout << "\tpop ebp\n\tret";  // No point atm since we dont have multiple functions, the way this is handled will change at the future
-
-
-    // Each condition jmp to endofBigIF or start of elseif or else
-    // Each ifBody at the end jmp to endofBigIf
-
-    // big if ->generate BigIFEND
-    // push into vec BigIFEND
-    // for every if ->PlainVisit(..) -> first if -> visit cond if its not correct label is either the next if end or bigend (based if there are more) so inuselabels.back?
-    // in between generate small if end? and push into
-    // then in condition you increase inside?
+    std::cout << "_END:\n"; // Final label that all return statements jump to - will need to change when functions are introduced
 }
 
 const std::string CodeGenerator::ReverseOp(const std::string& op)
@@ -100,7 +94,7 @@ const std::string CodeGenerator::ReverseOp(const std::string& op)
     else if (op == "<=") return asmLookup.at(">");
     else if (op == "!=") return asmLookup.at("==");
     else if (op == "==") return asmLookup.at("!=");
-    else                 return "WHAT";
+    else                 return "WHAT";  // ......
 }
 
 void CodeGenerator::Visit(ASTNode& n)        { assert(("Code Generator visited base ASTNode class?!"      , false)); }
@@ -134,23 +128,30 @@ void CodeGenerator::Visit(ConditionNode& n)       { ProcessBinOp(n, CmdType::REL
 
 void CodeGenerator::Visit(IfNode& n)
 {
-    const auto falseLabel = Label::NewLabel();      // CONDITION FALSE JUMP
-    instructions.push_back({ Command{"IfFalse", CmdType::IF }, fetch_instr(n.condition.get()).dest, std::nullopt, falseLabel });  // CONDITION FALSE JUMP
+    const auto falseLabel = Label::NewLabel(); // if condition(s) is false this jump label is the next elseif condition start or end of if-elseif-else
+    instructions.push_back({ Command{"IfFalse", CmdType::IF }, fetch_instr(n.condition.get()).dest, std::nullopt, falseLabel });
     if (n.body)
     {
-        PlainVisit(n.body.get()); // Processed the body of the if or else-if, we skip the rest (via goto) and go to the end
-        instructions.push_back({ Command{"Goto", CmdType::GOTO }, std::nullopt, std::nullopt, falseLabel });  // MUST BE GLOBAL_ENDIF JUMP
+        PlainVisit(n.body.get()); // Processed the body of the if or else-if, we skip the rest (via goto) and go to the end of all the chained if-elseif-else
+        instructions.push_back({ Command{"Goto", CmdType::GOTO }, std::nullopt, std::nullopt,  Operand{ CmdType::LABEL, n.parentEndLabel, n.parentEndLabel} });
     }
-    instructions.push_back({ Command{"Label", CmdType::LABEL }, std::nullopt, std::nullopt, falseLabel });    // CONDITION FALSE JUMP
+    // The label signifying the end of this if and potentially the start of another elseif or else
+    instructions.push_back({ Command{"Label", CmdType::LABEL }, std::nullopt, std::nullopt, falseLabel });
     
-    inUseLabels.push_back({ "", falseLabel.name }); // CONDITION FALSE JUMP
+    inUseLabels.push_back({ "", falseLabel.name });
 }
 void CodeGenerator::Visit(IfStatementNode& n)
 {
-    // NEED A GLOBAL IF JUMP TO END   ---> keep increasing the labels in use throughout and reset before processing??
-    for (const auto& ifN : n.ifNodes) PlainVisit(ifN.get());
+    // Label for the end of all the if-elseif-else contained
+    const auto endIfLabel = Label::NewLabel();
+    for (const auto& ifN : n.ifNodes) 
+    { 
+        // Set each child if-elseif jump label (if the branch is taken) to the end of this parent if
+        ifN->parentEndLabel = endIfLabel.name; 
+        PlainVisit(ifN.get()); 
+    }
     if (n.elseBody) PlainVisit(n.elseBody.get());  // No need to attach a goto end here, this is end of the if-else-if-else chain anyway
-    // NEEDS TO BE PUSHED?
+    instructions.push_back({ Command{"Label", CmdType::LABEL }, std::nullopt, std::nullopt, endIfLabel });
 }
 void CodeGenerator::Visit(IterationNode& n) { assert(("Code Generator visited base IterationNode class?!", false)); }
 
@@ -219,20 +220,15 @@ void CodeGenerator::ProcessAssignment(const BinaryASTNode& n)
 }
 
 void CodeGenerator::Visit(DeclareAssignNode& n)   { ProcessAssignment(n); }
-
-void CodeGenerator::Visit(AssignStatementNode& n) {  ProcessAssignment(n); }
+void CodeGenerator::Visit(AssignStatementNode& n) { ProcessAssignment(n); }
 
 void CodeGenerator::Visit(ReturnStatementNode& n)
 {
     instructions.push_back({ Command{ "Return", CmdType::RET }, std::nullopt, std::nullopt, GetValue(n.expr.get()).dest });
-    // we are done here we must jump to the end or something
 }
 
 void CodeGenerator::Visit(EmptyStatementNode& n) {}
 
-// TODO:
-/*
+/* TODO:
     -Fix/Add Nodes into the ast to accomodate main/entry point - potentially more? 
-
-    need beginfunc and endfunc, jump for return to the end and allocating space at begin func?
 */

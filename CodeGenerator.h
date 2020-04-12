@@ -24,7 +24,7 @@ struct Command
 
 struct Operand
 {
-    CmdType type;
+    CmdType type; // this is encoded twice for command and operand!
     std::string name;
     std::string address;
 };
