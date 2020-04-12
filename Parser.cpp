@@ -2,6 +2,7 @@
 
 Parser::Parser(const Lexer& lex) : lexer(lex)
 {
+    if (lexer.Failure()) { failState = true; return; }
     try { root = ParseProgram(); }
     catch (UnexpectedTokenException ex) { failState = true; std::cout << ex.what() << '\n'; }
 
@@ -272,24 +273,3 @@ UnqPtr<ASTNode> Parser::ParseReturn()
 }
 
 UnqPtr<ASTNode> Parser::ParseEmpty() { return std::make_unique<EmptyStatementNode>(); }
-
-// FEATURES MISSING TODO:
-/*
-    MUST:
-    GENERATE ASSEMBLY FROM TAC
-    COULD EXPAND UPON:
-    FOR, FUNCTIONS, ARRAYS, MISCELLANEOUS
-*/
-
-// PARTIAL IMPLEMENTATION TODO:
-/*
-    PROGRAM INCOMPLETE
-    NO TYPE CHECKING
-*/
-
-// GRAMMARS TODO :
-/*
-FOR_STATEMENT := FOR LPAR (ASSIGN_STATEMENT | DECL_ASSIGN | EMPTY_STATEMENT) (CONDITION | EMPTY_STATEMENT) (STEP | EMPTY_STATEMENT) RPAR { COMPOUND_STATEMENT }
-FUNCTION := TYPE IDENTIFIER (  comma separated list of type identifiers ) { COMPOUND_STATEMENT }
-ARRAYS?
-*/
