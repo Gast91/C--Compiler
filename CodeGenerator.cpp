@@ -2,9 +2,10 @@
 #include "AbstractSyntaxTree.h"
 
 std::vector<Quadruples> CodeGenerator::instructions;
-std::vector<std::pair<std::string, std::string>> CodeGenerator::inUseLabels;
 int Temporary::tempCount = 0;
 int Label::labelCount = 0;
+int Label::nextCmpLabel = 0;
+std::vector<std::string> Label::cmpJmpLabels;
 
 static const std::map<std::string, std::string> asmLookup =
 {
@@ -41,22 +42,25 @@ void CodeGenerator::GenerateTAC(ASTNode* n)
         else if (op->type == CmdType::IF)    std::cout << '\t' << op->value  << ' '   << src1->name << " Goto " << dest->name << ";\n";
         else if (op->type == CmdType::LABEL) std::cout << dest->name << ":\n";
         else if (op->type == CmdType::RET 
-              || op->type == CmdType::GOTO)  std::cout << '\t' << op->value << ' ' << dest->name << ";\n";  // if it works fix comps
-        // Unary Operation Instruction
+              || op->type == CmdType::GOTO)  std::cout << '\t' << op->value << ' ' << dest->name << ";\n";
+        // Unaries
         else std::cout << '\t' << dest->name << " = " << op->value << ' ' << src1->name << ";\n";
     }
     GenerateAssembly();
 }
 
-void CodeGenerator::GenerateAssembly()         // not handling && and || - look into mul/div - mov mem, mem? - nested things and labels and then done??
+void CodeGenerator::GenerateAssembly()         // not handling && and || - look into mul/div - mov mem, mem?
 {
+    // Index all the comparison jump labels so that each comparison instruction can get the 
+    // correct label in order even if control flow statements are nested into each other
+    for (const auto& instruction : instructions)  if (instruction.op->type == CmdType::IF) Label::AddCmpLabel(instruction.dest->name);
     std::cout << "\nx86 Assembly:\nmain:\n";
     for (auto& [op, src1, src2, dest] : instructions)
     {
         const auto destination = asmLookup.find(dest->name) != asmLookup.end() ? asmLookup.at(dest->name) : dest->address;
         if (op->type == CmdType::GOTO)       std::cout << asmLookup.at("Goto") << destination << '\n';
         else if (op->type == CmdType::LABEL) std::cout << destination << ":\n";
-        else if (op->type == CmdType::IF)    ++labelIndex; // We processed condition(s) for this control flow, move to next label
+        else if (op->type == CmdType::IF);   // We processed condition(s) for this control flow, no need to do anything
         else if (op->type == CmdType::RET)
         {
             std::cout << "\tmov eax, " << destination << '\n'; // EAX will always have the return value
@@ -64,7 +68,7 @@ void CodeGenerator::GenerateAssembly()         // not handling && and || - look 
         }
         else if (const auto operand1 = asmLookup.find(src1->name) != asmLookup.end() ? asmLookup.at(src1->name) : src1->address; src1 && !src2)
         {
-            std::cout << "\tmov " << destination << ", " << operand1 << '\n';   // this only for assigns and unaries so far - return for example does other things
+            std::cout << "\tmov " << destination << ", " << operand1 << '\n';
             if (op->type == CmdType::UNARY) std::cout << "\tneg " << destination << '\n';
         }
         else if (src2)
@@ -74,12 +78,12 @@ void CodeGenerator::GenerateAssembly()         // not handling && and || - look 
             {
                 if (operand1 != destination) std::cout << "\tmov " << destination << ", " << operand1 << '\n';
                 std::cout << "\tcmp " << destination << ", " << operand2 << '\n';
-                std::cout << ReverseOp(op->value) << ' ' << inUseLabels.at(labelIndex).second << '\n';
+                std::cout << ReverseOp(op->value) << ' ' << Label::GetCmpLabel() << '\n';
             }
             else if (dest->type == CmdType::REG)
             {
                 if (operand1 != destination) std::cout << "\tmov " << destination << ", " << operand1 << '\n';
-                std::cout << asmLookup.at(op->value) << destination << ", " << operand2 << '\n';                 // multiply must always be in the eax| weird rules for DIV also
+                std::cout << asmLookup.at(op->value) << destination << ", " << operand2 << '\n';                 // multiply must always be in the eax|weird rules for DIV also
             }
         }
     }
@@ -137,9 +141,8 @@ void CodeGenerator::Visit(IfNode& n)
     }
     // The label signifying the end of this if and potentially the start of another elseif or else
     instructions.push_back({ Command{"Label", CmdType::LABEL }, std::nullopt, std::nullopt, falseLabel });
-    
-    inUseLabels.push_back({ "", falseLabel.name });
 }
+
 void CodeGenerator::Visit(IfStatementNode& n)
 {
     // Label for the end of all the if-elseif-else contained
@@ -153,6 +156,7 @@ void CodeGenerator::Visit(IfStatementNode& n)
     if (n.elseBody) PlainVisit(n.elseBody.get());  // No need to attach a goto end here, this is end of the if-else-if-else chain anyway
     instructions.push_back({ Command{"Label", CmdType::LABEL }, std::nullopt, std::nullopt, endIfLabel });
 }
+
 void CodeGenerator::Visit(IterationNode& n) { assert(("Code Generator visited base IterationNode class?!", false)); }
 
 void CodeGenerator::Visit(WhileNode& n)
@@ -167,8 +171,6 @@ void CodeGenerator::Visit(WhileNode& n)
         instructions.push_back({ Command{"Goto", CmdType::GOTO }, std::nullopt, std::nullopt, startLabel });
     }
     instructions.push_back({ Command{"Label", CmdType::LABEL }, std::nullopt, std::nullopt, endLabel });
-
-    inUseLabels.push_back({ startLabel.name, endLabel.name });
 }
 
 void CodeGenerator::Visit(DoWhileNode& n)
@@ -180,8 +182,6 @@ void CodeGenerator::Visit(DoWhileNode& n)
         PlainVisit(n.body.get());
         instructions.push_back({ Command{"If", CmdType::IF }, fetch_instr(n.condition.get()).dest, std::nullopt, startLabel });
     }
-
-    inUseLabels.push_back({ startLabel.name, "" });
 }
 
 void CodeGenerator::Visit(CompoundStatementNode& n)

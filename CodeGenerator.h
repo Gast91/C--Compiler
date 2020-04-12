@@ -57,9 +57,12 @@ class Label
 {
 private:
     static int labelCount;
+    static std::vector<std::string> cmpJmpLabels;
+    static int nextCmpLabel;
 public:
-    static const Operand NewLabel()     { return Operand{ CmdType::LABEL, "_L" + std::to_string(labelCount), "_L" + std::to_string(labelCount++) }; }
-    static const Operand CurrentLabel()  { return Operand{ CmdType::LABEL, "_L" + std::to_string(labelCount), "_L" + std::to_string(labelCount) }; }
+    static const Operand NewLabel() { return Operand{ CmdType::LABEL, "_L" + std::to_string(labelCount), "_L" + std::to_string(labelCount++) }; }
+    static void AddCmpLabel(const std::string& nextLabel) { cmpJmpLabels.push_back(nextLabel); }
+    static const std::string GetCmpLabel() { return cmpJmpLabels.at(nextCmpLabel++); }
 };
 
 // CodeGenerator derives from ValueGetter by the 'Curiously Recurring Template Pattern' so that 
@@ -69,8 +72,6 @@ class CodeGenerator : public ValueGetter<CodeGenerator, ASTNode*, Quadruples>, p
 {
 private:
     static std::vector<Quadruples> instructions;
-    static std::vector<std::pair<std::string, std::string>> inUseLabels;  // is this just the end always? get rid of one string?
-    unsigned int labelIndex = 0;
 
     void ProcessAssignment(const BinaryASTNode& n);
     void ProcessBinOp(const BinaryASTNode& n, CmdType type);
