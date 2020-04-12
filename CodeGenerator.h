@@ -3,10 +3,11 @@
 #include <optional>
 #include <map>
 #include <vector>
+#include <fstream>
 
 #include "Visitor.h"
 
-#define OPTIMIZE_TEMPS  // This global somehow?
+#define OPTIMIZE_TEMPS
 // Optimization flag enables the recycling of already processed temporary variables
 // and prevents -> _t0 = a * b -> c = _t0 and instead optimizes to c = a * b.
 #ifdef OPTIMIZE_TEMPS
@@ -15,7 +16,9 @@
 #define fetch_instr(x) GetValue(x)
 #endif // OPTIMIZE_TEMPS
 
+// Type of intermediate representation commands/instructions - Used in assembly generation
 enum class CmdType { ARITHM, RELAT, LOG, UNARY, IF, LABEL, GOTO, COPY, RET, REG, NONE };
+
 struct Command
 {
     std::string value;
@@ -24,7 +27,7 @@ struct Command
 
 struct Operand
 {
-    CmdType type; // this is encoded twice for command and operand!
+    CmdType type; // this is encoded twice for command and operand! remove from here?
     std::string name;
     std::string address;
 };
@@ -37,6 +40,8 @@ struct Quadruples
     std::optional<Operand> dest;
 };
 
+// Handles the recycling (if enabled) and creation of new temporary variables
+// that are used in both intermediate code generation and assembly generation
 class Temporary
 {
 private:
@@ -53,6 +58,8 @@ public:
     }
 };
 
+// Handles the creation of new labels as well as the jmp label
+// distribution to conditions that request a jump location
 class Label
 {
 private:
@@ -64,6 +71,13 @@ public:
     static void AddCmpLabel(const std::string& nextLabel) { cmpJmpLabels.push_back(nextLabel); }
     static const std::string GetCmpLabel() { return cmpJmpLabels.at(nextCmpLabel++); }
 };
+
+template <typename Arg, typename ...Args>
+void Print(std::ostream& out, Arg&& arg, Args&& ...args)
+{
+    (out << arg);
+    (out << ... << args);
+}
 
 // CodeGenerator derives from ValueGetter by the 'Curiously Recurring Template Pattern' so that 
 // the ValueGetter can instantiate the Evaluator itself. It also implements INodeVisitor interface 

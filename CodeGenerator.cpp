@@ -34,16 +34,19 @@ void CodeGenerator::GenerateTAC(ASTNode* n)
 {
     std::cout << "Intermediate Language Representation:\nmain:\n";
     PlainVisit(n);  // Start Traversing the AST
+    if (instructions.empty()) { std::cout << "\nNo Intermediate code generated.\n"; return; }
+    std::vector<Command> cmp;
+    unsigned int cmpIndex = 0;
     for (auto& [op, src1, src2, dest] : instructions)
     {
         // Presence of second operand indicates a full three address code instruction
-        if (src2)                            std::cout << '\t' << dest->name << " = " << src1->name << ' ' << op->value << ' ' << src2->name << ";\n";
+        if (src2)                            std::cout << '\t' << dest->name << " = " << src1->name << ' ' << op->value << ' ' << src2->name << ";\n"; 
         else if (op->type == CmdType::COPY)  std::cout << '\t' << dest->name << ' '   << op->value  << ' ' << src1->name << ";\n";
         else if (op->type == CmdType::IF)
         {
             // Add the jump label of this control flow statement to a list so that
             // each subsequent relational statement that depends to it can access it. -Wont work for multiple conditions probably??
-            Label::AddCmpLabel(dest->name);
+            for (auto i = cmpIndex; i < cmp.size(); ++i) Label::AddCmpLabel(dest->name);  ++cmpIndex;
             std::cout << '\t' << op->value << ' ' << src1->name << " Goto " << dest->name << ";\n";
         }
         else if (op->type == CmdType::LABEL) std::cout << dest->name << ":\n";
@@ -51,12 +54,14 @@ void CodeGenerator::GenerateTAC(ASTNode* n)
               || op->type == CmdType::GOTO)  std::cout << '\t' << op->value << ' ' << dest->name << ";\n";
         // Unaries
         else std::cout << '\t' << dest->name << " = " << op->value << ' ' << src1->name << ";\n";
+
+        if (op->type == CmdType::RELAT) cmp.push_back(Command{ dest->name, op->type });
     }
-    GenerateAssembly();
 }
 
 void CodeGenerator::GenerateAssembly()
 {
+    if (instructions.empty()) { std::cout << "\nNo assembly generated.\n"; return; }
     std::cout << "\nx86 Assembly:\nmain:\n";
     for (auto& [op, src1, src2, dest] : instructions)
     {
@@ -83,11 +88,16 @@ void CodeGenerator::GenerateAssembly()
                 std::cout << "\tcmp " << destination << ", " << operand2 << '\n';
                 std::cout << ReverseOp(op->value) << ' ' << Label::GetCmpLabel() << '\n';
             }
-            else if (op->type == CmdType::LOG); // ??? Maybe store all log and relat until you reach an if, then somehow proccess them and reset the storage for the next?
+            else if (op->type == CmdType::LOG) std::cout << "\t;Multiple conditions with operators \"&&\" and \"||\" are not fully supported. There might be errors\n";
             else if (dest->type == CmdType::REG)
             {
                 if (operand1 != destination) std::cout << "\tmov " << destination << ", " << operand1 << '\n';
-                std::cout << asmLookup.at(op->value) << destination << ", " << operand2 << '\n';
+                if (const auto opCode = asmLookup.at(op->value); opCode == "\timul " && destination == "eax")
+                    std::cout << opCode << ' ' << operand2 << '\n';
+                else if (opCode == "\timul " && destination != "eax")
+                    std::cout << opCode << destination << ", " << operand2 << " ;Note that \"imul reg, ... \" is not valid, eax is always the implicit register for imul\n";
+                else
+                    std::cout << opCode << destination << ", " << operand2 << '\n';
             }
         }
     }
@@ -102,7 +112,7 @@ const std::string CodeGenerator::ReverseOp(const std::string& op)
     else if (op == "<=") return asmLookup.at(">");
     else if (op == "!=") return asmLookup.at("==");
     else if (op == "==") return asmLookup.at("!=");
-    else                 return "WHAT";  // ......
+    else                 return op;
 }
 
 void CodeGenerator::Visit(ASTNode& n)        { assert(("Code Generator visited base ASTNode class?!"      , false)); }
