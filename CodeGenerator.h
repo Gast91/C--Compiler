@@ -15,7 +15,7 @@
 #define fetch_instr(x) GetValue(x)
 #endif // OPTIMIZE_TEMPS
 
-enum class CmdType { ARITHM, RELAT, UNARY, IF, LABEL, GOTO, COPY, RET, REG, NONE };
+enum class CmdType { ARITHM, RELAT, LOG, UNARY, IF, LABEL, GOTO, COPY, RET, REG, NONE };
 struct Command
 {
     std::string value;

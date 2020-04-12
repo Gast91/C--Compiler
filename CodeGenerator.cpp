@@ -39,7 +39,13 @@ void CodeGenerator::GenerateTAC(ASTNode* n)
         // Presence of second operand indicates a full three address code instruction
         if (src2)                            std::cout << '\t' << dest->name << " = " << src1->name << ' ' << op->value << ' ' << src2->name << ";\n";
         else if (op->type == CmdType::COPY)  std::cout << '\t' << dest->name << ' '   << op->value  << ' ' << src1->name << ";\n";
-        else if (op->type == CmdType::IF)    std::cout << '\t' << op->value  << ' '   << src1->name << " Goto " << dest->name << ";\n";
+        else if (op->type == CmdType::IF)
+        {
+            // Add the jump label of this control flow statement to a list so that
+            // each subsequent relational statement that depends to it can access it. -Wont work for multiple conditions probably??
+            Label::AddCmpLabel(dest->name);
+            std::cout << '\t' << op->value << ' ' << src1->name << " Goto " << dest->name << ";\n";
+        }
         else if (op->type == CmdType::LABEL) std::cout << dest->name << ":\n";
         else if (op->type == CmdType::RET 
               || op->type == CmdType::GOTO)  std::cout << '\t' << op->value << ' ' << dest->name << ";\n";
@@ -49,11 +55,8 @@ void CodeGenerator::GenerateTAC(ASTNode* n)
     GenerateAssembly();
 }
 
-void CodeGenerator::GenerateAssembly()         // not handling && and || - look into mul/div - mov mem, mem?
+void CodeGenerator::GenerateAssembly()
 {
-    // Index all the comparison jump labels so that each comparison instruction can get the 
-    // correct label in order even if control flow statements are nested into each other
-    for (const auto& instruction : instructions)  if (instruction.op->type == CmdType::IF) Label::AddCmpLabel(instruction.dest->name);
     std::cout << "\nx86 Assembly:\nmain:\n";
     for (auto& [op, src1, src2, dest] : instructions)
     {
@@ -80,10 +83,11 @@ void CodeGenerator::GenerateAssembly()         // not handling && and || - look 
                 std::cout << "\tcmp " << destination << ", " << operand2 << '\n';
                 std::cout << ReverseOp(op->value) << ' ' << Label::GetCmpLabel() << '\n';
             }
+            else if (op->type == CmdType::LOG); // ??? Maybe store all log and relat until you reach an if, then somehow proccess them and reset the storage for the next?
             else if (dest->type == CmdType::REG)
             {
                 if (operand1 != destination) std::cout << "\tmov " << destination << ", " << operand1 << '\n';
-                std::cout << asmLookup.at(op->value) << destination << ", " << operand2 << '\n';                 // multiply must always be in the eax|weird rules for DIV also
+                std::cout << asmLookup.at(op->value) << destination << ", " << operand2 << '\n';
             }
         }
     }
@@ -128,7 +132,7 @@ void CodeGenerator::ProcessBinOp(const BinaryASTNode& n, CmdType type)
 }
 
 void CodeGenerator::Visit(BinaryOperationNode& n) { ProcessBinOp(n, CmdType::ARITHM); }
-void CodeGenerator::Visit(ConditionNode& n)       { ProcessBinOp(n, CmdType::RELAT);  }
+void CodeGenerator::Visit(ConditionNode& n)       { ProcessBinOp(n, n.op.first == "&&" || n.op.first == "||" ? CmdType::LOG : CmdType::RELAT); }
 
 void CodeGenerator::Visit(IfNode& n)
 {
@@ -184,19 +188,9 @@ void CodeGenerator::Visit(DoWhileNode& n)
     }
 }
 
-void CodeGenerator::Visit(CompoundStatementNode& n)
-{
-    for (const auto& statement : n.statements) PlainVisit(statement.get());
-    // the way it is set up here, generation will start here, maybe have a ProgramEntryNode?  also label main:
-    // for setting up stack etc? for exit as well - wont work atm - hack atm is generate
-}
-
-void CodeGenerator::Visit(StatementBlockNode& n) { for (const auto& statement : n.statements) PlainVisit(statement.get()); }
-
-void CodeGenerator::Visit(DeclareStatementNode& n)
-{
-    Return(GetValue(n.identifier.get()));  // might change but for now this returns its identifier, used only for declare-assign
-}
+void CodeGenerator::Visit(CompoundStatementNode& n) { for (const auto& statement : n.statements) PlainVisit(statement.get()); }
+void CodeGenerator::Visit(StatementBlockNode& n)    { for (const auto& statement : n.statements) PlainVisit(statement.get()); }
+void CodeGenerator::Visit(DeclareStatementNode& n)  { Return(GetValue(n.identifier.get())); }
 
 void CodeGenerator::ProcessAssignment(const BinaryASTNode& n)
 {
@@ -230,5 +224,8 @@ void CodeGenerator::Visit(ReturnStatementNode& n)
 void CodeGenerator::Visit(EmptyStatementNode& n) {}
 
 /* TODO:
+    -Mul and Div require special registers
+    -Mov mem, mem is not possible?
+    -&& and || proccessing (ie multiple conditions in one statement condition)
     -Fix/Add Nodes into the ast to accomodate main/entry point - potentially more? 
 */
