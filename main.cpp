@@ -3,7 +3,7 @@
 #include "SemanticAnalyzer.h"
 #include "CodeGenerator.h"
 
-int main(int argc, char* argv[])
+int main(int argc, char* argv[])  // change success checks to !success -> return, verbose mode? set fail flag for lexer or exc if cannot find file to read
 {
     // Create lexer and pass to it the file to be tokenized
     Lexer lexer("source.txt");    //argv[argc - 1]);  This for actual programs
@@ -36,28 +36,3 @@ int main(int argc, char* argv[])
     std::cin.get(); // Debug Only - Get rid for actual
     _CrtSetDbgFlag(_CRTDBG_LEAK_CHECK_DF);  // _CrtDumpMemoryLeaks() will be called AFTER main has been exited
 }
-
-/*---------------GRAMMAR SPECIFICATION--------------------------------------
-AREXPR := NUMBER + MATHOPER + NUMBER | NUMBER + MATHOPER + AREXPR
-STATEMENT := IDENT + CONDITION ...
-CONDITION := IDENT + '(' + AREXPR + ')' |
-EXPR??
-
-DIGIT := '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
-INT := DIGIT | INT
-
-MATHOPER := '+' | '-' | '*' | '/' | COMPMATHOP
-COMPMATHOP := "+=" | "-=" | "*=" | "/=" | "++" | "--"   ///// SPLIT AGAIN?
-LOGOPER := '>' | '<' | COMPLOGOPER
-COMPLOGOPER := ">=" | "<=" | "==" | "!="
-EXPRESSION := ARITHMEXPR | LOGEXPR | ASSIGNEXPR
-LOGEXPR := 
-ARITHMEXPR := INT MATHOPER INT | INT MATHOPER ARITHMEXPR | IDENTIFIER MATHOPER INT  ???
-ASSIGNEXPR := IDENTIFIER = INT | IDENTIFIER = IDENTIFIER ;
-
-KEYWORD := TYPE | ..
-CHARACTER := begins with any lower or upper case letter, can have numbers after and "_"
-IDENTIFIER := CHARACTER | IDENTIFIER
-TYPE :=
-DECLARESTATEMENT := TYPE ASSIGNEXPR;
-*/

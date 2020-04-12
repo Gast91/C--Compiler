@@ -208,18 +208,19 @@ std::vector<UnqPtr<ASTNode>> Parser::ParseStatementList()
     return nodes;
 }
 
-// STATEMENT : COMPOUND_STATEMENT | ASSIGN_STATEMENT | EMPTY_STATEMENT
-UnqPtr<ASTNode> Parser::ParseStatement()                                                  // FOR/OTHER STAMENTS..etc go here
+// STATEMENT : COMPOUND_STATEMENT | ASSIGN_STATEMENT |
+// ITERATION_STATEMENT | DECL | ASSIGN | STATEMENT_BLOCK | EMPTY_STATEMENT
+UnqPtr<ASTNode> Parser::ParseStatement()                                              // FOR/OTHER STAMENTS..etc go here
 {
     const auto&[tokenValue, tokenType] = lexer.GetCurrentToken();
     if         (tokenType == Token::IF)         return ParseIfStatement();
-    else if    (tokenType == Token::WHILE)      return ParseWhile();                 // Merge Loop Statements?
+    else if    (tokenType == Token::WHILE)      return ParseWhile();                  // Merge Loop Statements?
     else if    (tokenType == Token::DO)         return ParseDoWhile();
     else if    (tokenType == Token::RET)        return ParseReturn();
-    else if    (tokenType == Token::INT_TYPE)   return ParseDeclarationStatement();  // lexer.isType()? the same will happen for all types - and functions + void
-    else if    (tokenType == Token::IDENTIFIER) return ParseAssignStatement();       // Can parse an assign statement or a declare and assign statement
-    else if    (tokenType == Token::LCURLY)	   return ParseStatementBlock();         // Specifically parses free floating statement blocks (enclosed by { })
-    else if    (tokenType == Token::RCURLY)	   return ParseEmpty();
+    else if    (tokenType == Token::INT_TYPE)   return ParseDeclarationStatement();   // lexer.isType()? the same will happen for all types - and functions + void
+    else if    (tokenType == Token::IDENTIFIER) return ParseAssignStatement();        // Can parse an assign statement or a declare and assign statement
+    else if    (tokenType == Token::LCURLY)	    return ParseStatementBlock();         // Specifically parses free floating statement blocks (enclosed by { })
+    else if    (tokenType == Token::RCURLY)	    return ParseEmpty();
     else if    (tokenType == Token::FILE_END)   return ParseEmpty();
     else throw UnexpectedTokenException("Encountered unexpected token '" + tokenValue + "' at line " + lexer.GetLine());
 }
@@ -288,7 +289,7 @@ UnqPtr<ASTNode> Parser::ParseEmpty() { return std::make_unique<EmptyStatementNod
 
 // GRAMMARS TODO :
 /*
-FOR_STATEMENT := FOR LPAR (ASSIGN_STATEMENT | EMPTY_STATEMENT) (CONDITION | EMPTY_STATEMENT) (STEP | EMPTY_STATEMENT) RPAR { COMPOUND_STATEMENT }
+FOR_STATEMENT := FOR LPAR (ASSIGN_STATEMENT | DECL_ASSIGN | EMPTY_STATEMENT) (CONDITION | EMPTY_STATEMENT) (STEP | EMPTY_STATEMENT) RPAR { COMPOUND_STATEMENT }
 FUNCTION := TYPE IDENTIFIER (  comma separated list of type identifiers ) { COMPOUND_STATEMENT }
 ARRAYS?
 */

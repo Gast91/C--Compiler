@@ -63,12 +63,8 @@ void SymbolTable::Print()
     std::cout << '\n';
 }
 
-/*
-Add:	-Each VariableSymbol should have an address associated with it
-         So that the code generator later on - or assembly generator will know its stack offset
-        -Rename VariableSymbol to IdentifierSymbol?
-        -Rename Symbol.h,Symbol.cpp to SymbolTable? <----
-        -Missing Type Checking
-        -For more types->redefinition to happen must be same name and type
-         main can be a variable but you cant have two identifiers with type function
+/* TODO:
+    -Missing Type Checking
+    -For more types->redefinition to happen must be same name and type
+     main can be a variable but you cant have two identifiers with type function
 */
