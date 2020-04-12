@@ -9,6 +9,7 @@ Lexer::Lexer(const char* sourcePath)
     if (!infile)
     {
         std::cout << "Cannot open file\n";
+        failState = true;
         return;
     }
 
@@ -128,11 +129,13 @@ constexpr bool Lexer::IsIdentifier(const std::string& identifier, const bool fir
 
 void Lexer::PrintTokens() const
 {
+    if (failState) return;
     std::cout << "Tokenized Input (Split by whitespace):\n";
     for (const auto& token : sourceTokens) if (token.second != Token::NLINE && token.second != Token::FILE_END) std::cout << token.first << ' ';
     std::cout << '\n';
 }
 
+bool Lexer::Failure() const { return failState; }
 bool Lexer::Done() const { return sourceTokens.at(currentTokenIndex).second == Token::FILE_END; }
 
 const std::string Lexer::GetLine() const { return std::to_string(line); }

@@ -14,6 +14,8 @@ private:
     unsigned int currentTokenIndex = 0;
     unsigned int line = 0;
 
+    bool failState = false;
+
     void TokenizeSource(std::ifstream& infile);
     void AddToken(const std::string& tok);
 
@@ -26,6 +28,7 @@ private:
 public:
     Lexer(const char* sourcePath);
 
+    bool Failure() const;
     void PrintTokens() const;
     bool Done() const;
     const std::string GetLine() const;
