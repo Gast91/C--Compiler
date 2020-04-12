@@ -16,10 +16,16 @@ class ASTNode
 public:
     std::string parentID;
 public:
+    ASTNode() = default;
+    ASTNode(const ASTNode&) = default;
     virtual ~ASTNode() = default;
+    ASTNode(ASTNode&&) = default;
+    ASTNode& operator=(const ASTNode&) = default;
+    ASTNode& operator=(ASTNode&&) = default;
 
-    // Function allowing the implementation of the visitor pattern
+    // To allow a class implementing the visitor pattern to visit this node
     virtual void Accept(ASTNodeVisitor& v) = 0;
+    // Sets each child's parentID to the current node's id (for AST visualization)
     virtual void SetChildrenPrintID(const std::string& pID) = 0;
 };
 
@@ -111,6 +117,7 @@ public:
     UnqPtr<ASTNode> condition;
     UnqPtr<ASTNode> body;
     std::string type;  // IF or ELSE_IF used only for visualization
+    std::string parentEndLabel;
 public:
     IfNode(UnqPtr<ASTNode> b, UnqPtr<ASTNode> cond) noexcept : body(std::move(b)),  condition(std::move(cond)) {}
 
