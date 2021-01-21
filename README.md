@@ -28,7 +28,7 @@ the name C--. This project has nothing to do with the C-- proramming language de
 
 ### Current Limitations
 - If-elseif-else, while-dowhile inner statements must be enclosed by {} even if they only contain a single statement.
-- Keywords not currently present in the token table accessed by the lexer will be categorized as identifiers allowing variable declarations or assignments in the form of **int throw = 5**. Easily fixed by added all the symbols present in the language that are not already in the table but the parser cannot deal with them yet anyway.
+- Keywords not currently present in the token table accessed by the lexer will be categorized as identifiers allowing variable declarations or assignments in the form     of **int throw = 5**. Easily fixed by adding all the symbols present in the language that are not already in the table but the parser cannot deal with them yet anyway.
 - At the moment everything must be written inside the main function meaning that there is no function parsing, global variables etc.
 - No type checking at the moment. Only available/recognized type is integers and the use of any other C++ built-in type will lead the parser to complain.
 - Intermediate code generation on some occasions uses more temporary variables than needed.
