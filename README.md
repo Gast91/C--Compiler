@@ -2,7 +2,7 @@
 
 C--Compiler is an attempt to make, by hand, a very basic compiler to translate C++ into assembly.
 The aim to begin with, is for the compiler to be able to process a relatively small subset of C++, hence 
-the name C--. This project has nothing to do with the C-- proramming language despite what the name of this project might suggest. This project is part of a final year dissertation. This project has been on hold/not currently updated since June 2020.
+the name C--. This project has nothing to do with the C-- proramming language despite what the name of this project might suggest. This project is part of a final year dissertation. This project has been on hold/not currently updated since June 2020, the most up to date branch is the assembly one.
 
 ## Getting Started
 
