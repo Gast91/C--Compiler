@@ -72,11 +72,22 @@ public:
     static const std::string GetCmpLabel() { return cmpJmpLabels.at(nextCmpLabel++); }
 };
 
-template <typename Arg, typename ...Args>
-void Print(std::ostream& out, Arg&& arg, Args&& ...args)
+// MERGE????? - template template parameters
+template <typename ...Args>
+void print(std::ostream& out1, std::ofstream& out2, const Args& ...args)
 {
-    (out << arg);
-    (out << ... << args);
+    (out1 << ... << args);
+    (out2 << ... << args);
+}
+template <typename ...Args>
+void print(std::ostream& out1, const Args& ...args)
+{
+    (out1 << ... << args);
+}
+template <typename ...Args>
+void print(std::ofstream& out2, const Args& ...args)
+{
+    (out2 << ... << args);
 }
 
 // CodeGenerator derives from ValueGetter by the 'Curiously Recurring Template Pattern' so that 
