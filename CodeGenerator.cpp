@@ -136,7 +136,7 @@ void CodeGenerator::ProcessBinOp(const BinaryASTNode& n, CmdType type)
     const auto src2 = fetch_instr(n.right.get()).dest;
     instructions.push_back({ Command{n.op.first, type }, src1, src2, dest });
 #else
-    instructions.push_back({ Command{n.op.first, type }, fetch_instr(n.left).dest, fetch_instr(n.right).dest, Temporary::NewTemporary() });
+    instructions.push_back({ Command{n.op.first, type }, fetch_instr(n.left.get()).dest, fetch_instr(n.right.get()).dest, Temporary::NewTemporary() });
 #endif // OPTIMIZE_TEMPS
     Return(instructions.back());
 }
