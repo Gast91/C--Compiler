@@ -12,7 +12,13 @@ class Lexer
 private:
     std::vector<TokenPair> sourceTokens;
     unsigned int currentTokenIndex = 0;
-    unsigned int line = 0;
+    //unsigned int line = 0;
+    struct SourceInfo
+    {
+        unsigned int line = 0;
+        unsigned int column = 1;
+        unsigned int lineStartIndex = 0;
+    } sourceInfo;
 
     bool failState = false;
 
@@ -31,6 +37,7 @@ public:
     bool Failure() const;
     void PrintTokens() const;
     bool Done() const;
+    const ErrorInfo GetErrorInfo() const;
     const std::string GetLine() const;
     void Consume(const Token token);
     const TokenPair& GetCurrentToken();
