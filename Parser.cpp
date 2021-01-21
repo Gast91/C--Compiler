@@ -39,7 +39,8 @@ UnqPtr<ASTNode> Parser::ParseFactor()
         lexer.Consume(Token::RPAR);
         return node;
     }
-    else throw UnexpectedTokenException("Unexpected token '" + tokValue + "' at line " + lexer.GetLine());
+    else throw UnexpectedTokenException(lexer.GetErrorInfo(), "Encountered Unexpected Token");
+    //tokValue?
 }
 
 // TERM := FACTOR ((MUL | DIV) FACTOR)*
@@ -165,7 +166,7 @@ UnqPtr<ASTNode> Parser::ParseDoWhile()
 UnqPtr<ASTNode> Parser::ParseProgram()                           // hacky way for only main now - ParseTranslationUnit-> ParseFunction or ParseDeclaration
 {
     lexer.Consume(Token::INT_TYPE);
-    lexer.Consume(Token::MAIN);                                 // hack here as well
+    lexer.Consume(Token::MAIN);                                  // hack here as well
     lexer.Consume(Token::LPAR); 
     lexer.Consume(Token::RPAR);
 
@@ -223,7 +224,8 @@ UnqPtr<ASTNode> Parser::ParseStatement()                                        
     else if    (tokenType == Token::LCURLY)	    return ParseStatementBlock();         // Specifically parses free floating statement blocks (enclosed by { })
     else if    (tokenType == Token::RCURLY)	    return ParseEmpty();
     else if    (tokenType == Token::FILE_END)   return ParseEmpty();
-    else throw UnexpectedTokenException("Encountered unexpected token '" + tokenValue + "' at line " + lexer.GetLine());
+    else throw UnexpectedTokenException(lexer.GetErrorInfo(), "Encountered Unexpected Token");
+    //tokenValue?
 }
 
 // DECLARATION_STATEMENT := TYPE_SPECIFIER IDENTIFIER SEMI |
