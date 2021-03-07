@@ -1,130 +1,16 @@
 #include <imgui.h>
 #include <imgui-SFML.h>
-#include <imgui_stdlib.h>
+
 #include <TextEditor.h>
-#include <imfilebrowser.h>
+#include <ImGuiFileDialog.h>
 
 #include <SFML/Graphics/RenderWindow.hpp>
 #include <SFML/System/Clock.hpp>
 #include <SFML/Window/Event.hpp>
 
-#include <iostream>
 #include <fstream>
 
-enum Menu
-{
-    NoSel  = 0,
-    New    = 1 << 0,
-    Open   = 1 << 1,
-    Save   = 1 << 2,
-    SaveAs = 1 << 3,
-    Quit   = 1 << 4
-};
-
-inline Menu operator|(Menu a, Menu b)
-{
-    return static_cast<Menu>(static_cast<int>(a) | static_cast<int>(b));
-}
-inline Menu operator&(Menu a, Menu b)
-{
-    return static_cast<Menu>(static_cast<int>(a) & static_cast<int>(b));
-}
-inline Menu operator^(Menu a, Menu b)
-{
-    return static_cast<Menu>(static_cast<int>(a) ^ static_cast<int>(b));
-}
-
-class CodeEditor
-{
-private:
-    std::string buffer;
-    std::string title = "untitled";
-    int lineCount = 1;
-    ImGuiWindowFlags window_flags = 0;
-    bool* p_open = nullptr;
-    Menu menuOption = Menu::NoSel;
-    bool loaded = false;
-
-    void ShowMenu()
-    {
-        if (ImGui::BeginMenuBar())
-        {
-            if (ImGui::BeginMenu("File"))
-            {
-                if (ImGui::MenuItem("New"))
-                {
-                    buffer.clear();
-                    menuOption = NoSel | Menu::New;
-                }
-                if (ImGui::MenuItem("Open", "Ctrl+O")) { menuOption = NoSel | Menu::Open; }
-                if (ImGui::MenuItem("Save", "Ctrl+S")) { menuOption = NoSel | Menu::Save; }
-                if (ImGui::MenuItem("Save As.."))      { menuOption = NoSel | Menu::SaveAs; }
-
-                ImGui::Separator();
-                if (ImGui::MenuItem("Quit", "Alt+F4")) { menuOption = NoSel | Menu::Quit; }
-                ImGui::EndMenu();
-            }
-            ImGui::EndMenuBar();
-        }
-    }
-    void ShowBanner()
-    {
-        // File name (left-aligned)
-        ImGui::TextWrapped(title.c_str());
-        const float ItemSpacing = ImGui::GetStyle().ItemSpacing.x;
-
-        // Total line number (right-aligned)
-        static float linesCountTextWidth = 100.0f;        // First frame guess
-        float pos = linesCountTextWidth + ItemSpacing;
-        ImGui::SameLine(ImGui::GetWindowWidth() - pos);
-        ImGui::TextWrapped(std::to_string(lineCount).c_str());
-        linesCountTextWidth = ImGui::GetItemRectSize().x; // Actual width
-
-        // Line label (right-aligned)
-        static float linesTextWidth = 100.0f;             // First frame guess
-        pos += linesTextWidth + ItemSpacing;
-        ImGui::SameLine(ImGui::GetWindowWidth() - pos);
-        ImGui::TextWrapped("Lines: ");
-        linesTextWidth = ImGui::GetItemRectSize().x;      // Actual width
-
-        ImGui::Separator();
-    }
-public:
-    CodeEditor()
-    {
-        window_flags |= ImGuiWindowFlags_MenuBar;
-    }
-    bool Render()
-    {
-        bool shouldQuit = false;
-        Menu previousOpt = menuOption;
-        ImGui::Begin("Code Editor", p_open, window_flags);
-        ShowMenu();
-
-        if (menuOption & Menu::NoSel)  menuOption = previousOpt;
-        if (menuOption & Menu::New)
-        {
-            ShowBanner();  // Show file name and total line count labels
-            ImGui::InputTextMultiline("##Code Editor", &buffer, { ImGui::GetWindowWidth(), ImGui::GetWindowHeight() - ImGui::GetWindowPos().y });
-            loaded = true;
-        }
-        else if (menuOption & Menu::Open)   ImGui::Text("Open Clicked");
-        else if (menuOption & Menu::Save)   ImGui::Text("Save Clicked");
-        else if (menuOption & Menu::SaveAs) ImGui::Text("SaveAs Clicked");
-        else if (menuOption & Menu::Quit)   shouldQuit = true;
-
-        if (loaded)
-        {
-            if (ImGui::SmallButton("Tokenize"))
-            {
-                std::cout << "Toks!\n";
-            }
-        }
-
-        ImGui::End();
-        return !shouldQuit;
-    }
-};
+constexpr const char* fileTypeFilter = "Source files (*.cpp *.h *.hpp *.txt){.cpp,.h,.hpp,.txt}";
 
 int main()
 {
@@ -132,22 +18,15 @@ int main()
     window.setVerticalSyncEnabled(true);
     ImGui::SFML::Init(window);
 
-    window.resetGLStates(); // call it if you only draw ImGui. Otherwise not needed.
+    // Since we only draw ImGui stuff atm we need this
+    window.resetGLStates();
     sf::Clock deltaClock;
 
-    //CodeEditor codeEditor;
     TextEditor editor;
     editor.SetLanguageDefinition(TextEditor::LanguageDefinition::CPlusPlus());
     editor.SetShowWhitespaces(false);
-    std::string fileName = "Untitled.cpp";
+    std::string fileName = "Untitled";
 
-    ImGui::FileBrowser fileDialog;
-    ImGui::FileBrowser fileDialog1(ImGuiFileBrowserFlags_EnterNewFilename);
-    fileDialog1.SetTitle("Save As");
-    fileDialog1.SetTypeFilters({ ".h", ".cpp", ".txt" });
-    // (optional) set browser properties
-    fileDialog.SetTitle("Choose File");
-    fileDialog.SetTypeFilters({ ".h", ".cpp", ".txt" });
     while (window.isOpen()) 
     {
         sf::Event event;
@@ -176,21 +55,22 @@ int main()
         {
             if (ImGui::BeginMenu("File"))
             {
-                if (ImGui::MenuItem("New"))            { editor.SetText(""); fileName = "Untitled"; }  //??
-                if (ImGui::MenuItem("Open", "Ctrl+O")) { fileDialog.Open();  }
-                if (ImGui::MenuItem("Save"))
+                if (ImGui::MenuItem("New"))            { editor.SetText(""); fileName = "Untitled"; }  //?? handle file name and extension seperately?
+                if (ImGui::MenuItem("Open", "Ctrl+O")) { ImGuiFileDialog::Instance()->OpenModal("ChooseFileKey", "Choose File", fileTypeFilter, ".", ""); }
+                if (ImGui::MenuItem("Save", "Ctrl+S"))
                 {
-                    auto textToSave = editor.GetText();
-                    /// save text.... fileName is the path
-                    // if fileName is untitled - you call SaveAs
+                    if (fileName == "Untitled") ImGuiFileDialog::Instance()->OpenModal("SaveAsKey", "Save File As", fileTypeFilter, ".", "");
+                    else
+                    {
+                        std::ofstream outfile;
+                        outfile.open(fileName);
+                        outfile << std::noskipws;
+                        // pop up for failure? if (!outfile) { //stuff }
+                        outfile << editor.GetText();
+                        outfile.close();
+                    }
                 }
-                if (ImGui::MenuItem("Save As.."))
-                {
-                    fileDialog1.Open();
-                    // how to get the text?
-                    // call the save text as above but ALSO change its name
-                    // fileName = ....
-                }
+                if (ImGui::MenuItem("Save As..")) { ImGuiFileDialog::Instance()->OpenModal("SaveAsKey", "Save File As", fileTypeFilter, ".", ""); }
                 
                 if (ImGui::MenuItem("Quit", "Alt-F4")) window.close();
                 ImGui::EndMenu();
@@ -236,35 +116,47 @@ int main()
         ImGui::Spacing();
 
         editor.Render("TextEditor");
-        if (ImGui::Button("Tokenize"))
+        if (ImGui::Button("Tokenize"))  // Why is button barely in view??..
         {
-            //RUN LEXER!
-            std::cout << "Running Lexer\n";
+            // RUN LEXER!
+            // Pass output to another ImGuiWindow to display a table of tokens and their info
         }
         ImGui::End();
 
+        if (ImGuiFileDialog::Instance()->Display("ChooseFileKey"))
+        {
+            if (ImGuiFileDialog::Instance()->IsOk())
+            {
+                std::ifstream infile;
+                fileName = ImGuiFileDialog::Instance()->GetFilePathName(); // GetSelectionDifferences?
+                infile.open(fileName);
+                // pop up for failure? if (!infile) { //stuff }
+                std::vector<std::string> lines;
+                std::string line;
+                while (std::getline(infile, line)) lines.push_back(line);
+                editor.SetTextLines(lines);
 
-        fileDialog.Display();
-        if (fileDialog.HasSelected())
-        {
-            std::ifstream infile;
-            fileName = fileDialog.GetSelected().string();
-            infile.open(fileDialog.GetSelected());
-            // pop up for failure? if (!infile) { //stuff }
-            std::vector<std::string> lines;
-            std::string line;
-            while (std::getline(infile, line)) lines.push_back(line);
-            editor.SetTextLines(lines);
-            fileDialog.ClearSelected();
-        }
-        fileDialog1.Display();
-        if (fileDialog.HasSelected())
-        {
-            std::cout << fileDialog1.GetSelected() << '\n';
-            fileDialog1.ClearSelected();
+                infile.close();
+            }
+            ImGuiFileDialog::Instance()->Close();
         }
 
-        /*ImGui::ShowDemoWindow();*/
+        if (ImGuiFileDialog::Instance()->Display("SaveAsKey"))
+        {
+            if (ImGuiFileDialog::Instance()->IsOk())
+            {
+                std::ofstream outfile;
+                std::string fpName = ImGuiFileDialog::Instance()->GetFilePathName();
+                outfile.open(fpName);
+                outfile << std::noskipws;
+                // pop up for failure? if (!outfile) { //stuff }
+                outfile << editor.GetText();
+                fileName = fpName;
+                outfile.close();
+
+            }
+            ImGuiFileDialog::Instance()->Close();
+        }
 
         window.clear();
         ImGui::SFML::Render(window);
@@ -272,3 +164,14 @@ int main()
     }
     ImGui::SFML::Shutdown();
 }
+
+/*  TODO:
+*       Overwriting confirmation for SaveAs
+*       Popup dialog for file errors
+*       Shortcut implementation
+*       Lexer Integration
+*       Cleanup/Separation of display etc
+*       Docking
+*       Merge all compiler branches, create new on (dissertation)
+*           Master becomes an ImGui frontend
+*/
