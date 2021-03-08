@@ -10,11 +10,11 @@
 class Lexer
 {
 private:
-    //std::vector<TokenPair> sourceTokens;
+    //std::vector<TokenPair> sourceTokens;    // OBSOLETE
     std::vector<TokenInfo> sourceTokens;
     unsigned int currentTokenIndex = 0;
     //unsigned int line = 0;
-    struct SourceInfo
+    struct SourceInfo                        // OBSOLETE
     {
         unsigned int line = 0;
         unsigned int column = 1;
@@ -35,10 +35,10 @@ public:
     void Tokenize(const std::vector<std::string>& srcLines);
     const std::vector<TokenInfo>& GetTokens() const;
     bool Failure() const;
-    void PrintTokens() const;
+    void PrintTokens() const;                  // PrintTokens can possibly output to file BUT ALSO into an imgui window?
     /*bool Done() const;*/
-    /*const ErrorInfo GetErrorInfo() const;*/
-    const std::string GetLine() const;
+    /*const ErrorInfo GetErrorInfo() const;*/  // OBSOLETE
+    const std::string GetLine() const;         // OBSOLETE ??
     /*void Consume(const Token token);
-    const TokenPair& GetCurrentToken();*/
+    const TokenPair& GetCurrentToken();*/      // NEEDS CHANGE
 };
