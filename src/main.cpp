@@ -13,9 +13,22 @@
 #include <fstream>
 
 #include "Lexer.h"
+#include "Parser.h"
 
 constexpr const char* fileTypeFilter = "Source files (*.cpp *.h *.hpp *.txt){.cpp,.h,.hpp,.txt}";
 
+static void HelpMarker(const char* desc)
+{
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
 // Usage:
 //  static ExampleAppLog my_log;
 //  my_log.AddLog("Hello %d world\n", 123);
@@ -33,14 +46,14 @@ struct ExampleAppLog
         Clear();
     }
 
-    void    Clear()
+    void Clear()
     {
         Buf.clear();
         LineOffsets.clear();
         LineOffsets.push_back(0);
     }
 
-    void    AddLog(const char* fmt, ...) IM_FMTARGS(2)
+    void AddLog(const char* fmt, ...) IM_FMTARGS(2)
     {
         int old_size = Buf.size();
         va_list args;
@@ -48,11 +61,13 @@ struct ExampleAppLog
         Buf.appendfv(fmt, args);
         va_end(args);
         for (int new_size = Buf.size(); old_size < new_size; old_size++)
-            if (Buf[old_size] == '\n')
+        {
+            if (Buf[old_size] == '\n')  
                 LineOffsets.push_back(old_size + 1);
+        }
     }
 
-    void    Draw(const char* title, bool* p_open = NULL)
+    void Draw(const char* title, bool* p_open = NULL)
     {
         if (!ImGui::Begin(title, p_open))
         {
@@ -169,7 +184,7 @@ static void ShowExampleAppLog(bool* p_open, ExampleAppLog& log)
 }
 int main()
 {
-    sf::RenderWindow window(sf::VideoMode(800, 600), "EditorTest");
+    sf::RenderWindow window(sf::VideoMode().getDesktopMode(), "EditorTest");
     window.setVerticalSyncEnabled(true);
 
     ImGui::SFML::Init(window);  
@@ -184,6 +199,8 @@ int main()
     std::string fileName = "Untitled";
 
     Lexer lexer;
+    Parser parser;
+    parser.RegisterLexer(&lexer);  // ONE CONSTRUCTOR - NOT LIKE THIS
     ExampleAppLog log;
     while (window.isOpen()) 
     {
@@ -316,8 +333,20 @@ int main()
             // if there was a change in the editor
             // run all previous steps and update all
             // windows up to AST
+            try 
+            { 
+                parser.Parse();
+                if (parser.Success()) log.AddLog("%s", "Parsing successful, AST built\n"); // kinda meh    
+            }
+            catch (UnexpectedTokenException& ex) { log.AddLog("%s", ex.what()); }
         }
         ParseButtonWidth = ImGui::GetItemRectSize().x;
+        if (ImGui::IsItemHovered())
+        {
+            ImGui::BeginTooltip();
+            ImGui::Text("%s", "Generate AST");
+            ImGui::EndTooltip();
+        }
 
         static float TokButtonWidth = 100.0f;
         pos += TokButtonWidth + ItemSpacing;
@@ -328,6 +357,7 @@ int main()
             lexer.Tokenize(editor.GetTextLines());
             //lexer.PrintTokens();                    // PrintTokens rendering ImGui
             for (const auto& toks : lexer.GetTokens()) log.AddLog("%s ", std::get<0>(toks).c_str());
+            log.AddLog("%c", '\n');
         }
         TokButtonWidth = ImGui::GetItemRectSize().x;       
 
@@ -364,6 +394,11 @@ int main()
             ImGui::EndTable();
         }
         ImGui::End();
+
+        /*
+        *   IMGUI TREE SHOWING NODE HIERARCHY - BECOMES THE NEW ASTVISUALIZER?? (HANDLES .JS FILE OUTPUT AND IMGUI TREE (CONSOLE?)
+        *   EACH NODE DOES ITS OWN IMGUI APPEND?
+        */
         
 
         if (ImGuiFileDialog::Instance()->Display("ChooseFileKey"))
@@ -414,9 +449,8 @@ int main()
 *       Overwriting confirmation for SaveAs
 *       Popup dialog for file errors
 *       Shortcut implementation
-*       Lexer Integration
 *       Cleanup/Separation of display etc
-*       Docking
+*       Docking - SFML backend issues
 *       Merge all compiler branches, create new on (dissertation)
 *           Master becomes an ImGui frontend
 */
