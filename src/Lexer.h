@@ -32,7 +32,9 @@ public:
     void PrintTokens() const;                  // PrintTokens can possibly output to file BUT ALSO into an imgui window?
     bool Done() const;
     const ErrorInfo GetErrorInfo() const;      // OBSOLETE ??
-    const std::string GetLine() const;         // OBSOLETE ??
+    std::string GetCurrentTokenVal() const;
+    std::string GetCurrentTokenLine() const;
+    Token GetCurrentTokenType() const;
     void Consume(const Token tokenType);
     const TokenInfo& GetCurrentToken();
 

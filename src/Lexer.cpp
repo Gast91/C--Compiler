@@ -129,7 +129,9 @@ const std::vector<TokenInfo>& Lexer::GetTokens() const
 bool Lexer::Failure() const { return failState; }
 bool Lexer::Done() const { return currentTokenIndex == sourceTokens.size(); }  // ??
 
-const std::string Lexer::GetLine() const { return std::to_string(std::get<2>(sourceTokens.at(currentTokenIndex))); }
+std::string Lexer::GetCurrentTokenVal() const { return std::get<0>(sourceTokens.at(currentTokenIndex)); }
+std::string Lexer::GetCurrentTokenLine() const { return std::to_string(std::get<2>(sourceTokens.at(currentTokenIndex))); }
+Token Lexer::GetCurrentTokenType() const { return std::get<1>(sourceTokens.at(currentTokenIndex)); }
 
 const ErrorInfo Lexer::GetErrorInfo() const  // THIS SHIT IS UGLY AF - MAKE BETTER - ALSO MAKE IT FIT FOR SEMANTICS
 {                                            // WONKY after semicolons, shows line below?... ALSO check how you showed the expected token before (git)
