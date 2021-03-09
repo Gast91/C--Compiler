@@ -2,6 +2,7 @@
 
 #include "Lexer.h"
 #include "AbstractSyntaxTree.h"
+#include "Logger.h"
 
 class Parser
 {
@@ -30,12 +31,11 @@ private:
 
     bool failState = false;
     bool parsingCond = false;
+    bool done = false;
 public:
-    Parser() = default;
     Parser(Lexer* lex);
 
     void Parse();
-    void RegisterLexer(Lexer* lex);
-    ASTNode* GetAST() const noexcept { return failState ? nullptr : root.get(); }
+    ASTNode* GetAST() const noexcept { return failState || !done ? nullptr : root.get(); }
     bool Success()    const noexcept { return !failState; }
 };

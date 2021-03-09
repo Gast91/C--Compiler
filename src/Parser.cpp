@@ -1,26 +1,25 @@
 #include "Parser.h"
 
-Parser::Parser(Lexer* lex) : lexer(lex)
-{
-    if (lexer->Failure()) { failState = true; return; }
-    try { root = ParseProgram(); }
-    catch (UnexpectedTokenException ex) { failState = true; std::cout << ex.what() << '\n'; }
+Parser::Parser(Lexer* lex) : lexer(lex) {}
 
-    // Somewhere, somehow not all tokens were processed.
-    if (!lexer->Done()) failState = true;
-    else std::cout << "\nParsing Successful, AST Built";
-}
-
-void Parser::RegisterLexer(Lexer* lex) { lexer = lex; }
 void Parser::Parse()
 {
-    /*try {*/ root = ParseProgram(); //}
-    //catch (UnexpectedTokenException ex) { failState = true; std::cout << ex.what() << '\n'; }
+    try 
+    { 
+        root = ParseProgram();
+        done = true;
+    }
+    catch (UnexpectedTokenException ex) 
+    { 
+        failState = true; 
+        Logger::Instance()->Log("%s \n", ex.what()); 
+    }
 
     // Somewhere, somehow not all tokens were processed.
-    if (!lexer->Done()) failState = true;
-    else std::cout << "\nParsing Successful, AST Built";
+    if (!lexer->Done()) failState = true;  // - SHOW WHAT IS LEFT???
+    else Logger::Instance()->Log("\nParsing Successful, AST Built");
 }
+
 // FACTOR := (ADD | SUB ) FACTOR | INTEGER | IDENTIFIER | LPAR EXPRESSION RPAR
 UnqPtr<ASTNode> Parser::ParseFactor()
 {
@@ -49,7 +48,7 @@ UnqPtr<ASTNode> Parser::ParseFactor()
         lexer->Consume(Token::RPAR);
         return node;
     }
-    else throw UnexpectedTokenException(lexer->GetErrorInfo(), "Encountered Unexpected Token");
+    else throw UnexpectedTokenException(lexer->GetErrorInfo(), "Encountered Unexpected Token '" + lexer->GetCurrentTokenVal() + '\'');
     //tokValue?
 }
 
@@ -234,7 +233,7 @@ UnqPtr<ASTNode> Parser::ParseStatement()                                        
     else if    (tokenType == Token::LCURLY)	    return ParseStatementBlock();         // Specifically parses free floating statement blocks (enclosed by { })
     else if    (tokenType == Token::RCURLY)	    return ParseEmpty();
     else if    (tokenType == Token::FILE_END)   return ParseEmpty();
-    else throw UnexpectedTokenException(lexer->GetErrorInfo(), "Encountered Unexpected Token");
+    else throw UnexpectedTokenException(lexer->GetErrorInfo(), "Encountered Unexpected Token '" + lexer->GetCurrentTokenVal() + '\'');
     //tokenValue?
 }
 
