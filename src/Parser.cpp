@@ -40,7 +40,7 @@ UnqPtr<ASTNode> Parser::ParseFactor()
     else if (tokType == Token::IDENTIFIER)
     {
         lexer->Consume(Token::IDENTIFIER);
-        return std::make_unique<IdentifierNode>(tokValue, std::to_string(line));
+        return std::make_unique<IdentifierNode>(tokValue, std::to_string(line), tokType);
     }
     else if (tokType == Token::LPAR)
     {
@@ -243,30 +243,32 @@ UnqPtr<ASTNode> Parser::ParseStatement()                                        
 UnqPtr<ASTNode> Parser::ParseDeclarationStatement() // in the future it should accommodate function declarations also
 {
     // Get the type specifier (int, float, char etc..) and consume it
-    const auto& [tokenValue, tokenType, line, col] = lexer->GetCurrentToken();
+    std::string tokenVal; Token tokenType;
+    std::tie(tokenVal, tokenType, std::ignore, std::ignore) = lexer->GetCurrentToken();
     lexer->Consume(tokenType);
+
     // Next is identifier so process it
-    UnqPtr<IdentifierNode> ident = std::make_unique<IdentifierNode>(tokenValue, std::to_string(line), tokenType);
+    UnqPtr<IdentifierNode> ident = std::make_unique<IdentifierNode>(lexer->GetCurrentTokenVal(), lexer->GetCurrentTokenLine(), tokenType);
     lexer->Consume(Token::IDENTIFIER);
     // If there is an assignment following this is a declaration and assignment statement in one
-    if (std::get<1>(lexer->GetCurrentToken()) == Token::ASSIGN)
+    if (lexer->GetCurrentTokenType() == Token::ASSIGN)
     {
         // Process the rest as a declare and assign statement
         lexer->Consume(Token::ASSIGN);
-        UnqPtr<DeclareAssignNode> node = std::make_unique<DeclareAssignNode>(std::make_unique<DeclareStatementNode>(std::move(ident), TokenPair{ tokenValue, tokenType }), ParseExpr());
+        UnqPtr<DeclareAssignNode> node = std::make_unique<DeclareAssignNode>(std::make_unique<DeclareStatementNode>(std::move(ident), TokenPair{ tokenVal, tokenType }), ParseExpr());
         lexer->Consume(Token::SEMI);
         return node;
     }
     // Or is was just a declaration statement
     lexer->Consume(Token::SEMI);
-    return std::make_unique<DeclareStatementNode>(std::move(ident), TokenPair{ tokenValue, tokenType });
+    return std::make_unique<DeclareStatementNode>(std::move(ident), TokenPair{ tokenVal, tokenType });
 }
 
 // ASSIGN_STATEMENT := IDENTIFIER ASSIGN EXPRESSION
 UnqPtr<ASTNode> Parser::ParseAssignStatement()
 {
     const auto& [tokenValue, tokenType, line, col] = lexer->GetCurrentToken();
-    UnqPtr<IdentifierNode> ident = std::make_unique<IdentifierNode>(tokenValue, std::to_string(line));
+    UnqPtr<IdentifierNode> ident = std::make_unique<IdentifierNode>(tokenValue, std::to_string(line), tokenType);
     lexer->Consume(Token::IDENTIFIER);
     lexer->Consume(Token::ASSIGN);
     UnqPtr<ASTNode> node = std::make_unique<AssignStatementNode>(std::move(ident), ParseExpr());
