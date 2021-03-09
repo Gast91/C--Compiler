@@ -3,14 +3,12 @@
 
 void ASTVisualizer::PrintAST(ASTNode& n)
 {
-    // IF ROOT EXISTS!!!!!! then setNextopen is safe
-    ImGui::Begin("Parser Output");
     if (ImGui::Button("Expand AST"));//   open_action = 1;
     ImGui::SameLine();
     if (ImGui::Button("Collapse AST"));// open_action = 0;
     ImGui::Separator();
-    //if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
 
+    //if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
     if (ImGui::TreeNode((void*)(intptr_t)&n, "ROOT"))
     {
         if (align_label_with_current_x_position)
@@ -20,7 +18,6 @@ void ASTVisualizer::PrintAST(ASTNode& n)
             ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
         ImGui::TreePop();
     }
-    ImGui::End();
 }
 
 void ASTVisualizer::Visit(ASTNode& n)       { assert(("ASTVisualizer visited base ASTNode class?!"      , false)); }
