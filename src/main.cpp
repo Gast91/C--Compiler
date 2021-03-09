@@ -12,6 +12,7 @@
 
 #include <fstream>
 
+#include "Logger.h"
 #include "Lexer.h"
 #include "Parser.h"
 #include "ASTVisualizer.h"
@@ -31,133 +32,19 @@ static void HelpMarker(const char* desc)
     }
 }
 
-struct ExampleAppLog
-{
-    ImGuiTextBuffer     Buf;
-    ImGuiTextFilter     Filter;
-    ImVector<int>       LineOffsets; // Index to lines offset. We maintain this with AddLog() calls.
-    bool                AutoScroll;  // Keep scrolling if already at the bottom.
-
-    ExampleAppLog()
-    {
-        AutoScroll = true;
-        Clear();
-    }
-
-    void Clear()
-    {
-        Buf.clear();
-        LineOffsets.clear();
-        LineOffsets.push_back(0);
-    }
-
-    void AddLog(const char* fmt, ...) IM_FMTARGS(2)
-    {
-        int old_size = Buf.size();
-        va_list args;
-        va_start(args, fmt);
-        Buf.appendfv(fmt, args);
-        va_end(args);
-        for (int new_size = Buf.size(); old_size < new_size; old_size++)
-        {
-            if (Buf[old_size] == '\n')  
-                LineOffsets.push_back(old_size + 1);
-        }
-    }
-
-    void Draw(const char* title, bool* p_open = NULL)
-    {
-        if (!ImGui::Begin(title, p_open))
-        {
-            ImGui::End();
-            return;
-        }
-
-        // Options menu
-        if (ImGui::BeginPopup("Options"))
-        {
-            ImGui::Checkbox("Auto-scroll", &AutoScroll);
-            ImGui::EndPopup();
-        }
-
-        // Main window
-        if (ImGui::Button("Options"))
-            ImGui::OpenPopup("Options");
-        ImGui::SameLine();
-        bool clear = ImGui::Button("Clear");
-        ImGui::SameLine();
-        bool copy = ImGui::Button("Copy");
-        ImGui::SameLine();
-        Filter.Draw("Filter", -100.0f);
-
-        ImGui::Separator();
-        ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
-
-        if (clear) Clear();
-        if (copy)  ImGui::LogToClipboard();
-
-        ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-        const char* buf = Buf.begin();
-        const char* buf_end = Buf.end();
-        if (Filter.IsActive())
-        {
-            for (int line_no = 0; line_no < LineOffsets.Size; line_no++)
-            {
-                const char* line_start = buf + LineOffsets[line_no];
-                const char* line_end = (line_no + 1 < LineOffsets.Size) ? (buf + LineOffsets[line_no + 1] - 1) : buf_end;
-                if (Filter.PassFilter(line_start, line_end))
-                    ImGui::TextUnformatted(line_start, line_end);   // something else? for format and wrap
-            }
-        }
-        else
-        {
-            ImGuiListClipper clipper;
-            clipper.Begin(LineOffsets.Size);
-            while (clipper.Step())
-            {
-                for (int line_no = clipper.DisplayStart; line_no < clipper.DisplayEnd; line_no++)
-                {
-                    const char* line_start = buf + LineOffsets[line_no];
-                    const char* line_end = (line_no + 1 < LineOffsets.Size) ? (buf + LineOffsets[line_no + 1] - 1) : buf_end;
-                    ImGui::TextUnformatted(line_start, line_end);    // something else? for format and wrap
-                }
-            }
-            clipper.End();
-        }
-        ImGui::PopStyleVar();
-
-        if (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
-            ImGui::SetScrollHereY(1.0f);
-
-        ImGui::EndChild();
-        ImGui::End();
-    }
-};
-
-// Demonstrate creating a simple log window with basic filtering.
-static void ShowExampleAppLog(bool* p_open, ExampleAppLog& log)
+static void ShowLogger(bool* p_open)
 {
     ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
     ImGui::Begin("Console Output", p_open);
-    /*if (ImGui::SmallButton("[Debug] Add 5 entries"))
-    {
-        static int counter = 0;
-        const char* categories[3] = { "info", "warn", "error" };
-        const char* words[] = { "Bumfuzzled", "Cattywampus", "Snickersnee", "Abibliophobia", "Absquatulate", "Nincompoop", "Pauciloquent" };
-        for (int n = 0; n < 5; n++)
-        {
-            const char* category = categories[counter % IM_ARRAYSIZE(categories)];
-            const char* word = words[counter % IM_ARRAYSIZE(words)];
-            log.AddLog("[%05d] [%s] Hello, current time is %.1f, here's a word: '%s'\n",
-                ImGui::GetFrameCount(), category, ImGui::GetTime(), word);
-            counter++;
-        }
-    }*/
+
+    /* Can add other stuff here */
+
     ImGui::End();
 
     // Actually call in the regular Log helper (which will Begin() into the same window as we just did)
-    log.Draw("Console Output", p_open);
+    Logger::Instance()->Draw("Console Output", p_open);
 }
+
 int main()
 {
     sf::RenderWindow window(sf::VideoMode().getDesktopMode(), "EditorTest");
@@ -175,10 +62,8 @@ int main()
     std::string fileName = "Untitled";
 
     Lexer lexer;
-    Parser parser;
-    parser.RegisterLexer(&lexer);  // ONE CONSTRUCTOR - NOT LIKE THIS
+    Parser parser(&lexer);
     ASTVisualizer viz;
-    ExampleAppLog log;
     while (window.isOpen()) 
     {
         sf::Event event;
@@ -231,7 +116,7 @@ int main()
             if (ImGui::BeginMenu("Edit"))
             {
                 bool ro = editor.IsReadOnly();
-                if (ImGui::MenuItem("Read-only mode", nullptr, &ro))                                          editor.SetReadOnly(ro);
+                if (ImGui::Checkbox("Read-only mode", &ro))                                                  editor.SetReadOnly(ro);
                 ImGui::Separator();    
 
                 if (ImGui::MenuItem("Undo", "ALT-Backspace", nullptr, !ro && editor.CanUndo()))               editor.Undo();
@@ -249,12 +134,13 @@ int main()
 
                 ImGui::EndMenu();
             }
-
             if (ImGui::BeginMenu("View"))
             {
-                if (ImGui::MenuItem("Dark palette"))       editor.SetPalette(TextEditor::GetDarkPalette());
-                if (ImGui::MenuItem("Light palette"))      editor.SetPalette(TextEditor::GetLightPalette());
-                if (ImGui::MenuItem("Retro blue palette")) editor.SetPalette(TextEditor::GetRetroBluePalette());
+                bool ws = editor.IsShowingWhitespaces();
+                if (ImGui::Checkbox("Show whitespaces", &ws)) editor.SetShowWhitespaces(ws);
+                if (ImGui::MenuItem("Dark palette"))          editor.SetPalette(TextEditor::GetDarkPalette());
+                if (ImGui::MenuItem("Light palette"))         editor.SetPalette(TextEditor::GetLightPalette());
+                if (ImGui::MenuItem("Retro blue palette"))    editor.SetPalette(TextEditor::GetRetroBluePalette());
                 ImGui::EndMenu();
             }
             ImGui::EndMenuBar();
@@ -310,12 +196,7 @@ int main()
             // if there was a change in the editor
             // run all previous steps and update all
             // windows up to AST
-            try 
-            { 
-                parser.Parse();
-                if (parser.Success()) log.AddLog("%s", "Parsing successful, AST built\n"); // kinda meh    
-            }
-            catch (UnexpectedTokenException& ex) { log.AddLog("%s", ex.what()); }
+            parser.Parse();
         }
         ParseButtonWidth = ImGui::GetItemRectSize().x;
         if (ImGui::IsItemHovered())
@@ -332,9 +213,9 @@ int main()
         {
             // only if there was a change in the editor
             lexer.Tokenize(editor.GetTextLines());
-            //lexer.PrintTokens();                    // PrintTokens rendering ImGui
-            for (const auto& toks : lexer.GetTokens()) log.AddLog("%s ", std::get<0>(toks).c_str());
-            log.AddLog("%c", '\n');
+            Logger::Instance()->Log("Tokenized Input (Split by whitespace):\n");
+            for (const auto& toks : lexer.GetTokens()) Logger::Instance()->Log("%s ", std::get<0>(toks).c_str());
+            Logger::Instance()->Log("%c", '\n');
         }
         TokButtonWidth = ImGui::GetItemRectSize().x;       
 
@@ -373,7 +254,10 @@ int main()
         ImGui::End();
 
         // Each node recursively builds the ImGui Tree through successive visits of the ASTVisualizer
-        viz.PrintAST(*parser.GetAST());
+        ImGui::Begin("Parser Output");
+        if (const auto& AST = parser.GetAST(); AST) 
+            viz.PrintAST(*AST);
+        ImGui::End();
 
         if (ImGuiFileDialog::Instance()->Display("ChooseFileKey"))
         {
@@ -410,7 +294,7 @@ int main()
             ImGuiFileDialog::Instance()->Close();
         }
         static bool* p_open;
-        ShowExampleAppLog(p_open, log);
+        ShowLogger(p_open);
         //ImGui::ShowDemoWindow();
         window.clear();
         ImGui::SFML::Render(window);
@@ -427,4 +311,16 @@ int main()
 *       Docking - SFML backend issues
 *       Merge all compiler branches, create new on (dissertation)
 *           Master becomes an ImGui frontend
+* 
+* 
+*       Lexer start   = false;  // this is the same as hasOutput
+*       Lexer failure = false;
+*       Lexer hasOutput returns sourceTokens.size != 0
+* 
+*       Parser done   = false;
+*       Parser failure = false;
+*       Parser constructor gets Lexer and waits
+*       Parser Parse checks if Lexer hasOutput && not failure? and then parses. If successful sets DONE to TRUE
+*       Parser isDone returns done
+*       Parser GetAST returns nullptr if FAILURE OR !isDone ELSE returns AST
 */
