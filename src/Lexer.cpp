@@ -7,14 +7,14 @@ void Lexer::Tokenize(const std::vector<std::string>& srcLines)
     {
         sourceTokens.clear();
         currentTokenIndex = 0;
-        lineStartIndex = 0;
+        lineStartTokenIndex = 0;
     }
     size_t lineNo = 0;
     for (const auto& line : srcLines)
     {
         ++lineNo;
         size_t prev = 0, pos;
-        while ((pos = line.find_first_of(" \t+-*/()=!><&|;{}%", prev)) != std::string::npos)
+        while ((pos = line.find_first_of(" \t+-*/()=!><&|;{}%,.\'\"", prev)) != std::string::npos)
         {
             if (pos < prev) continue;
             if (pos > prev) AddToken(line.substr(prev, pos - prev), lineNo, prev + 1);
@@ -113,18 +113,7 @@ constexpr bool Lexer::IsIdentifier(const std::string& identifier, const bool fir
     return false;
 }
 
-void Lexer::PrintTokens() const
-{
-    if (failState) return;
-    std::cout << "Tokenized Input (Split by whitespace):\n";
-    for (const auto& [name, type, line, col] : sourceTokens) if (type != Token::NLINE && type != Token::FILE_END) std::cout << name << ' ';
-    std::cout << '\n';
-}
-
-const std::vector<TokenInfo>& Lexer::GetTokens() const
-{
-    return sourceTokens;
-}
+const std::vector<TokenInfo>& Lexer::GetTokens() const { return sourceTokens; }
 
 bool Lexer::Failure() const { return failState; }
 bool Lexer::Done() const { return currentTokenIndex == sourceTokens.size(); }  // ??
@@ -133,22 +122,20 @@ std::string Lexer::GetCurrentTokenVal() const { return std::get<0>(sourceTokens.
 std::string Lexer::GetCurrentTokenLine() const { return std::to_string(std::get<2>(sourceTokens.at(currentTokenIndex))); }
 Token Lexer::GetCurrentTokenType() const { return std::get<1>(sourceTokens.at(currentTokenIndex)); }
 
-const ErrorInfo Lexer::GetErrorInfo() const  // THIS SHIT IS UGLY AF - MAKE BETTER - ALSO MAKE IT FIT FOR SEMANTICS
-{                                            // WONKY after semicolons, shows line below?... ALSO check how you showed the expected token before (git)
+const ErrorInfo Lexer::GetErrorInfo() const   // Get source text straight from editor somehow? probably the better way - sem?
+{                                             // spaces instead of tabs offset it slightly - still needs some work           
     // Source column and line for the error
     const auto& [tok, type, line, col] = sourceTokens.at(currentTokenIndex);
-    const std::string loc = "<source>:" + std::to_string(line) + ":" + std::to_string(col) + ":";
+    const std::string loc = "<source>::" + std::to_string(line) + ":" + std::to_string(col) + ":";
     const std::string seperator = "\t|\t";
-
-
-    // Format the erroneous line of code
-    unsigned int index = lineStartIndex + 1;   // line's not correct without +1
-    const auto& token = std::get<0>(sourceTokens.at(index++));
-    std::string codeLine = seperator + std::get<0>(sourceTokens.at(index++)) + " ";
-    while (std::get<2>(sourceTokens.at(index)) == lineStartIndex)
-        codeLine.append(std::get<0>(sourceTokens.at(index++)) + " ");
-    const size_t len = codeLine.size() - col - seperator.size();
-    codeLine.append("\n" + seperator).append(len, ' ').append("^").append(std::get<0>(sourceTokens.at(currentTokenIndex)).size(), '~');
+    size_t index = lineStartTokenIndex;
+    std::stringstream ss;
+    ss << seperator << ' ' << std::get<0>(sourceTokens.at(index++)) 
+       << ' ' << std::get<0>(sourceTokens.at(index++)) << ' ';
+    while (std::get<2>(sourceTokens.at(index)) == line)
+        ss << std::get<0>(sourceTokens.at(index++)) << ' ';
+    std::string codeLine = ss.str();
+    codeLine.append("\n" + seperator).append(col, ' ').append("^").append(std::get<0>(sourceTokens.at(currentTokenIndex)).size(), '~');
     return { loc, codeLine };
 }
 
@@ -159,9 +146,9 @@ void Lexer::Consume(const Token tokenType)
     {
         ++currentTokenIndex;
         if (currentTokenIndex == sourceTokens.size()) return;
-        if (std::get<2>(sourceTokens.at(currentTokenIndex)) != line) ++lineStartIndex;
+        if (std::get<2>(sourceTokens.at(currentTokenIndex)) > line) lineStartTokenIndex = currentTokenIndex;
     }
-    else throw UnexpectedTokenException(GetErrorInfo(), "Encountered Unexpected Token");
+    else throw UnexpectedTokenException(GetErrorInfo(), "Encountered Unexpected Token '" + std::get<0>(sourceTokens.at(currentTokenIndex)) + '\'');
 }
 
 const TokenInfo& Lexer::GetCurrentToken() { return sourceTokens.at(currentTokenIndex); }

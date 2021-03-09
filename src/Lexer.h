@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <sstream>
 #include <vector>
 
 #include "Error.h"
@@ -11,8 +12,8 @@ class Lexer
 {
 private:
     std::vector<TokenInfo> sourceTokens;
-    unsigned int currentTokenIndex = 0;      // must reset on lex
-    unsigned int lineStartIndex = 1;
+    unsigned int currentTokenIndex = 0;
+    unsigned int lineStartTokenIndex = 0;
 
     bool failState = false;
     bool tokenized = false;
@@ -29,7 +30,6 @@ public:
     void Tokenize(const std::vector<std::string>& srcLines);
     const std::vector<TokenInfo>& GetTokens() const;
     bool Failure() const;
-    void PrintTokens() const;                  // PrintTokens can possibly output to file BUT ALSO into an imgui window?
     bool Done() const;
     const ErrorInfo GetErrorInfo() const;      // OBSOLETE ??
     std::string GetCurrentTokenVal() const;
