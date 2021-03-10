@@ -61,7 +61,15 @@ int main()
     editor.SetShowWhitespaces(false);
     std::string fileName = "Untitled";
 
-    Lexer lexer;
+    auto getLineAt = [&editor](const int line, const int col)
+    {
+        const auto currentCoords = editor.GetCursorPosition();
+        editor.SetCursorPosition({ line, col });
+        std::string sourceLine = editor.GetCurrentLineText();
+        editor.SetCursorPosition(currentCoords);
+        return sourceLine;
+    };
+    Lexer lexer(getLineAt);
     Parser parser(&lexer);
     ASTVisualizer viz;
     while (window.isOpen()) 
@@ -87,7 +95,7 @@ int main()
         ImGui::SFML::Update(window, deltaClock.restart());
 
         auto cpos = editor.GetCursorPosition();
-        ImGui::Begin("Editor", nullptr, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_MenuBar /*| ImGuiWindowFlags_NoMove*/);  // change for docking
+        ImGui::Begin("Editor", nullptr, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_MenuBar);
         ImGui::SetWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
         if (ImGui::BeginMenuBar())
         {
@@ -191,7 +199,7 @@ int main()
         static float ParseButtonWidth = 100.0f;
         pos += ParseButtonWidth + ItemSpacing;
         ImGui::SameLine(ImGui::GetWindowWidth() - pos);
-        if (ImGui::SmallButton("Parse"))  // Generate AST?
+        if (ImGui::SmallButton("Parse"))
         {
             // if there was a change in the editor
             // run all previous steps and update all
@@ -225,14 +233,11 @@ int main()
         editor.Render("TextEditor");  
         ImGui::End();
 
-
         // MAKE THIS PART OF THE LEXER.PRINT????
         static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_Hideable; // | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
         ImGui::Begin("Lexer Output");
         if (ImGui::BeginTable("Tokens", 3, flags))
         {
-            // Submit columns name with TableSetupColumn() and call TableHeadersRow() to create a row with a header in each column.
-            // (Later we will show how TableSetupColumn() has other uses, optional flags, sizing weight etc.)
             ImGui::TableSetupColumn("Token");
             ImGui::TableSetupColumn("Type");
             ImGui::TableSetupColumn("Line:Column");
@@ -255,7 +260,7 @@ int main()
 
         // Each node recursively builds the ImGui Tree through successive visits of the ASTVisualizer
         ImGui::Begin("Parser Output");
-        if (const auto& AST = parser.GetAST(); AST) 
+        if (const auto& AST = parser.GetAST(); AST)
             viz.PrintAST(*AST);
         ImGui::End();
 
@@ -303,24 +308,18 @@ int main()
     ImGui::SFML::Shutdown();
 }
 
-/*  TODO:
-*       Overwriting confirmation for SaveAs
-*       Popup dialog for file errors
-*       Shortcut implementation
-*       Cleanup/Separation of display etc
-*       Docking - SFML backend issues
-*       Merge all compiler branches, create new on (dissertation)
-*           Master becomes an ImGui frontend
-* 
-* 
-*       Lexer start   = false;  // this is the same as hasOutput
-*       Lexer failure = false;
-*       Lexer hasOutput returns sourceTokens.size != 0
-* 
-*       Parser done   = false;
-*       Parser failure = false;
-*       Parser constructor gets Lexer and waits
-*       Parser Parse checks if Lexer hasOutput && not failure? and then parses. If successful sets DONE to TRUE
-*       Parser isDone returns done
-*       Parser GetAST returns nullptr if FAILURE OR !isDone ELSE returns AST
+/*  TODO: NO SEMANTICS UNTIL CLEANUP AND MERGE WITH C--Compiler project
+*     - Overwriting confirmation for SaveAs                                 - low priority
+*     - Popup dialog for file errors                                        - low priority
+*     - Shortcut implementation                                             - low priority
+*     - Cleanup/Separation of display etc                                   - high priority
+*     - Docking - SFML backend issues                                       - low priority - unachievable atm (switch to other backend?)
+*     - Merge all compiler branches, create new on (dissertation)           - hight priority
+*         Master becomes an ImGui frontend                                  
+*     - Logger checkbox for levels (verbose etc)                            - ?? priority - figure out spdlog
+*         Use it through spdlog (multisink - file and/or 'console')         
+*     - Utility is useless atm - move to ASTJson or something?              - ?? priority - figure out spdlog
+*         ASTVisualizer with old functionality - no console output thought?
+*     - Window headers always stay at the top (like code editor)            - medium priority
+*     - Somehow getting lexer line output from code editor                  - medium priority
 */

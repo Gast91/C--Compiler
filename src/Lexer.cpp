@@ -13,11 +13,15 @@ void Lexer::Tokenize(const std::vector<std::string>& srcLines)
     for (const auto& line : srcLines)
     {
         ++lineNo;
-        size_t prev = 0, pos;
-        while ((pos = line.find_first_of(" \t+-*/()=!><&|;{}%,.\'\"", prev)) != std::string::npos)
+        size_t prev = 0, col = 1, pos;
+        while ((pos = line.find_first_of(" \t+-*/()=!><&|;{}%,.\'\"", prev)) != std::string::npos) // TODO: ,.'" will need a different approach
         {
             if (pos < prev) continue;
-            if (pos > prev) AddToken(line.substr(prev, pos - prev), lineNo, prev + 1);
+            if (pos > prev) 
+            {
+                AddToken(line.substr(prev, pos - prev), lineNo, col); 
+                col += pos - prev;
+            }
 
             // This delimiter is a special character or an operator (normal or compound) and must be preserved as a token 
             // or it is a form of a whitespace character and must be discarded
@@ -28,9 +32,10 @@ void Lexer::Tokenize(const std::vector<std::string>& srcLines)
                 // If the next character and the current delimiter form a compound operator,
                 // they must be preserved as one token
                 const std::string nextCharacter = line.substr(pos + 1, 1);
-                if (IsCompoundOperator(delimiter, nextCharacter))  // doesnt check for >>= or <<=
+                if (IsCompoundOperator(delimiter, nextCharacter))  // doesnt check for >>= or <<= and other 3 wide compound operators
                 {
-                    AddToken(delimiter + nextCharacter, lineNo, prev + 1);
+                    AddToken(delimiter + nextCharacter, lineNo, col);
+                    col += 2;
                     // Skip the next character since it has been processed already (part of a compound operator)
                     prev = pos + 2;
                     continue;
@@ -38,11 +43,13 @@ void Lexer::Tokenize(const std::vector<std::string>& srcLines)
                 // Comment start at any point in this line means we skip the rest of the line
                 else if (IsComment(delimiter, nextCharacter)) { pos = prev = std::string::npos; break; }
                 // Delimiter is just a normal operator, preserve it
-                else AddToken(delimiter, lineNo, prev + 1);
+                else AddToken(delimiter, lineNo, col++);
             }
+            else if (delimiter == "\t") col += 4; // Tab representation in text is worth more
+            else if (delimiter == " ")  col += 1;
             prev = pos + 1;
         }
-        if (prev < line.length()) AddToken(line.substr(prev, std::string::npos), lineNo, prev + 1);
+        if (prev < line.length()) AddToken(line.substr(prev, std::string::npos), lineNo, col);
     }
     tokenized = true;
 }
@@ -67,7 +74,7 @@ bool Lexer::IsDiscardableCharacter(const std::string& delimiter) const noexcept 
 
 bool Lexer::IsCompoundOperator(const std::string& delimiter, const std::string& next) const
 {
-    switch (delimiter.front())  // shiftleft and shiftright missing
+    switch (delimiter.front())  // shiftleft/shiftright assignment missing
     {
     case '*': case '/': case '!': case '=': case '%': case '^': return next == "=";
     case '+': return next == "=" || next == "+";
@@ -85,7 +92,7 @@ bool Lexer::IsComment(const std::string& delimiter, const std::string& next) con
     return delimiter.front() == '/' && next == "/";
 }
 
-bool Lexer::IsInteger(const std::string& num) const
+bool Lexer::IsInteger(const std::string& num) const  // needs a generalized number (floats etc) - takes into account period
 {
     unsigned int i = 0;
     const unsigned char digit = num.front();
@@ -116,11 +123,11 @@ constexpr bool Lexer::IsIdentifier(const std::string& identifier, const bool fir
 const std::vector<TokenInfo>& Lexer::GetTokens() const { return sourceTokens; }
 
 bool Lexer::Failure() const { return failState; }
-bool Lexer::Done() const { return currentTokenIndex == sourceTokens.size(); }  // ??
+bool Lexer::Done()    const { return currentTokenIndex == sourceTokens.size(); }  // ??
 
-std::string Lexer::GetCurrentTokenVal() const { return std::get<0>(sourceTokens.at(currentTokenIndex)); }
+std::string Lexer::GetCurrentTokenVal()  const { return std::get<0>(sourceTokens.at(currentTokenIndex)); }
 std::string Lexer::GetCurrentTokenLine() const { return std::to_string(std::get<2>(sourceTokens.at(currentTokenIndex))); }
-Token Lexer::GetCurrentTokenType() const { return std::get<1>(sourceTokens.at(currentTokenIndex)); }
+Token Lexer::GetCurrentTokenType()       const { return std::get<1>(sourceTokens.at(currentTokenIndex)); }
 
 const ErrorInfo Lexer::GetErrorInfo() const   // Get source text straight from editor somehow? probably the better way - sem?
 {                                             // spaces instead of tabs offset it slightly - still needs some work           
@@ -136,6 +143,10 @@ const ErrorInfo Lexer::GetErrorInfo() const   // Get source text straight from e
         ss << std::get<0>(sourceTokens.at(index++)) << ' ';
     std::string codeLine = ss.str();
     codeLine.append("\n" + seperator).append(col, ' ').append("^").append(std::get<0>(sourceTokens.at(currentTokenIndex)).size(), '~');
+
+
+    std::cout << getLineAt(line - 1, 0) << '\n';
+
     return { loc, codeLine };
 }
 
@@ -151,5 +162,5 @@ void Lexer::Consume(const Token tokenType)
     else throw UnexpectedTokenException(GetErrorInfo(), "Encountered Unexpected Token '" + std::get<0>(sourceTokens.at(currentTokenIndex)) + '\'');
 }
 
-const TokenInfo& Lexer::GetCurrentToken() { return sourceTokens.at(currentTokenIndex); }
+const TokenInfo& Lexer::GetCurrentToken() const { return sourceTokens.at(currentTokenIndex); }
 bool Lexer::hasTokenized() const { return tokenized; }
