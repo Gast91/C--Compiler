@@ -3,6 +3,7 @@
 #include <fstream>
 #include <imgui.h>
 #include <magic_enum.hpp>
+#include <functional>
 
 #include "Visitor.h"
 #include "Utility.h"
@@ -10,14 +11,14 @@
 class ASTVisualizer : public ASTNodeVisitor
 {
 private:
-    //std::vector<std::string> config;
-    //std::ofstream out;
-    //bool consoleOutput;
-
     ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
     bool align_label_with_current_x_position = false;
+    int open_action = -1;
+
+    template<class ...Args>
+    void RenderNode(std::function<void()> visitCallback, void* n, const char* fmt, Args...);
 public:
-    void PrintAST(ASTNode& n);
+    void RenderAST(ASTNode& n);
 
     // Inherited via ASTNodeVisitor
     void Visit(ASTNode& n)               override;

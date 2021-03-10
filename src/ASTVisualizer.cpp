@@ -1,19 +1,26 @@
 #include "ASTVisualizer.h"
 #include "AbstractSyntaxTree.h"
 
-void ASTVisualizer::PrintAST(ASTNode& n)
+void ASTVisualizer::RenderAST(ASTNode& n)
 {
-    if (ImGui::Button("Expand AST"));//   open_action = 1;
-    ImGui::SameLine();
-    if (ImGui::Button("Collapse AST"));// open_action = 0;
+    open_action = -1;
+    if (ImGui::Button("Expand AST"))   open_action = 1; ImGui::SameLine();
+    if (ImGui::Button("Collapse AST")) open_action = 0; ImGui::SameLine();
+    ImGui::Checkbox("Remove Identation", &align_label_with_current_x_position);
     ImGui::Separator();
 
-    //if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode((void*)(intptr_t)&n, "ROOT"))
+    RenderNode([&]() { n.Accept(*this); }, (void*)(intptr_t)&n, "ROOT");
+}
+
+template<class ...Args>
+void ASTVisualizer::RenderNode(std::function<void()> visitCallback, void* n, const char* fmt, Args... args)
+{
+    if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
+    if (ImGui::TreeNode(n, fmt, args...))
     {
         if (align_label_with_current_x_position)
             ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-        n.Accept(*this);
+        visitCallback();
         if (align_label_with_current_x_position)
             ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
         ImGui::TreePop();
@@ -38,193 +45,103 @@ void ASTVisualizer::Visit(IdentifierNode& n)
 
 void ASTVisualizer::Visit(UnaryOperationNode& n)
 {
-    //if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode((void*)(intptr_t)&n, "UNARY OP '%s'", n.op.first.c_str()))
-    {
-        if (align_label_with_current_x_position)
-            ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-        n.expr->Accept(*this);
-        if (align_label_with_current_x_position)
-            ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-        ImGui::TreePop();
-    }
+    RenderNode( [&]() { n.expr->Accept(*this); }, (void*)(intptr_t)&n, "UNARY OP '%s'", n.op.first.c_str());
 }
 
 void ASTVisualizer::Visit(BinaryOperationNode& n)
 {
-    //if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode((void*)(intptr_t)&n, "BINARY OP '%s'", n.op.first.c_str()))
-    {
-        if (align_label_with_current_x_position)
-            ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-        n.left->Accept(*this);
-        n.right->Accept(*this);
-        if (align_label_with_current_x_position)
-            ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-        ImGui::TreePop();
-    }
+    RenderNode( [&]() { 
+        n.left->Accept(*this); 
+        n.right->Accept(*this); },
+        (void*)(intptr_t)&n, "BINARY OP '%s'", n.op.first.c_str());
 }
 
 void ASTVisualizer::Visit(ConditionNode& n)
 {
-    //if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode((void*)(intptr_t)&n, "CONDITION '%s'", n.op.first.c_str()))
-    {
-        if (align_label_with_current_x_position)
-            ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-        n.left->Accept(*this);
-        n.right->Accept(*this);
-        if (align_label_with_current_x_position)
-            ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-        ImGui::TreePop();
-    }
+    RenderNode( [&]() { 
+        n.left->Accept(*this); 
+        n.right->Accept(*this); },
+        (void*)(intptr_t)&n, "CONDITION '%s'", n.op.first.c_str());
 }
 
 void ASTVisualizer::Visit(IfNode& n)
 {
-    //if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode((void*)(intptr_t)&n, "%s", n.type.c_str()))
-    {
-        if (align_label_with_current_x_position)
-            ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-        n.condition->Accept(*this);
-        if (n.body) n.body->Accept(*this);
-        if (align_label_with_current_x_position)
-            ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-        ImGui::TreePop();
-    }
+    RenderNode( [&]() { 
+        n.condition->Accept(*this); 
+        if (n.body) 
+            n.body->Accept(*this); },
+        (void*)(intptr_t)&n, "%s", n.type.c_str());
 }
 
 void ASTVisualizer::Visit(IfStatementNode& n)
 {
-    //if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode((void*)(intptr_t)&n, "IF_STATEMENT"))
-    {
-        if (align_label_with_current_x_position)
-            ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-        for (const auto& ifN : n.ifNodes) ifN->Accept(*this);
-        if (n.elseBody) n.elseBody->Accept(*this);
-        if (align_label_with_current_x_position)
-            ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-        ImGui::TreePop();
-    }
+    RenderNode( [&]() { 
+        for (const auto& ifN : n.ifNodes) 
+            ifN->Accept(*this); 
+        if (n.elseBody) 
+            n.elseBody->Accept(*this); },
+        (void*)(intptr_t)&n, "IF_STATEMENT");
 }
 
 void ASTVisualizer::Visit(IterationNode& n) { assert(("ASTVisualizer visited base IterationNode class?!", false)); }
 void ASTVisualizer::Visit(WhileNode& n)
 {
-    //if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode((void*)(intptr_t)&n, "WHILE"))
-    {
-        if (align_label_with_current_x_position)
-            ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-        n.condition->Accept(*this);
-        if (n.body) n.body->Accept(*this);
-        if (align_label_with_current_x_position)
-            ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-        ImGui::TreePop();
-    }
+    RenderNode( [&]() { 
+        n.condition->Accept(*this); 
+        if (n.body)  
+            n.body->Accept(*this); },
+        (void*)(intptr_t)&n, "WHILE");
 }
 
 void ASTVisualizer::Visit(DoWhileNode& n)
 {
-    //if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode((void*)(intptr_t)&n, "DO_WHILE"))
-    {
-        if (align_label_with_current_x_position)
-            ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-        n.condition->Accept(*this);
-        if (n.body) n.body->Accept(*this);
-        if (align_label_with_current_x_position)
-            ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-        ImGui::TreePop();
-    }
+    RenderNode( [&]() { 
+        n.condition->Accept(*this); 
+        if (n.body) 
+            n.body->Accept(*this); },
+        (void*)(intptr_t)&n, "DO_WHILE");
 }
 
 void ASTVisualizer::Visit(CompoundStatementNode& n)
 {
-    //if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode((void*)(intptr_t)&n, "COMPOUND"))
-    {
-        if (align_label_with_current_x_position)
-            ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-        for (const auto& statement : n.statements) statement->Accept(*this);
-        if (align_label_with_current_x_position)
-            ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-        ImGui::TreePop();
-    }
+    RenderNode( [&]() { 
+        for (const auto& statement : n.statements) 
+            statement->Accept(*this); },
+        (void*)(intptr_t)&n, "COMPOUND");
 }
 
 void ASTVisualizer::Visit(StatementBlockNode& n)
 {
-    //if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode((void*)(intptr_t)&n, "STATEMENT_BLOCK"))
-    {
-        if (align_label_with_current_x_position)
-            ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-        for (const auto& statement : n.statements) statement->Accept(*this);
-        if (align_label_with_current_x_position)
-            ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-        ImGui::TreePop();
-    }
+    RenderNode( [&]() { 
+        for (const auto& statement : n.statements) 
+            statement->Accept(*this); },
+        (void*)(intptr_t)&n, "STATEMENT_BLOCK");
 }
 
 void ASTVisualizer::Visit(DeclareStatementNode& n)
 {
-    //if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode((void*)(intptr_t)&n, "DECLARE"))
-    {
-        if (align_label_with_current_x_position)
-            ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-        n.identifier->Accept(*this);
-        if (align_label_with_current_x_position)
-            ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-        ImGui::TreePop();
-    }
+    RenderNode( [&]() { n.identifier->Accept(*this); }, (void*)(intptr_t)&n, "DECLARE");
 }
 
 void ASTVisualizer::Visit(DeclareAssignNode& n)
 {
-    //if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode((void*)(intptr_t)&n, "DECLARE_ASSIGN '%s'", n.op.first.c_str()))
-    {
-        if (align_label_with_current_x_position)
-            ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-        n.left->Accept(*this);
-        n.right->Accept(*this);
-        if (align_label_with_current_x_position)
-            ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-        ImGui::TreePop();
-    }
+    RenderNode( [&]() { 
+        n.left->Accept(*this); 
+        n.right->Accept(*this); },
+        (void*)(intptr_t)&n, "DECLARE_ASSIGN '%s'", n.op.first.c_str());
 }
 
 void ASTVisualizer::Visit(AssignStatementNode& n)
 {
-    //if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode((void*)(intptr_t)&n, "ASSIGN '%s'", n.op.first.c_str()))
-    {
-        if (align_label_with_current_x_position)
-            ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-        n.left->Accept(*this);
-        n.right->Accept(*this);
-        if (align_label_with_current_x_position)
-            ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-        ImGui::TreePop();
-    }
+    RenderNode( [&]() { 
+        n.left->Accept(*this); 
+        n.right->Accept(*this); },
+        (void*)(intptr_t)&n, "ASSIGN '%s'", n.op.first.c_str());
 }
 
 void ASTVisualizer::Visit(ReturnStatementNode& n)
 {
-    //if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode((void*)(intptr_t)&n, "RETURN"))
-    {
-        if (align_label_with_current_x_position)
-            ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-            n.expr->Accept(*this);
-        if (align_label_with_current_x_position)
-            ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
-        ImGui::TreePop();
-    }
+    RenderNode( [&]() { n.expr->Accept(*this); }, (void*)(intptr_t)&n, "RETURN");
 }
 
 void ASTVisualizer::Visit(EmptyStatementNode& n) {}

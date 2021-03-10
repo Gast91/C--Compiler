@@ -234,10 +234,12 @@ int main()
         ImGui::End();
 
         // MAKE THIS PART OF THE LEXER.PRINT????
-        static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_Hideable; // | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
+        static ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_Hideable;
         ImGui::Begin("Lexer Output");
         if (ImGui::BeginTable("Tokens", 3, flags))
         {
+            // Freeze first row of the table - NEEDS ImGuiTableFlags_ScrollY flag
+            ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableSetupColumn("Token");
             ImGui::TableSetupColumn("Type");
             ImGui::TableSetupColumn("Line:Column");
@@ -261,7 +263,7 @@ int main()
         // Each node recursively builds the ImGui Tree through successive visits of the ASTVisualizer
         ImGui::Begin("Parser Output");
         if (const auto& AST = parser.GetAST(); AST)
-            viz.PrintAST(*AST);
+            viz.RenderAST(*AST);
         ImGui::End();
 
         if (ImGuiFileDialog::Instance()->Display("ChooseFileKey"))
@@ -320,6 +322,4 @@ int main()
 *         Use it through spdlog (multisink - file and/or 'console')         
 *     - Utility is useless atm - move to ASTJson or something?              - ?? priority - figure out spdlog
 *         ASTVisualizer with old functionality - no console output thought?
-*     - Window headers always stay at the top (like code editor)            - medium priority
-*     - Somehow getting lexer line output from code editor                  - medium priority
 */
