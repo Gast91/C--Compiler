@@ -41,7 +41,7 @@ public:
     const std::vector<TokenInfo>& GetTokens() const;
     bool Failure() const;
     bool Done() const;
-    const ErrorInfo GetErrorInfo() const;      // OBSOLETE ??
+    const ErrorInfo GetErrorInfo() const;
     std::string GetCurrentTokenVal() const;
     std::string GetCurrentTokenLine() const;
     Token GetCurrentTokenType() const;

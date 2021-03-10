@@ -9,14 +9,14 @@ void Parser::Parse()
         root = ParseProgram();
         done = true;
     }
-    catch (UnexpectedTokenException ex) 
+    catch (const UnexpectedTokenException& ex) 
     { 
         failState = true; 
         Logger::Instance()->Log("%s \n", ex.what()); 
     }
 
     // Somewhere, somehow not all tokens were processed.
-    if (!lexer->Done()) failState = true;  // - SHOW WHAT IS LEFT???
+    if (!lexer->Done()) failState = true;  // - SHOW WHAT IS LEFT??? - STATES NEED CORRECTION
     else Logger::Instance()->Log("\nParsing Successful, AST Built");
 }
 
@@ -57,11 +57,11 @@ UnqPtr<ASTNode> Parser::ParseTerm()
 {
     UnqPtr<ASTNode> node = ParseFactor();
 
-    while (std::get<1>(lexer->GetCurrentToken()) == Token::MUL || std::get<1>(lexer->GetCurrentToken()) == Token::DIV)
+    while (lexer->GetCurrentTokenType() == Token::MUL || lexer->GetCurrentTokenType() == Token::DIV)
     {
-        const auto& currentToken = lexer->GetCurrentToken();
-        lexer->Consume(std::get<1>(currentToken));
-        node = std::make_unique<BinaryOperationNode>(std::move(node), TokenPair{ std::get<0>(currentToken), std::get<1>(currentToken) }, ParseFactor());
+        const auto& [tokenValue, tokenType, line, col] = lexer->GetCurrentToken();
+        lexer->Consume(tokenType);
+        node = std::make_unique<BinaryOperationNode>(std::move(node), TokenPair{ tokenValue, tokenType }, ParseFactor());
     }
     return node;
 }
@@ -71,11 +71,11 @@ UnqPtr<ASTNode> Parser::ParseExpr()
 {
     UnqPtr<ASTNode> node = ParseTerm();
 
-    while (std::get<1>(lexer->GetCurrentToken()) == Token::ADD || std::get<1>(lexer->GetCurrentToken()) == Token::SUB)
+    while (lexer->GetCurrentTokenType() == Token::ADD || lexer->GetCurrentTokenType() == Token::SUB)
     {
-        const auto currentToken = lexer->GetCurrentToken();
-        lexer->Consume(std::get<1>(currentToken));
-        node = std::make_unique<BinaryOperationNode>(std::move(node), TokenPair{ std::get<0>(currentToken), std::get<1>(currentToken) }, ParseTerm());
+        const auto& [tokenValue, tokenType, line, col] = lexer->GetCurrentToken();
+        lexer->Consume(tokenType);
+        node = std::make_unique<BinaryOperationNode>(std::move(node), TokenPair{ tokenValue, tokenType }, ParseTerm());
     }
     return node;
 }
@@ -84,13 +84,13 @@ UnqPtr<ASTNode> Parser::ParseExpr()
 UnqPtr<ASTNode> Parser::ParseBoolExpr()
 {
     UnqPtr<ASTNode> node = ParseExpr();
-    while (std::get<1>(lexer->GetCurrentToken()) == Token::LT  || std::get<1>(lexer->GetCurrentToken()) == Token::GT  ||
-           std::get<1>(lexer->GetCurrentToken()) == Token::LTE || std::get<1>(lexer->GetCurrentToken()) == Token::GTE ||
-           std::get<1>(lexer->GetCurrentToken()) == Token::EQ  || std::get<1>(lexer->GetCurrentToken()) == Token::NEQ)
+    while (lexer->GetCurrentTokenType() == Token::LT  || lexer->GetCurrentTokenType() == Token::GT  ||
+           lexer->GetCurrentTokenType() == Token::LTE || lexer->GetCurrentTokenType() == Token::GTE ||
+           lexer->GetCurrentTokenType() == Token::EQ  || lexer->GetCurrentTokenType() == Token::NEQ)
     {
-        auto currentToken = lexer->GetCurrentToken();
-        lexer->Consume(std::get<1>(currentToken));
-        node = std::make_unique<ConditionNode>(std::move(node), TokenPair{ std::get<0>(currentToken), std::get<1>(currentToken) }, ParseExpr());  // shouldnt be a condition in the long run
+        const auto& [tokenValue, tokenType, line, col] = lexer->GetCurrentToken();
+        lexer->Consume(tokenType);
+        node = std::make_unique<ConditionNode>(std::move(node), TokenPair{ tokenValue, tokenType }, ParseExpr());  // shouldnt be a condition in the long run
     }
     return node;
 }
@@ -105,11 +105,11 @@ UnqPtr<ASTNode> Parser::ParseCond()
     parsingCond = true;
     UnqPtr<ASTNode> node = ParseBoolExpr();
 
-    while (std::get<1>(lexer->GetCurrentToken()) == Token::AND || std::get<1>(lexer->GetCurrentToken()) == Token::OR)
+    while (lexer->GetCurrentTokenType() == Token::AND || lexer->GetCurrentTokenType() == Token::OR)
     {
-        auto currentToken = lexer->GetCurrentToken();
-        lexer->Consume(std::get<1>(currentToken));
-        node = std::make_unique<ConditionNode>(std::move(node), TokenPair{ std::get<0>(currentToken), std::get<1>(currentToken) }, ParseBoolExpr());  // shouldnt be a condition in the long run
+        const auto& [tokenValue, tokenType, line, col] = lexer->GetCurrentToken();
+        lexer->Consume(tokenType);
+        node = std::make_unique<ConditionNode>(std::move(node), TokenPair{ tokenValue, tokenType }, ParseBoolExpr());  // shouldnt be a condition in the long run
     }
     parsingCond = false;
     return node;
@@ -129,11 +129,11 @@ UnqPtr<ASTNode> Parser::ParseIfStatement()
 {
     UnqPtr<IfStatementNode> ifStatement = std::make_unique<IfStatementNode>();
     ifStatement->AddNode(std::make_unique<IfNode>(ParseCompoundStatement(), ParseIfCond()));
-    while (std::get<1>(lexer->GetCurrentToken()) == Token::ELSE)  // Can be 0 or more else if's and 0 or 1 else
+    while (lexer->GetCurrentTokenType() == Token::ELSE)  // Can be 0 or more else if's and 0 or 1 else
     {
         // Is there an else if coming?
         lexer->Consume(Token::ELSE);
-        if (std::get<1>(lexer->GetCurrentToken()) == Token::IF)
+        if (lexer->GetCurrentTokenType() == Token::IF)
             ifStatement->AddNode(std::make_unique<IfNode>(ParseCompoundStatement(), ParseIfCond()));
         else // So it is just an else
         {
@@ -179,9 +179,7 @@ UnqPtr<ASTNode> Parser::ParseProgram()                           // hacky way fo
     lexer->Consume(Token::LPAR); 
     lexer->Consume(Token::RPAR);
 
-    //ASTNode* node = ParseCompoundStatement();
-
-    return ParseCompoundStatement(); //node;
+    return ParseCompoundStatement();
 }
 
 // BLOCK := { COMPOUND_STATEMENT }
@@ -214,7 +212,7 @@ std::vector<UnqPtr<ASTNode>> Parser::ParseStatementList()
     nodes.push_back(std::move(node));
 
     // Statement list ends at a closing curly bracket
-    while (std::get<1>(lexer->GetCurrentToken()) != Token::RCURLY) nodes.push_back(ParseStatement());
+    while (lexer->GetCurrentTokenType() != Token::RCURLY) nodes.push_back(ParseStatement());  // GetCurrentTokenType accesses past end of array if there is no ending semicolon
     lexer->Consume(Token::RCURLY);
     return nodes;
 }
@@ -232,9 +230,8 @@ UnqPtr<ASTNode> Parser::ParseStatement()                                        
     else if    (tokenType == Token::IDENTIFIER) return ParseAssignStatement();        // Can parse an assign statement or a declare and assign statement
     else if    (tokenType == Token::LCURLY)	    return ParseStatementBlock();         // Specifically parses free floating statement blocks (enclosed by { })
     else if    (tokenType == Token::RCURLY)	    return ParseEmpty();
-    else if    (tokenType == Token::FILE_END)   return ParseEmpty();
-    else throw UnexpectedTokenException(lexer->GetErrorInfo(), "Encountered Unexpected Token '" + lexer->GetCurrentTokenVal() + '\'');
-    //tokenValue?
+    //else if    (tokenType == Token::FILE_END)   return ParseEmpty();                  // Needed? - Not used atm
+    throw UnexpectedTokenException(lexer->GetErrorInfo(), "Encountered Unexpected Token '" + tokenValue + '\'');
 }
 
 // DECLARATION_STATEMENT := TYPE_SPECIFIER IDENTIFIER SEMI |

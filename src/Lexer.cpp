@@ -157,11 +157,17 @@ constexpr bool Lexer::IsIdentifier(const std::string& identifier, const bool fir
 const std::vector<TokenInfo>& Lexer::GetTokens() const { return sourceTokens; }
 
 bool Lexer::Failure() const { return failState; }
-bool Lexer::Done()    const { return currentTokenIndex == sourceTokens.size(); }  // ??
+bool Lexer::Done()    const { return currentTokenIndex == sourceTokens.size(); }
 
-std::string Lexer::GetCurrentTokenVal()  const { return std::get<0>(sourceTokens.at(currentTokenIndex)); }
-std::string Lexer::GetCurrentTokenLine() const { return std::to_string(std::get<2>(sourceTokens.at(currentTokenIndex))); }
-Token Lexer::GetCurrentTokenType()       const { return std::get<1>(sourceTokens.at(currentTokenIndex)); }
+const TokenInfo& Lexer::GetCurrentToken() const { return sourceTokens.at(currentTokenIndex); }
+std::string Lexer::GetCurrentTokenVal()   const { return std::get<0>(sourceTokens.at(currentTokenIndex)); }
+Token Lexer::GetCurrentTokenType()        const 
+{ 
+    if (currentTokenIndex == sourceTokens.size())
+        throw UnexpectedTokenException("Encountered Unexpected Token 'FILE_END'");
+    return std::get<1>(sourceTokens.at(currentTokenIndex)); 
+}
+std::string Lexer::GetCurrentTokenLine()  const { return std::to_string(std::get<2>(sourceTokens.at(currentTokenIndex))); }
 
 const ErrorInfo Lexer::GetErrorInfo() const  // what about semantic errors?
 {          
@@ -185,5 +191,4 @@ void Lexer::Consume(const Token tokenType)
     else throw UnexpectedTokenException(GetErrorInfo(), "Encountered Unexpected Token '" + std::get<0>(sourceTokens.at(currentTokenIndex)) + '\'');
 }
 
-const TokenInfo& Lexer::GetCurrentToken() const { return sourceTokens.at(currentTokenIndex); }
 bool Lexer::hasTokenized() const { return tokenized; }
