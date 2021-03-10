@@ -10,12 +10,16 @@ void Lexer::Tokenize(const std::vector<std::string>& srcLines)
         lineStartTokenIndex = 0;
     }
     size_t lineNo = 0;
+    bool multiline = false;
     for (const auto& line : srcLines)
     {
         ++lineNo;
         size_t prev = 0, col = 1, pos;
-        while ((pos = line.find_first_of(" \t+-*/()=!><&|;{}%,.\'\"", prev)) != std::string::npos) // TODO: ,.'" will need a different approach
+        while ((pos = line.find_first_of(" \t+-*/()=!><&|;{}%,.\'\"", prev)) != std::string::npos) // TODO: .'" will need a different approach
         {
+            // Skip characters part of multiline comments and adjust pointer positions and flags
+            if (ShouldSkipChars(line, pos, prev, col, multiline)) continue;
+
             if (pos < prev) continue;
             if (pos > prev) 
             {
@@ -42,6 +46,7 @@ void Lexer::Tokenize(const std::vector<std::string>& srcLines)
                 }
                 // Comment start at any point in this line means we skip the rest of the line
                 else if (IsComment(delimiter, nextCharacter)) { pos = prev = std::string::npos; break; }
+                else if (IsMultiLineCommentStart(delimiter, nextCharacter)) { col += 2; multiline = true; }
                 // Delimiter is just a normal operator, preserve it
                 else AddToken(delimiter, lineNo, col++);
             }
@@ -92,6 +97,35 @@ bool Lexer::IsComment(const std::string& delimiter, const std::string& next) con
     return delimiter.front() == '/' && next == "/";
 }
 
+bool Lexer::ShouldSkipChars(const std::string& line, size_t& pos, size_t& prev, size_t& col, bool& multiline)  // VERY MEH..but it works
+{
+    if (const std::string delimiter = line.substr(pos, 1); multiline && !IsMultiLineCommentEnd(delimiter, line.substr(pos + 1, 1))) 
+    {
+        col += pos - prev;
+        prev = pos + 1;
+        if      (delimiter == "\t") col += 4;
+        else if (delimiter == " ")  col += 1;
+        return true;
+    }
+    else if (IsMultiLineCommentEnd(delimiter, line.substr(pos + 1, 1)))
+    {
+        multiline = false;
+        prev = pos + 2;
+        col += 3;  // +1 for the delimiter
+        return true;
+    }
+    return false;
+}
+
+bool Lexer::IsMultiLineCommentStart(const std::string& delimiter, const std::string& next) const
+{
+    return delimiter.front() == '/' && next == "*";
+}
+bool Lexer::IsMultiLineCommentEnd(const std::string& delimiter, const std::string& next) const
+{
+    return delimiter.front() == '*' && next == "/";
+}
+
 bool Lexer::IsInteger(const std::string& num) const  // needs a generalized number (floats etc) - takes into account period
 {
     unsigned int i = 0;
@@ -129,24 +163,13 @@ std::string Lexer::GetCurrentTokenVal()  const { return std::get<0>(sourceTokens
 std::string Lexer::GetCurrentTokenLine() const { return std::to_string(std::get<2>(sourceTokens.at(currentTokenIndex))); }
 Token Lexer::GetCurrentTokenType()       const { return std::get<1>(sourceTokens.at(currentTokenIndex)); }
 
-const ErrorInfo Lexer::GetErrorInfo() const   // Get source text straight from editor somehow? probably the better way - sem?
-{                                             // spaces instead of tabs offset it slightly - still needs some work           
-    // Source column and line for the error
+const ErrorInfo Lexer::GetErrorInfo() const  // what about semantic errors?
+{          
     const auto& [tok, type, line, col] = sourceTokens.at(currentTokenIndex);
     const std::string loc = "<source>::" + std::to_string(line) + ":" + std::to_string(col) + ":";
-    const std::string seperator = "\t|\t";
-    size_t index = lineStartTokenIndex;
-    std::stringstream ss;
-    ss << seperator << ' ' << std::get<0>(sourceTokens.at(index++)) 
-       << ' ' << std::get<0>(sourceTokens.at(index++)) << ' ';
-    while (std::get<2>(sourceTokens.at(index)) == line)
-        ss << std::get<0>(sourceTokens.at(index++)) << ' ';
-    std::string codeLine = ss.str();
-    codeLine.append("\n" + seperator).append(col, ' ').append("^").append(std::get<0>(sourceTokens.at(currentTokenIndex)).size(), '~');
-
-
-    std::cout << getLineAt(line - 1, 0) << '\n';
-
+    const std::string seperator = "\t|\t\t";
+    std::string codeLine = seperator + getLineAt(line - 1, 0);
+    codeLine.append("\n" + seperator).append(col - 1, ' ').append("^").append(std::get<0>(sourceTokens.at(currentTokenIndex)).size() - 1, '~');
     return { loc, codeLine };
 }
 

@@ -25,7 +25,10 @@ private:
 
     bool IsDiscardableCharacter(const std::string& delimiter) const noexcept;
     bool IsCompoundOperator(const std::string& delimiter, const std::string& next) const;
-    size_t OperatorWidth(const std::string& delimiter, const std::string& twoNext) const;
+    //size_t OperatorWidth(const std::string& delimiter, const std::string& twoNext) const;
+    bool IsMultiLineCommentStart(const std::string& delimiter, const std::string& next) const;
+    bool IsMultiLineCommentEnd(const std::string& delimiter, const std::string& next) const;
+    bool ShouldSkipChars(const std::string& line, size_t& pos, size_t& prev, size_t& col, bool& multiline);
     bool IsComment(const std::string& delimiter, const std::string& next) const;
     bool IsInteger(const std::string& num) const;
     bool IsCharacter(const unsigned char c) const noexcept;
