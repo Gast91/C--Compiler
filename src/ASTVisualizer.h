@@ -15,8 +15,18 @@ private:
     bool align_label_with_current_x_position = false;
     int open_action = -1;
 
+    struct ImRect
+    {
+        ImVec2 min;
+        ImVec2 max;
+    } nodeRect;
+
+    const ImColor TreeLineColor = ImColor(128, 128, 128, 255);
+    const float SmallOffsetX = -11.0f;
+    const float HorizontalTreeLineSize = 8.0f;
+
     template<class ...Args>
-    void RenderNode(std::function<void()> visitCallback, void* n, const char* fmt, Args...);
+    ImRect RenderNode(std::function<void()> visitCallback, void* n, const char* fmt, Args...);
 public:
     void RenderAST(ASTNode& n);
 

@@ -9,13 +9,44 @@ void ASTVisualizer::RenderAST(ASTNode& n)
     ImGui::Checkbox("Remove Identation", &align_label_with_current_x_position);
     ImGui::Separator();
 
-    RenderNode([&]() { n.Accept(*this); }, (void*)(intptr_t)&n, "ROOT");
+    nodeRect = RenderNode([&]() { n.Accept(*this); }, (void*)(intptr_t)&n, "ROOT");
 }
 
 template<class ...Args>
-void ASTVisualizer::RenderNode(std::function<void()> visitCallback, void* n, const char* fmt, Args... args)
+ASTVisualizer::ImRect ASTVisualizer::RenderNode(std::function<void()> visitCallback, void* n, const char* fmt, Args... args)
 {
     if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
+    if (ImGui::TreeNode(n, fmt, args...))
+    {
+        if (align_label_with_current_x_position)
+            ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
+
+        nodeRect = { ImGui::GetItemRectMin(), ImGui::GetItemRectMax() };
+
+        ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+        ImVec2 verticalLineStart = ImGui::GetCursorScreenPos();
+        verticalLineStart.x += SmallOffsetX; //to nicely line up with the arrow symbol
+        ImVec2 verticalLineEnd = verticalLineStart;
+
+        visitCallback();
+        const float midpoint = (nodeRect.min.y + nodeRect.max.y) / 2.0f;
+
+        //drawList->AddLine(ImVec2(verticalLineStart.x, midpoint), ImVec2(verticalLineStart.x + HorizontalTreeLineSize, midpoint), TreeLineColor);
+
+        verticalLineEnd.y = midpoint;
+
+        if (align_label_with_current_x_position)
+            ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
+        ImGui::TreePop();
+
+        drawList->AddLine(verticalLineStart, verticalLineEnd, TreeLineColor);
+    }
+    return nodeRect;
+
+
+    // NO LINES
+    /*if (open_action != -1) ImGui::SetNextItemOpen(open_action != 0);
     if (ImGui::TreeNode(n, fmt, args...))
     {
         if (align_label_with_current_x_position)
@@ -24,7 +55,7 @@ void ASTVisualizer::RenderNode(std::function<void()> visitCallback, void* n, con
         if (align_label_with_current_x_position)
             ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
         ImGui::TreePop();
-    }
+    }*/
 }
 
 void ASTVisualizer::Visit(ASTNode& n)       { assert(("ASTVisualizer visited base ASTNode class?!"      , false)); }
@@ -35,22 +66,48 @@ void ASTVisualizer::Visit(IntegerNode& n)
 {
     ImGuiTreeNodeFlags node_flags = base_flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_Bullet;
     ImGui::TreeNodeEx((void*)(intptr_t)&n, node_flags, "INT_LITERAL:%d", n.value);
+    nodeRect = { ImGui::GetItemRectMin(), ImGui::GetItemRectMax() };
+
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+    ImVec2 verticalLineStart = ImGui::GetCursorScreenPos();
+    verticalLineStart.x += SmallOffsetX; //to nicely line up with the arrow symbol
+    ImVec2 verticalLineEnd = verticalLineStart;
+
+    const float midpoint = (nodeRect.min.y + nodeRect.max.y) / 2.0f;
+    drawList->AddLine(ImVec2(verticalLineStart.x, midpoint), ImVec2(verticalLineStart.x + HorizontalTreeLineSize, midpoint), TreeLineColor);
+    verticalLineEnd.y = midpoint;
+
+    //drawList->AddLine(verticalLineStart, verticalLineEnd, TreeLineColor);
 }
 
 void ASTVisualizer::Visit(IdentifierNode& n)
 {
     ImGuiTreeNodeFlags node_flags = base_flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_Bullet;
     ImGui::TreeNodeEx((void*)(intptr_t)&n, node_flags, "%s:%s", n.name.c_str(), magic_enum::enum_name(n.type).data());
+    nodeRect = { ImGui::GetItemRectMin(), ImGui::GetItemRectMax() };
+
+    ImDrawList* drawList = ImGui::GetWindowDrawList();
+
+    ImVec2 verticalLineStart = ImGui::GetCursorScreenPos();
+    verticalLineStart.x += SmallOffsetX; //to nicely line up with the arrow symbol
+    ImVec2 verticalLineEnd = verticalLineStart;
+
+    const float midpoint = (nodeRect.min.y + nodeRect.max.y) / 2.0f;
+    drawList->AddLine(ImVec2(verticalLineStart.x, midpoint), ImVec2(verticalLineStart.x + HorizontalTreeLineSize, midpoint), TreeLineColor);
+    verticalLineEnd.y = midpoint;
+
+    //drawList->AddLine(verticalLineStart, verticalLineEnd, TreeLineColor);
 }
 
 void ASTVisualizer::Visit(UnaryOperationNode& n)
 {
-    RenderNode( [&]() { n.expr->Accept(*this); }, (void*)(intptr_t)&n, "UNARY OP '%s'", n.op.first.c_str());
+    nodeRect = RenderNode( [&]() { n.expr->Accept(*this); }, (void*)(intptr_t)&n, "UNARY OP '%s'", n.op.first.c_str());
 }
 
 void ASTVisualizer::Visit(BinaryOperationNode& n)
 {
-    RenderNode( [&]() { 
+    nodeRect = RenderNode( [&]() {
         n.left->Accept(*this); 
         n.right->Accept(*this); },
         (void*)(intptr_t)&n, "BINARY OP '%s'", n.op.first.c_str());
@@ -58,7 +115,7 @@ void ASTVisualizer::Visit(BinaryOperationNode& n)
 
 void ASTVisualizer::Visit(ConditionNode& n)
 {
-    RenderNode( [&]() { 
+    nodeRect = RenderNode( [&]() {
         n.left->Accept(*this); 
         n.right->Accept(*this); },
         (void*)(intptr_t)&n, "CONDITION '%s'", n.op.first.c_str());
@@ -66,7 +123,7 @@ void ASTVisualizer::Visit(ConditionNode& n)
 
 void ASTVisualizer::Visit(IfNode& n)
 {
-    RenderNode( [&]() { 
+    nodeRect = RenderNode( [&]() {
         n.condition->Accept(*this); 
         if (n.body) 
             n.body->Accept(*this); },
@@ -75,7 +132,7 @@ void ASTVisualizer::Visit(IfNode& n)
 
 void ASTVisualizer::Visit(IfStatementNode& n)
 {
-    RenderNode( [&]() { 
+    nodeRect = RenderNode( [&]() {
         for (const auto& ifN : n.ifNodes) 
             ifN->Accept(*this); 
         if (n.elseBody) 
@@ -86,7 +143,7 @@ void ASTVisualizer::Visit(IfStatementNode& n)
 void ASTVisualizer::Visit(IterationNode& n) { assert(("ASTVisualizer visited base IterationNode class?!", false)); }
 void ASTVisualizer::Visit(WhileNode& n)
 {
-    RenderNode( [&]() { 
+    nodeRect = RenderNode( [&]() {
         n.condition->Accept(*this); 
         if (n.body)  
             n.body->Accept(*this); },
@@ -95,7 +152,7 @@ void ASTVisualizer::Visit(WhileNode& n)
 
 void ASTVisualizer::Visit(DoWhileNode& n)
 {
-    RenderNode( [&]() { 
+    nodeRect = RenderNode( [&]() {
         n.condition->Accept(*this); 
         if (n.body) 
             n.body->Accept(*this); },
@@ -104,7 +161,7 @@ void ASTVisualizer::Visit(DoWhileNode& n)
 
 void ASTVisualizer::Visit(CompoundStatementNode& n)
 {
-    RenderNode( [&]() { 
+    nodeRect = RenderNode( [&]() {
         for (const auto& statement : n.statements) 
             statement->Accept(*this); },
         (void*)(intptr_t)&n, "COMPOUND");
@@ -112,7 +169,7 @@ void ASTVisualizer::Visit(CompoundStatementNode& n)
 
 void ASTVisualizer::Visit(StatementBlockNode& n)
 {
-    RenderNode( [&]() { 
+    nodeRect = RenderNode( [&]() {
         for (const auto& statement : n.statements) 
             statement->Accept(*this); },
         (void*)(intptr_t)&n, "STATEMENT_BLOCK");
@@ -120,12 +177,12 @@ void ASTVisualizer::Visit(StatementBlockNode& n)
 
 void ASTVisualizer::Visit(DeclareStatementNode& n)
 {
-    RenderNode( [&]() { n.identifier->Accept(*this); }, (void*)(intptr_t)&n, "DECLARE");
+    nodeRect = RenderNode( [&]() { n.identifier->Accept(*this); }, (void*)(intptr_t)&n, "DECLARE");
 }
 
 void ASTVisualizer::Visit(DeclareAssignNode& n)
 {
-    RenderNode( [&]() { 
+    nodeRect = RenderNode( [&]() {
         n.left->Accept(*this); 
         n.right->Accept(*this); },
         (void*)(intptr_t)&n, "DECLARE_ASSIGN '%s'", n.op.first.c_str());
@@ -133,7 +190,7 @@ void ASTVisualizer::Visit(DeclareAssignNode& n)
 
 void ASTVisualizer::Visit(AssignStatementNode& n)
 {
-    RenderNode( [&]() { 
+    nodeRect = RenderNode( [&]() {
         n.left->Accept(*this); 
         n.right->Accept(*this); },
         (void*)(intptr_t)&n, "ASSIGN '%s'", n.op.first.c_str());
@@ -141,7 +198,7 @@ void ASTVisualizer::Visit(AssignStatementNode& n)
 
 void ASTVisualizer::Visit(ReturnStatementNode& n)
 {
-    RenderNode( [&]() { n.expr->Accept(*this); }, (void*)(intptr_t)&n, "RETURN");
+    nodeRect = RenderNode( [&]() { n.expr->Accept(*this); }, (void*)(intptr_t)&n, "RETURN");
 }
 
 void ASTVisualizer::Visit(EmptyStatementNode& n) {}
