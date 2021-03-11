@@ -19,7 +19,7 @@
 
 constexpr const char* fileTypeFilter = "Source files (*.cpp *.h *.hpp *.txt){.cpp,.h,.hpp,.txt}";
 
-static void HelpMarker(const char* desc)
+static void HelpMarker(const char* desc) // move somewhere else/remove/whatever
 {
     ImGui::TextDisabled("(?)");
     if (ImGui::IsItemHovered())
@@ -45,6 +45,24 @@ static void ShowLogger(bool* p_open)
     Logger::Instance()->Draw("Console Output", p_open);
 }
 
+static void ShowSaveDialog(const TextEditor& editor, const std::string& fileName)
+{
+    if (fileName == "Untitled")
+        ImGuiFileDialog::Instance()->OpenModal("SaveAsKey", "Save File As", fileTypeFilter, "D:/Desktop/CTests", "", 1, nullptr, ImGuiFileDialogFlags_ConfirmOverwrite);
+    else
+    {
+        std::ofstream outfile;
+        outfile.open(fileName);
+        if (outfile)
+        {
+            outfile << std::noskipws;
+            outfile << editor.GetText();
+            outfile.close();
+        }
+        else ImGui::OpenPopup("Error");
+    }
+}
+
 int main()
 {
     sf::RenderWindow window(sf::VideoMode().getDesktopMode(), "EditorTest");
@@ -60,6 +78,11 @@ int main()
     editor.SetLanguageDefinition(TextEditor::LanguageDefinition::CPlusPlus());
     editor.SetShowWhitespaces(false);
     std::string fileName = "Untitled";
+
+    ImGuiFileDialog::Instance()->SetExtentionInfos(".cpp", ImVec4(1.0f, 1.0f, 0.0f, 0.9f));
+    ImGuiFileDialog::Instance()->SetExtentionInfos(".h",   ImVec4(0.0f, 1.0f, 0.0f, 0.9f));
+    ImGuiFileDialog::Instance()->SetExtentionInfos(".hpp", ImVec4(0.0f, 0.0f, 1.0f, 0.9f));
+    ImGuiFileDialog::Instance()->SetExtentionInfos(".txt", ImVec4(1.0f, 0.0f, 1.0f, 0.9f));
 
     auto getLineAt = [&editor](const int line, const int col)
     {
@@ -84,6 +107,12 @@ int main()
             case sf::Event::KeyPressed:
                 switch (event.key.code)
                 {
+                /*case sf::Keyboard::LControl: 
+                    if (sf::Keyboard::isKeyPressed(sf::Keyboard::S) && !ImGui::IsPopupOpen("Error") && !ImGuiFileDialog::Instance()->IsOpened())
+                        ShowSaveDialog(editor, fileName);
+                    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::O) && !ImGui::IsPopupOpen("Error") && !ImGuiFileDialog::Instance()->IsOpened())
+                        ImGuiFileDialog::Instance()->OpenModal("ChooseFileKey", "Choose File", fileTypeFilter, "D:/Desktop/CTests", "");
+                    break;*/
                 case sf::Keyboard::Escape: window.close(); break;
                 default: break;
                 }
@@ -101,23 +130,13 @@ int main()
         {
             if (ImGui::BeginMenu("File"))
             {
-                if (ImGui::MenuItem("New"))            { editor.SetText(""); fileName = "Untitled"; }  //?? handle file name and extension seperately?
-                if (ImGui::MenuItem("Open", "Ctrl+O")) { ImGuiFileDialog::Instance()->OpenModal("ChooseFileKey", "Choose File", fileTypeFilter, ".", ""); }
-                if (ImGui::MenuItem("Save", "Ctrl+S"))
-                {
-                    if (fileName == "Untitled") ImGuiFileDialog::Instance()->OpenModal("SaveAsKey", "Save File As", fileTypeFilter, ".", "");
-                    else
-                    {
-                        std::ofstream outfile;
-                        outfile.open(fileName);
-                        outfile << std::noskipws;
-                        // pop up for failure? if (!outfile) { //stuff }
-                        outfile << editor.GetText();
-                        outfile.close();
-                    }
-                }
-                if (ImGui::MenuItem("Save As..")) { ImGuiFileDialog::Instance()->OpenModal("SaveAsKey", "Save File As", fileTypeFilter, ".", ""); }
-                
+                if (ImGui::MenuItem("New"))
+                    editor.SetText(""); fileName = "Untitled";  //?? handle file name and extension seperately?
+                if (ImGui::MenuItem("Open", "Ctrl+O"))
+                    ImGuiFileDialog::Instance()->OpenModal("ChooseFileKey", "Choose File", fileTypeFilter, "D:/Desktop/CTests", "");
+                if (ImGui::MenuItem("Save", "Ctrl+S")) ShowSaveDialog(editor, fileName);
+                if (ImGui::MenuItem("Save As..")) 
+                    ImGuiFileDialog::Instance()->OpenModal("SaveAsKey", "Save File As", fileTypeFilter, "D:/Desktop/CTests", "", 1, nullptr, ImGuiFileDialogFlags_ConfirmOverwrite);
                 if (ImGui::MenuItem("Quit", "Alt-F4")) window.close();
                 ImGui::EndMenu();
             }
@@ -125,7 +144,7 @@ int main()
             {
                 bool ro = editor.IsReadOnly();
                 if (ImGui::Checkbox("Read-only mode", &ro))                                                  editor.SetReadOnly(ro);
-                ImGui::Separator();    
+                ImGui::Separator();
 
                 if (ImGui::MenuItem("Undo", "ALT-Backspace", nullptr, !ro && editor.CanUndo()))               editor.Undo();
                 if (ImGui::MenuItem("Redo", "Ctrl-Y", nullptr, !ro && editor.CanRedo()))                      editor.Redo();
@@ -274,12 +293,16 @@ int main()
                 fileName = ImGuiFileDialog::Instance()->GetFilePathName(); // GetSelectionDifferences?
                 infile.open(fileName);
                 // pop up for failure? if (!infile) { //stuff }
-                std::vector<std::string> lines;
-                std::string line;
-                while (std::getline(infile, line)) lines.push_back(line);
-                editor.SetTextLines(lines);
+                if (infile)
+                {
+                    std::vector<std::string> lines;
+                    std::string line;
+                    while (std::getline(infile, line)) lines.push_back(line);
+                    editor.SetTextLines(lines);
 
-                infile.close();
+                    infile.close();
+                }
+                else ImGui::OpenPopup("Error");
             }
             ImGuiFileDialog::Instance()->Close();
         }
@@ -288,21 +311,33 @@ int main()
         {
             if (ImGuiFileDialog::Instance()->IsOk())
             {
-                std::ofstream outfile;
                 std::string fpName = ImGuiFileDialog::Instance()->GetFilePathName();
+                std::ofstream outfile;
                 outfile.open(fpName);
-                outfile << std::noskipws;
-                // pop up for failure? if (!outfile) { //stuff }
-                outfile << editor.GetText();
-                fileName = fpName;
-                outfile.close();
-
+                if (outfile)
+                {
+                    outfile << std::noskipws;
+                    outfile << editor.GetText();
+                    fileName = fpName;
+                    outfile.close();
+                }
+                else ImGui::OpenPopup("Error");
             }
             ImGuiFileDialog::Instance()->Close();
         }
+
+        if (ImGui::BeginPopupModal("Error", NULL, ImGuiWindowFlags_NoResize))
+        {
+            ImGui::Text("Cannot read/write file");
+            ImGui::Separator();
+            if (ImGui::Button("OK", ImVec2(ImGui::GetContentRegionAvail().x, 0))) ImGui::CloseCurrentPopup();
+            ImGui::EndPopup();
+        }
+
         static bool* p_open;
         ShowLogger(p_open);
         //ImGui::ShowDemoWindow();
+
         window.clear();
         ImGui::SFML::Render(window);
         window.display();
@@ -311,15 +346,14 @@ int main()
 }
 
 /*  TODO: NO SEMANTICS UNTIL CLEANUP AND MERGE WITH C--Compiler project
-*     - Overwriting confirmation for SaveAs                                 - low priority
-*     - Popup dialog for file errors                                        - low priority
-*     - Shortcut implementation                                             - low priority
-*     - Cleanup/Separation of display etc                                   - high priority
-*     - Docking - SFML backend issues                                       - low priority - unachievable atm (switch to other backend?)
-*     - Merge all compiler branches, create new on (dissertation)           - hight priority
-*         Master becomes an ImGui frontend                                  
-*     - Logger checkbox for levels (verbose etc)                            - ?? priority - figure out spdlog
-*         Use it through spdlog (multisink - file and/or 'console')         
-*     - Utility is useless atm - move to ASTJson or something?              - ?? priority - figure out spdlog
-*         ASTVisualizer with old functionality - no console output thought?
+*     - Shortcut implementation  - PARTIAL/WRONG                             - low priority
+*     - Cleanup/Separation of display etc                                    - high priority
+*     - Docking - SFML backend issues                                        - low priority - unachievable atm (switch to other backend?)
+*     - Merge all compiler branches, create new on (dissertation)            - hight priority
+*         Master becomes an ImGui frontend                                   
+*     - Logger checkbox for levels (verbose etc)                             - ?? priority - figure out spdlog
+*         Use it through spdlog (multisink - file and/or 'console')          
+*     - Utility is useless atm - move to ASTJson or something?               - ?? priority - figure out spdlog
+*         ASTVisualizer with old functionality - no console output thought?  
+*     - Correct Resetting of Lexer and Parser - no } crashes on second parse - medium priority
 */
