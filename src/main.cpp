@@ -320,10 +320,9 @@ int main()
 /*  TODO: NO SEMANTICS UNTIL CLEANUP AND MERGE WITH C--Compiler project
 *     - Cleanup/Separation of display etc                                    - high priority
 *     - Docking - SFML backend issues                                        - low priority - unachievable atm (switch to other backend?)
-*     - Merge all compiler branches, create new on (dissertation)            - hight priority
-*         Master becomes an ImGui frontend                                   
-*     - Logger checkbox for levels (verbose etc)                             - ?? priority - figure out spdlog
-*         Use it through spdlog (multisink - file and/or 'console')          
-*     - Utility is useless atm - move to ASTJson or something?               - ?? priority - figure out spdlog
+*     - Merge all compiler branches, create new on (dissertation)            - high priority
+*         Master becomes an ImGui frontend - can I carry commit history?                                  
+*     - spdlog? multisink for file and/or 'console' output?         
+*     - Utility is useless atm - move to ASTJson or something?               - high priority - do/sort it out before merge
 *         ASTVisualizer with old functionality - no console output thought?
 */

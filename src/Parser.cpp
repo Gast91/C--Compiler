@@ -14,13 +14,13 @@ void Parser::Run()
     catch (const UnexpectedTokenException& ex) 
     { 
         failState = true; 
-        Logger::Instance()->Log("%s \n", ex.what()); 
+        Logger::Instance()->Log(Logger::Level::ERROR, "%s \n", ex.what());
     }
 
-    if (!failState) Logger::Instance()->Log("Parsing Successful, AST Built\n");
+    if (!failState) Logger::Instance()->Log(Logger::Level::INFO, "Parsing Successful, AST Built\n");
     // Somewhere, somehow not all tokens were processed.
     if (!lexer->Done()) 
-        Logger::Instance()->Log("Unproccessed tokens left starting at %d:%d\n", lexer->GetCurrentTokenLine(), lexer->GetCurrentTokenCol());
+        Logger::Instance()->Log(Logger::Level::DEBUG, "Unproccessed tokens left starting at %d:%d\n", lexer->GetCurrentTokenLine(), lexer->GetCurrentTokenCol());
     // Reset lexer index back to the start for the next parse
     // If lexer is always called before parser (as it should), this is pointless
     lexer->ResetIndex();

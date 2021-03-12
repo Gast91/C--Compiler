@@ -3,6 +3,7 @@
 Logger::Logger()
 {
     autoScroll = true;
+    logLevel = 1;
     Clear();
 }
 
@@ -19,8 +20,10 @@ void Logger::Clear()
     lineOffsets.push_back(0);
 }
 
-void Logger::Log(const char* fmt, ...) IM_FMTARGS(2)
+void Logger::Log(const Level lvl, const char* fmt, ...) IM_FMTARGS(2)
 {
+    if (static_cast<int>(lvl) < logLevel) return;
+
     int old_size = buffer.size();
     va_list args;
     va_start(args, fmt);
@@ -45,6 +48,11 @@ void Logger::Draw(const char* title, bool* p_open)
     if (ImGui::BeginPopup("Options"))
     {
         ImGui::Checkbox("Auto-scroll", &autoScroll);
+        ImGui::RadioButton("Debug",    &logLevel, 0);
+        ImGui::RadioButton("Info",     &logLevel, 1);
+        ImGui::RadioButton("Warn",     &logLevel, 2);
+        ImGui::RadioButton("Error",    &logLevel, 3);
+        ImGui::RadioButton("Critical", &logLevel, 4);
         ImGui::EndPopup();
     }
 
