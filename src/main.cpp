@@ -12,8 +12,6 @@
 
 #include <fstream>
 
-#include "Logger.h"
-#include "Lexer.h"
 #include "Parser.h"
 #include "ASTVisualizer.h"
 
@@ -84,16 +82,11 @@ int main()
     ImGuiFileDialog::Instance()->SetExtentionInfos(".hpp", ImVec4(0.0f, 0.0f, 1.0f, 0.9f));
     ImGuiFileDialog::Instance()->SetExtentionInfos(".txt", ImVec4(1.0f, 0.0f, 1.0f, 0.9f));
 
-    auto getLineAt = [&editor](const int line, const int col)
-    {
-        const auto currentCoords = editor.GetCursorPosition();
-        editor.SetCursorPosition({ line, col });
-        std::string sourceLine = editor.GetCurrentLineText();
-        editor.SetCursorPosition(currentCoords);
-        return sourceLine;
-    };
-    Lexer lexer(getLineAt);
+    Lexer lexer(&editor);
     Parser parser(&lexer);
+    // Registering order MATTERS - should mirror the order they should be run in
+    ModuleManager::Instance()->RegisterObservers(&lexer, &parser);
+
     ASTVisualizer viz;
     while (window.isOpen()) 
     {
@@ -107,12 +100,14 @@ int main()
             case sf::Event::KeyPressed:
                 switch (event.key.code)
                 {
-                /*case sf::Keyboard::LControl: 
-                    if (sf::Keyboard::isKeyPressed(sf::Keyboard::S) && !ImGui::IsPopupOpen("Error") && !ImGuiFileDialog::Instance()->IsOpened())
+                case sf::Keyboard::S:
+                    if (event.key.control && !ImGuiFileDialog::Instance()->IsOpened())
                         ShowSaveDialog(editor, fileName);
-                    else if (sf::Keyboard::isKeyPressed(sf::Keyboard::O) && !ImGui::IsPopupOpen("Error") && !ImGuiFileDialog::Instance()->IsOpened())
+                    break;
+                case sf::Keyboard::O:
+                    if (event.key.control && !ImGuiFileDialog::Instance()->IsOpened())
                         ImGuiFileDialog::Instance()->OpenModal("ChooseFileKey", "Choose File", fileTypeFilter, "D:/Desktop/CTests", "");
-                    break;*/
+                    break;
                 case sf::Keyboard::Escape: window.close(); break;
                 default: break;
                 }
@@ -156,7 +151,7 @@ int main()
                 if (ImGui::MenuItem("Paste", "Ctrl-V", nullptr, !ro && ImGui::GetClipboardText() != nullptr)) editor.Paste();
                 ImGui::Separator();
 
-                if (ImGui::MenuItem("Select all", nullptr, nullptr)) 
+                if (ImGui::MenuItem("Select all", "Ctrl-A", nullptr)) 
                     editor.SetSelection(TextEditor::Coordinates(), TextEditor::Coordinates(editor.GetTotalLines(), 0));
 
                 ImGui::EndMenu();
@@ -181,50 +176,32 @@ int main()
 
         const float ItemSpacing = ImGui::GetStyle().ItemSpacing.x;
 
-        // The first frame we make a guess, for subsequent frames we get the actual value
-        static float CGButtonWidth = 100.0f;
+        // Code Generation Button
+        static float CGButtonWidth = 100.0f;  // Guess for the first frame
         float pos = CGButtonWidth + ItemSpacing;
         ImGui::SameLine(ImGui::GetWindowWidth() - pos);
         if (ImGui::SmallButton("Code Gen"))
         {
-            // if there was a change in the editor
-            // run all previous steps and update all
-            // windows up to Code Gen
+            //ModuleManager::Instance()->RunModulesUpTo(&codeGen);
         }
         CGButtonWidth = ImGui::GetItemRectSize().x;
 
-        static float TACButtonWidth = 100.0f;
-        pos += TACButtonWidth + ItemSpacing;
-        ImGui::SameLine(ImGui::GetWindowWidth() - pos);
-        if (ImGui::SmallButton("TAC"))
-        {
-            // if there was a change in the editor
-            // run all previous steps and update all
-            // windows up to TAC
-        }
-        TACButtonWidth = ImGui::GetItemRectSize().x;
-
+        // Semantically Analyze Input Button
         static float SAButtonWidth = 100.0f;
         pos += SAButtonWidth + ItemSpacing;
         ImGui::SameLine(ImGui::GetWindowWidth() - pos);
         if (ImGui::SmallButton("Semantic Analysis"))
         {
-            // if there was a change in the editor
-            // run all previous steps and update all
-            // windows up to Semantic Analysis
+            //ModuleManager::Instance()->RunModulesUpTo(&sem);
         }
         SAButtonWidth = ImGui::GetItemRectSize().x;
 
+        // Parse Input Button
         static float ParseButtonWidth = 100.0f;
         pos += ParseButtonWidth + ItemSpacing;
         ImGui::SameLine(ImGui::GetWindowWidth() - pos);
-        if (ImGui::SmallButton("Parse"))
-        {
-            // if there was a change in the editor
-            // run all previous steps and update all
-            // windows up to AST
-            parser.Parse();
-        }
+        if (ImGui::SmallButton("Parse")) 
+            ModuleManager::Instance()->RunModulesUpTo(&parser);
         ParseButtonWidth = ImGui::GetItemRectSize().x;
         if (ImGui::IsItemHovered())
         {
@@ -233,26 +210,22 @@ int main()
             ImGui::EndTooltip();
         }
 
+        // Tokenize Input Button
         static float TokButtonWidth = 100.0f;
         pos += TokButtonWidth + ItemSpacing;
         ImGui::SameLine(ImGui::GetWindowWidth() - pos);
         if (ImGui::SmallButton("Tokenize"))
-        {
-            // only if there was a change in the editor
-            lexer.Tokenize(editor.GetTextLines());
-            Logger::Instance()->Log("Tokenized Input (Split by whitespace):\n");
-            for (const auto& toks : lexer.GetTokens()) Logger::Instance()->Log("%s ", std::get<0>(toks).c_str());
-            Logger::Instance()->Log("%c", '\n');
-        }
-        TokButtonWidth = ImGui::GetItemRectSize().x;       
+            ModuleManager::Instance()->RunModulesUpTo(&lexer);
+        TokButtonWidth = ImGui::GetItemRectSize().x;
 
         ImGui::Separator();
         ImGui::Spacing();
         
-        editor.Render("TextEditor");  
+        // Module notification HAS to happen before the editor is rendered since changed flag is reset
+        if (editor.IsTextChanged()) ModuleManager::Instance()->NotifyModulesToRun();
+        editor.Render("TextEditor");
         ImGui::End();
 
-        // MAKE THIS PART OF THE LEXER.PRINT????
         static ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_Resizable | ImGuiTableFlags_Hideable;
         ImGui::Begin("Lexer Output");
         if (ImGui::BeginTable("Tokens", 3, flags))
@@ -279,10 +252,10 @@ int main()
         }
         ImGui::End();
 
-        // Each node recursively builds the ImGui Tree through successive visits of the ASTVisualizer
+        // The ASTVisualizer recursively builds the ImGui Tree after each node visit
         ImGui::Begin("Parser Output");
         if (const auto& AST = parser.GetAST(); AST)
-            viz.RenderAST(*AST);
+            viz.RenderAST(*AST);  // also AST->Accept(viz); but no top banner
         ImGui::End();
 
         if (ImGuiFileDialog::Instance()->Display("ChooseFileKey"))
@@ -292,7 +265,6 @@ int main()
                 std::ifstream infile;
                 fileName = ImGuiFileDialog::Instance()->GetFilePathName(); // GetSelectionDifferences?
                 infile.open(fileName);
-                // pop up for failure? if (!infile) { //stuff }
                 if (infile)
                 {
                     std::vector<std::string> lines;
@@ -346,7 +318,6 @@ int main()
 }
 
 /*  TODO: NO SEMANTICS UNTIL CLEANUP AND MERGE WITH C--Compiler project
-*     - Shortcut implementation  - PARTIAL/WRONG                             - low priority
 *     - Cleanup/Separation of display etc                                    - high priority
 *     - Docking - SFML backend issues                                        - low priority - unachievable atm (switch to other backend?)
 *     - Merge all compiler branches, create new on (dissertation)            - hight priority
@@ -354,6 +325,5 @@ int main()
 *     - Logger checkbox for levels (verbose etc)                             - ?? priority - figure out spdlog
 *         Use it through spdlog (multisink - file and/or 'console')          
 *     - Utility is useless atm - move to ASTJson or something?               - ?? priority - figure out spdlog
-*         ASTVisualizer with old functionality - no console output thought?  
-*     - Correct Resetting of Lexer and Parser - no } crashes on second parse - medium priority
+*         ASTVisualizer with old functionality - no console output thought?
 */
