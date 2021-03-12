@@ -1,13 +1,15 @@
 #include "Parser.h"
 
-Parser::Parser(Lexer* lex) : lexer(lex) {}
-
-void Parser::Parse()
+void Parser::Run()
 {
+    if (!shouldRun) return;
+    failState = false;
+    done = false;
     try 
     { 
         root = ParseProgram();
         done = true;
+        shouldRun = false;
     }
     catch (const UnexpectedTokenException& ex) 
     { 
@@ -15,9 +17,13 @@ void Parser::Parse()
         Logger::Instance()->Log("%s \n", ex.what()); 
     }
 
+    if (!failState) Logger::Instance()->Log("Parsing Successful, AST Built\n");
     // Somewhere, somehow not all tokens were processed.
-    if (!lexer->Done()) failState = true;  // - SHOW WHAT IS LEFT??? - STATES NEED CORRECTION
-    else Logger::Instance()->Log("\nParsing Successful, AST Built");
+    if (!lexer->Done()) 
+        Logger::Instance()->Log("Unproccessed tokens left starting at %d:%d\n", lexer->GetCurrentTokenLine(), lexer->GetCurrentTokenCol());
+    // Reset lexer index back to the start for the next parse
+    // If lexer is always called before parser (as it should), this is pointless
+    lexer->ResetIndex();
 }
 
 // FACTOR := (ADD | SUB ) FACTOR | INTEGER | IDENTIFIER | LPAR EXPRESSION RPAR

@@ -5,21 +5,22 @@
 #include <sstream>
 #include <vector>
 #include <functional>
+#include <TextEditor.h>
 
 #include "Error.h"
 #include "Token.h"
+#include "Logger.h"
+#include "ModuleManager.h"
 
-class Lexer
+class Lexer : public IObserver
 {
 private:
+    TextEditor* editor;
+
     std::vector<TokenInfo> sourceTokens;
     unsigned int currentTokenIndex = 0;
-    unsigned int lineStartTokenIndex = 0;
 
-    std::function<std::string(const int line, const int col)> getLineAt;
-
-    bool failState = false;
-    bool tokenized = false;
+    bool shouldRun = false;
 
     void AddToken(const std::string& tok, const size_t lineNo, const size_t col);
 
@@ -33,20 +34,27 @@ private:
     bool IsInteger(const std::string& num) const;
     bool IsCharacter(const unsigned char c) const noexcept;
     constexpr bool IsIdentifier(const std::string& identifier, const bool firstCall) const;
-public:
-    Lexer(std::function<std::string(const int line, const int col)> getLineAtCallback)
-        : getLineAt(getLineAtCallback) {}
 
-    void Tokenize(const std::vector<std::string>& srcLines);
-    const std::vector<TokenInfo>& GetTokens() const;
-    bool Failure() const;
-    bool Done() const;
-    const ErrorInfo GetErrorInfo() const;
-    std::string GetCurrentTokenVal() const;
-    std::string GetCurrentTokenLine() const;
-    Token GetCurrentTokenType() const;
+    std::string GetSourceLine(const int line, const int col);
+public:
+    Lexer(TextEditor* ed) : editor(ed) {}
+    virtual ~Lexer() = default;
+
     void Consume(const Token tokenType);
     const TokenInfo& GetCurrentToken() const;
+    std::string GetCurrentTokenVal() const;
+    Token GetCurrentTokenType() const;
+    std::string GetCurrentTokenLine() const;
+    std::string GetCurrentTokenCol() const;
+    const std::vector<TokenInfo>& GetTokens() const;
 
-    bool hasTokenized() const;
+    const ErrorInfo GetErrorInfo();
+
+    bool Done() const;
+    void ResetIndex() { currentTokenIndex = 0; }
+
+    // Inherited via IObserver
+    virtual bool ShouldRun() const override { return shouldRun; }
+    virtual void SetToRun() override { shouldRun = true; }
+    virtual void Run() override;
 };

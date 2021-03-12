@@ -2,9 +2,8 @@
 
 #include "Lexer.h"
 #include "AbstractSyntaxTree.h"
-#include "Logger.h"
 
-class Parser
+class Parser : public IObserver
 {
 private:
     Lexer* lexer;
@@ -32,10 +31,17 @@ private:
     bool failState = false;
     bool parsingCond = false;
     bool done = false;
-public:
-    Parser(Lexer* lex);
 
-    void Parse();
+    bool shouldRun = false;
+public:
+    Parser(Lexer* lex) : lexer(lex) {}
+    virtual ~Parser() = default;
+
     ASTNode* GetAST() const noexcept { return failState || !done ? nullptr : root.get(); }
     bool Success()    const noexcept { return !failState; }
+
+    // Inherited via IObserver Interface
+    virtual bool ShouldRun() const override { return shouldRun; }
+    virtual void SetToRun() override { shouldRun = true; }
+    virtual void Run() override;
 };

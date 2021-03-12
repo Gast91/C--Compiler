@@ -1,13 +1,15 @@
 #include "Lexer.h"
 
-void Lexer::Tokenize(const std::vector<std::string>& srcLines)
+void Lexer::Run()
 {
+    if (!shouldRun) return;
+
+    const auto& srcLines = editor->GetTextLines();
     // Reset Lexer state for next run
     if (!sourceTokens.empty())
     {
         sourceTokens.clear();
         currentTokenIndex = 0;
-        lineStartTokenIndex = 0;
     }
     size_t lineNo = 0;
     bool multiline = false;
@@ -50,13 +52,23 @@ void Lexer::Tokenize(const std::vector<std::string>& srcLines)
                 // Delimiter is just a normal operator, preserve it
                 else AddToken(delimiter, lineNo, col++);
             }
-            else if (delimiter == "\t") col += 4; // Tab representation in text is worth more
+            else if (delimiter == "\t") col += editor->GetTabSize(); // Tab representation in text is worth more
             else if (delimiter == " ")  col += 1;
             prev = pos + 1;
         }
         if (prev < line.length()) AddToken(line.substr(prev, std::string::npos), lineNo, col);
     }
-    tokenized = true;
+    shouldRun = false;
+    Logger::Instance()->Log("Tokenized input!\n");
+}
+
+std::string Lexer::GetSourceLine(const int line, const int col)
+{
+    const auto currentCoords = editor->GetCursorPosition();
+    editor->SetCursorPosition({ line, col });
+    std::string sourceLine = editor->GetCurrentLineText();
+    editor->SetCursorPosition(currentCoords);
+    return sourceLine;
 }
 
 void Lexer::AddToken(const std::string& tok, const size_t lineNo, const size_t col)
@@ -103,7 +115,7 @@ bool Lexer::ShouldSkipChars(const std::string& line, size_t& pos, size_t& prev, 
     {
         col += pos - prev;
         prev = pos + 1;
-        if      (delimiter == "\t") col += 4;
+        if      (delimiter == "\t") col += editor->GetTabSize();
         else if (delimiter == " ")  col += 1;
         return true;
     }
@@ -138,7 +150,7 @@ bool Lexer::IsInteger(const std::string& num) const  // needs a generalized numb
     return false;
 }
 
-// Checks if the character pass to it is one of the alphabet characters (lower or upper) or a digit or underscore
+// Checks if the character passed to it is one of the alphabet characters (lower or upper) or a digit or underscore
 bool Lexer::IsCharacter(const unsigned char c) const noexcept { return isalpha(c) || c == '_' || isdigit(c); }
 
 constexpr bool Lexer::IsIdentifier(const std::string& identifier, const bool firstCall) const
@@ -156,7 +168,6 @@ constexpr bool Lexer::IsIdentifier(const std::string& identifier, const bool fir
 
 const std::vector<TokenInfo>& Lexer::GetTokens() const { return sourceTokens; }
 
-bool Lexer::Failure() const { return failState; }
 bool Lexer::Done()    const { return currentTokenIndex == sourceTokens.size(); }
 
 const TokenInfo& Lexer::GetCurrentToken() const { return sourceTokens.at(currentTokenIndex); }
@@ -167,14 +178,15 @@ Token Lexer::GetCurrentTokenType()        const
         throw UnexpectedTokenException("Encountered Unexpected Token 'FILE_END'");
     return std::get<1>(sourceTokens.at(currentTokenIndex)); 
 }
-std::string Lexer::GetCurrentTokenLine()  const { return std::to_string(std::get<2>(sourceTokens.at(currentTokenIndex))); }
+std::string Lexer::GetCurrentTokenLine() const { return std::to_string(std::get<2>(sourceTokens.at(currentTokenIndex))); }
+std::string Lexer::GetCurrentTokenCol()  const { return std::to_string(std::get<3>(sourceTokens.at(currentTokenIndex))); }
 
-const ErrorInfo Lexer::GetErrorInfo() const  // what about semantic errors?
+const ErrorInfo Lexer::GetErrorInfo()  // what about semantic errors?
 {          
     const auto& [tok, type, line, col] = sourceTokens.at(currentTokenIndex);
     const std::string loc = "<source>::" + std::to_string(line) + ":" + std::to_string(col) + ":";
     const std::string seperator = "\t|\t\t";
-    std::string codeLine = seperator + getLineAt(line - 1, 0);
+    std::string codeLine = seperator + GetSourceLine(line - 1, 0);
     codeLine.append("\n" + seperator).append(col - 1, ' ').append("^").append(std::get<0>(sourceTokens.at(currentTokenIndex)).size() - 1, '~');
     return { loc, codeLine };
 }
@@ -182,13 +194,6 @@ const ErrorInfo Lexer::GetErrorInfo() const  // what about semantic errors?
 void Lexer::Consume(const Token tokenType)
 {
     const auto& [tok, type, line, col] = sourceTokens.at(currentTokenIndex);
-    if (tokenType == type && currentTokenIndex < sourceTokens.size())
-    {
-        ++currentTokenIndex;
-        if (currentTokenIndex == sourceTokens.size()) return;
-        if (std::get<2>(sourceTokens.at(currentTokenIndex)) > line) lineStartTokenIndex = currentTokenIndex;
-    }
+    if (tokenType == type && currentTokenIndex < sourceTokens.size()) ++currentTokenIndex;
     else throw UnexpectedTokenException(GetErrorInfo(), "Encountered Unexpected Token '" + std::get<0>(sourceTokens.at(currentTokenIndex)) + '\'');
 }
-
-bool Lexer::hasTokenized() const { return tokenized; }
