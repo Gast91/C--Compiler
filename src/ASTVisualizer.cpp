@@ -4,12 +4,19 @@
 void ASTVisualizer::RenderAST(ASTNode& n)
 {
     open_action = -1;
-    if (ImGui::Button("Expand AST"))   open_action = 1; ImGui::SameLine();
-    if (ImGui::Button("Collapse AST")) open_action = 0; ImGui::SameLine();
-    ImGui::Checkbox("Remove Identation", &align_label_with_current_x_position);
-    ImGui::Separator();
+    ImGui::Begin("Parser Output");
+    if (&n)
+    {
+        if (ImGui::Button("Expand AST"))   open_action = 1; ImGui::SameLine();
+        if (ImGui::Button("Collapse AST")) open_action = 0; ImGui::SameLine();
+        ImGui::Checkbox("Remove Identation", &align_label_with_current_x_position);
+        ImGui::Separator();
 
-    nodeRect = RenderNode([&]() { n.Accept(*this); }, (void*)(intptr_t)&n, "ROOT");
+        ImGui::BeginChild("AST");
+        nodeRect = RenderNode([&]() { n.Accept(*this); }, (void*)(intptr_t)&n, "ROOT");
+        ImGui::EndChild();
+    }
+    ImGui::End();
 }
 
 template<class ...Args>
@@ -32,7 +39,7 @@ ASTVisualizer::ImRect ASTVisualizer::RenderNode(std::function<void()> visitCallb
         visitCallback();
         const float midpoint = (nodeRect.min.y + nodeRect.max.y) / 2.0f;
 
-        //drawList->AddLine(ImVec2(verticalLineStart.x, midpoint), ImVec2(verticalLineStart.x + HorizontalTreeLineSize, midpoint), TreeLineColor);
+        drawList->AddLine(ImVec2(verticalLineStart.x, midpoint), ImVec2(verticalLineStart.x + HorizontalTreeLineSize, midpoint), TreeLineColor);
 
         verticalLineEnd.y = midpoint;
 
@@ -68,15 +75,15 @@ void ASTVisualizer::Visit(IntegerNode& n)
     ImGui::TreeNodeEx((void*)(intptr_t)&n, node_flags, "INT_LITERAL:%d", n.value);
     nodeRect = { ImGui::GetItemRectMin(), ImGui::GetItemRectMax() };
 
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    //ImDrawList* drawList = ImGui::GetWindowDrawList();
 
-    ImVec2 verticalLineStart = ImGui::GetCursorScreenPos();
-    verticalLineStart.x += SmallOffsetX; //to nicely line up with the arrow symbol
-    ImVec2 verticalLineEnd = verticalLineStart;
+    //ImVec2 verticalLineStart = ImGui::GetCursorScreenPos();
+    //verticalLineStart.x += SmallOffsetX; //to nicely line up with the arrow symbol
+    //ImVec2 verticalLineEnd = verticalLineStart;
 
-    const float midpoint = (nodeRect.min.y + nodeRect.max.y) / 2.0f;
-    drawList->AddLine(ImVec2(verticalLineStart.x, midpoint), ImVec2(verticalLineStart.x + HorizontalTreeLineSize, midpoint), TreeLineColor);
-    verticalLineEnd.y = midpoint;
+    //const float midpoint = (nodeRect.min.y + nodeRect.max.y) / 2.0f;
+    //drawList->AddLine(ImVec2(verticalLineStart.x, midpoint), ImVec2(verticalLineStart.x + HorizontalTreeLineSize, midpoint), TreeLineColor);
+    //verticalLineEnd.y = midpoint;
 
     //drawList->AddLine(verticalLineStart, verticalLineEnd, TreeLineColor);
 }
@@ -87,15 +94,15 @@ void ASTVisualizer::Visit(IdentifierNode& n)
     ImGui::TreeNodeEx((void*)(intptr_t)&n, node_flags, "%s:%s", n.name.c_str(), magic_enum::enum_name(n.type).data());
     nodeRect = { ImGui::GetItemRectMin(), ImGui::GetItemRectMax() };
 
-    ImDrawList* drawList = ImGui::GetWindowDrawList();
+    //ImDrawList* drawList = ImGui::GetWindowDrawList();
 
-    ImVec2 verticalLineStart = ImGui::GetCursorScreenPos();
-    verticalLineStart.x += SmallOffsetX; //to nicely line up with the arrow symbol
-    ImVec2 verticalLineEnd = verticalLineStart;
+    //ImVec2 verticalLineStart = ImGui::GetCursorScreenPos();
+    //verticalLineStart.x += SmallOffsetX; //to nicely line up with the arrow symbol
+    //ImVec2 verticalLineEnd = verticalLineStart;
 
-    const float midpoint = (nodeRect.min.y + nodeRect.max.y) / 2.0f;
-    drawList->AddLine(ImVec2(verticalLineStart.x, midpoint), ImVec2(verticalLineStart.x + HorizontalTreeLineSize, midpoint), TreeLineColor);
-    verticalLineEnd.y = midpoint;
+    //const float midpoint = (nodeRect.min.y + nodeRect.max.y) / 2.0f;
+    //drawList->AddLine(ImVec2(verticalLineStart.x, midpoint), ImVec2(verticalLineStart.x + HorizontalTreeLineSize, midpoint), TreeLineColor);
+    //verticalLineEnd.y = midpoint;
 
     //drawList->AddLine(verticalLineStart, verticalLineEnd, TreeLineColor);
 }
