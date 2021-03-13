@@ -10,8 +10,8 @@ struct ErrorInfo
 class UnexpectedTokenException : public std::exception
 {
 public:
-    UnexpectedTokenException(const std::string& msg) : exception(("\nERROR: " + msg).c_str()) {}  // PARSER ERROR
-    UnexpectedTokenException(const ErrorInfo e, const std::string& msg) : exception(("\n" + e.sourceLoc + " PARSER ERROR: " + msg + "\n" + e.sourceCode).c_str()) {}
+    UnexpectedTokenException(const std::string& msg) : exception(("ERROR: " + msg).c_str()) {}  // PARSER ERROR
+    UnexpectedTokenException(const ErrorInfo e, const std::string& msg) : exception((e.sourceLoc + " PARSER ERROR: " + msg + "\n" + e.sourceCode).c_str()) {}
 };
 
 class SymbolNotFoundException : public std::exception
