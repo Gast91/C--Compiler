@@ -30,7 +30,14 @@ static void HelpMarker(const char* desc) // move somewhere else/remove/whatever
     }
 }
 
-static void ShowSaveDialog(const TextEditor& editor, const std::string& fileName)
+struct Button
+{
+    const char* label;
+    float width;
+    std::function<void()> action;
+};
+
+static void Save(const TextEditor& editor, const std::string& fileName)
 {
     if (fileName == "Untitled")
         ImGuiFileDialog::Instance()->OpenModal("SaveAsKey", "Save File As", fileTypeFilter, "D:/Desktop/CTests", "", 1, nullptr, ImGuiFileDialogFlags_ConfirmOverwrite);
@@ -89,7 +96,7 @@ int main()
                 {
                 case sf::Keyboard::S:
                     if (event.key.control && !ImGuiFileDialog::Instance()->IsOpened())
-                        ShowSaveDialog(editor, fileName);
+                        Save(editor, fileName);
                     break;
                 case sf::Keyboard::O:
                     if (event.key.control && !ImGuiFileDialog::Instance()->IsOpened())
@@ -105,7 +112,6 @@ int main()
 
         ImGui::SFML::Update(window, deltaClock.restart());
 
-        auto cpos = editor.GetCursorPosition();
         ImGui::Begin("Editor", nullptr, ImGuiWindowFlags_HorizontalScrollbar | ImGuiWindowFlags_MenuBar);
         ImGui::SetWindowSize(ImVec2(800, 600), ImGuiCond_FirstUseEver);
         if (ImGui::BeginMenuBar())
@@ -116,7 +122,7 @@ int main()
                     editor.SetText(""); fileName = "Untitled";  //?? handle file name and extension seperately?
                 if (ImGui::MenuItem("Open", "Ctrl+O"))
                     ImGuiFileDialog::Instance()->OpenModal("ChooseFileKey", "Choose File", fileTypeFilter, "D:/Desktop/CTests", "");
-                if (ImGui::MenuItem("Save", "Ctrl+S")) ShowSaveDialog(editor, fileName);
+                if (ImGui::MenuItem("Save", "Ctrl+S")) Save(editor, fileName);
                 if (ImGui::MenuItem("Save As..")) 
                     ImGuiFileDialog::Instance()->OpenModal("SaveAsKey", "Save File As", fileTypeFilter, "D:/Desktop/CTests", "", 1, nullptr, ImGuiFileDialogFlags_ConfirmOverwrite);
                 if (ImGui::MenuItem("Quit", "Alt-F4")) window.close();
@@ -125,17 +131,17 @@ int main()
             if (ImGui::BeginMenu("Edit"))
             {
                 bool ro = editor.IsReadOnly();
-                if (ImGui::Checkbox("Read-only mode", &ro))                                                  editor.SetReadOnly(ro);
+                if (ImGui::Checkbox("Read-only mode", &ro))                                                   editor.SetReadOnly(ro);
                 ImGui::Separator();
 
-                if (ImGui::MenuItem("Undo", "ALT-Backspace", nullptr, !ro && editor.CanUndo()))               editor.Undo();
-                if (ImGui::MenuItem("Redo", "Ctrl-Y", nullptr, !ro && editor.CanRedo()))                      editor.Redo();
+                if (ImGui::MenuItem("Undo",   "ALT-Backspace", nullptr, !ro && editor.CanUndo()))              editor.Undo();
+                if (ImGui::MenuItem("Redo",   "Ctrl-Y",        nullptr, !ro && editor.CanRedo()))              editor.Redo();
                 ImGui::Separator();
 
-                if (ImGui::MenuItem("Copy", "Ctrl-C", nullptr, editor.HasSelection()))                        editor.Copy();
-                if (ImGui::MenuItem("Cut", "Ctrl-X", nullptr, !ro && editor.HasSelection()))                  editor.Cut();
-                if (ImGui::MenuItem("Delete", "Del", nullptr, !ro && editor.HasSelection()))                  editor.Delete();
-                if (ImGui::MenuItem("Paste", "Ctrl-V", nullptr, !ro && ImGui::GetClipboardText() != nullptr)) editor.Paste();
+                if (ImGui::MenuItem("Copy",   "Ctrl-C", nullptr,        editor.HasSelection()))                editor.Copy();
+                if (ImGui::MenuItem("Cut",    "Ctrl-X", nullptr, !ro && editor.HasSelection()))                editor.Cut();
+                if (ImGui::MenuItem("Delete", "Del",    nullptr, !ro && editor.HasSelection()))                editor.Delete();
+                if (ImGui::MenuItem("Paste",  "Ctrl-V", nullptr, !ro && ImGui::GetClipboardText() != nullptr)) editor.Paste();
                 ImGui::Separator();
 
                 if (ImGui::MenuItem("Select all", "Ctrl-A", nullptr)) 
@@ -155,56 +161,28 @@ int main()
             ImGui::EndMenuBar();
         }
 
+        // Text Editor Status Bar TODO: FIX OVERLAP WITH MODULE BUTTON GROUP
+        const auto cpos = editor.GetCursorPosition();
         ImGui::Text("%6d/%-6d %6d lines  | %s | %s | %s | %s", cpos.mLine + 1, cpos.mColumn + 1, editor.GetTotalLines(),
             editor.IsOverwrite() ? "Ovr" : "Ins",
             editor.CanUndo() ? "*" : " ",
             editor.GetLanguageDefinition().mName.c_str(), fileName.c_str());
 
-
-        const float ItemSpacing = ImGui::GetStyle().ItemSpacing.x;
-
-        // Code Generation Button
-        static float CGButtonWidth = 100.0f;  // Guess for the first frame
-        float pos = CGButtonWidth + ItemSpacing;
-        ImGui::SameLine(ImGui::GetWindowWidth() - pos);
-        if (ImGui::SmallButton("Code Gen"))
+        // Right Aligned Module Button Group
+        static Button buttons[4] = {
+        {"CodeGen",  100.0f, []()  {/*ModuleManager::Instance()->RunModulesUpTo(&codeGen);*/} },
+        {"Semantic", 100.0f, []()  {/*ModuleManager::Instance()->RunModulesUpTo(&sem);*/    } },
+        {"Parse",    100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&parser);    } },
+        {"Tokenize", 100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&lexer);     } } };
+        const float itemSpacing = ImGui::GetStyle().ItemSpacing.x;
+        float pos = 0.0f;
+        for (int i = 0; i < 4; ++i)
         {
-            //ModuleManager::Instance()->RunModulesUpTo(&codeGen);
+            pos += buttons[i].width + itemSpacing;
+            ImGui::SameLine(ImGui::GetWindowWidth() - pos);
+            if (ImGui::SmallButton(buttons[i].label)) buttons[i].action();
+            buttons[i].width = ImGui::GetItemRectSize().x;
         }
-        CGButtonWidth = ImGui::GetItemRectSize().x;
-
-        // Semantically Analyze Input Button
-        static float SAButtonWidth = 100.0f;
-        pos += SAButtonWidth + ItemSpacing;
-        ImGui::SameLine(ImGui::GetWindowWidth() - pos);
-        if (ImGui::SmallButton("Semantic Analysis"))
-        {
-            //ModuleManager::Instance()->RunModulesUpTo(&sem);
-        }
-        SAButtonWidth = ImGui::GetItemRectSize().x;
-
-        // Parse Input Button
-        static float ParseButtonWidth = 100.0f;
-        pos += ParseButtonWidth + ItemSpacing;
-        ImGui::SameLine(ImGui::GetWindowWidth() - pos);
-        if (ImGui::SmallButton("Parse")) 
-            ModuleManager::Instance()->RunModulesUpTo(&parser);
-        ParseButtonWidth = ImGui::GetItemRectSize().x;
-        if (ImGui::IsItemHovered())
-        {
-            ImGui::BeginTooltip();
-            ImGui::Text("%s", "Generate AST");
-            ImGui::EndTooltip();
-        }
-
-        // Tokenize Input Button
-        static float TokButtonWidth = 100.0f;
-        pos += TokButtonWidth + ItemSpacing;
-        ImGui::SameLine(ImGui::GetWindowWidth() - pos);
-        if (ImGui::SmallButton("Tokenize"))
-            ModuleManager::Instance()->RunModulesUpTo(&lexer);
-        TokButtonWidth = ImGui::GetItemRectSize().x;
-
         ImGui::Separator();
         ImGui::Spacing();
         
@@ -239,18 +217,15 @@ int main()
         }
         ImGui::End();
 
-        // The ASTVisualizer recursively builds the ImGui Tree after each node visit
-        ImGui::Begin("Parser Output");
-        if (const auto& AST = parser.GetAST(); AST)
-            viz.RenderAST(*AST);  // also AST->Accept(viz); but no top banner
-        ImGui::End();
+        // Parser Output Window + AST Tree (if available)
+        viz.RenderAST(*parser.GetAST());  // also AST->Accept(viz); but no top banner
 
         if (ImGuiFileDialog::Instance()->Display("ChooseFileKey"))
         {
             if (ImGuiFileDialog::Instance()->IsOk())
             {
                 std::ifstream infile;
-                fileName = ImGuiFileDialog::Instance()->GetFilePathName(); // GetSelectionDifferences?
+                fileName = ImGuiFileDialog::Instance()->GetFilePathName();
                 infile.open(fileName);
                 if (infile)
                 {
@@ -304,7 +279,6 @@ int main()
 }
 
 /*  TODO: NO SEMANTICS UNTIL CLEANUP AND MERGE WITH C--Compiler project
-*     - Cleanup/Separation of display etc                                    - high priority
 *     - Docking - SFML backend issues                                        - low priority - unachievable atm (switch to other backend?)
 *     - Merge all compiler branches, create new on (dissertation)            - high priority
 *         Master becomes an ImGui frontend - can I carry commit history?                                  
