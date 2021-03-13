@@ -30,19 +30,6 @@ static void HelpMarker(const char* desc) // move somewhere else/remove/whatever
     }
 }
 
-static void ShowLogger(bool* p_open)
-{
-    ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
-    ImGui::Begin("Console Output", p_open);
-
-    /* Can add other stuff here */
-
-    ImGui::End();
-
-    // Actually call in the regular Log helper (which will Begin() into the same window as we just did)
-    Logger::Instance()->Draw("Console Output", p_open);
-}
-
 static void ShowSaveDialog(const TextEditor& editor, const std::string& fileName)
 {
     if (fileName == "Untitled")
@@ -306,8 +293,7 @@ int main()
             ImGui::EndPopup();
         }
 
-        static bool* p_open;
-        ShowLogger(p_open);
+        Logger::Instance()->Draw("Console Output", NULL);
         //ImGui::ShowDemoWindow();
 
         window.clear();

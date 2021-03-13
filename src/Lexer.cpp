@@ -23,9 +23,9 @@ void Lexer::Run()
             if (ShouldSkipChars(line, pos, prev, col, multiline)) continue;
 
             if (pos < prev) continue;
-            if (pos > prev) 
+            if (pos > prev)
             {
-                AddToken(line.substr(prev, pos - prev), lineNo, col); 
+                AddToken(line.substr(prev, pos - prev), lineNo, col);
                 col += pos - prev;
             }
 
@@ -59,7 +59,9 @@ void Lexer::Run()
         if (prev < line.length()) AddToken(line.substr(prev, std::string::npos), lineNo, col);
     }
     shouldRun = false;
-    Logger::Instance()->Log(Logger::Level::INFO, "Tokenized input!\n");
+    Logger::Info("Tokenized input!\n");
+    for (const auto& tok : sourceTokens) Logger::Debug("%s ", std::get<0>(tok).c_str());
+    Logger::Debug("\n");
 }
 
 std::string Lexer::GetSourceLine(const int line, const int col)

@@ -14,13 +14,13 @@ void Parser::Run()
     catch (const UnexpectedTokenException& ex) 
     { 
         failState = true; 
-        Logger::Instance()->Log(Logger::Level::ERROR, "%s \n", ex.what());
+        Logger::Error("%s \n", ex.what());
     }
 
-    if (!failState) Logger::Instance()->Log(Logger::Level::INFO, "Parsing Successful, AST Built\n");
+    if (!failState) Logger::Info("Parsing Successful, AST Built\n");
     // Somewhere, somehow not all tokens were processed.
     if (!lexer->Done()) 
-        Logger::Instance()->Log(Logger::Level::DEBUG, "Unproccessed tokens left starting at %d:%d\n", lexer->GetCurrentTokenLine(), lexer->GetCurrentTokenCol());
+        Logger::Error("Unproccessed tokens left starting at %s:%s\n", lexer->GetCurrentTokenLine().c_str(), lexer->GetCurrentTokenCol().c_str());
     // Reset lexer index back to the start for the next parse
     // If lexer is always called before parser (as it should), this is pointless
     lexer->ResetIndex();
@@ -29,7 +29,6 @@ void Parser::Run()
 // FACTOR := (ADD | SUB ) FACTOR | INTEGER | IDENTIFIER | LPAR EXPRESSION RPAR
 UnqPtr<ASTNode> Parser::ParseFactor()
 {
-    //const auto currentToken = lexer.GetCurrentToken();
     const auto&[tokValue, tokType, line, col] = lexer->GetCurrentToken();
     // Just a unary operator (+ or -) before a literal or identifier
     if (tokType == Token::ADD || tokType == Token::SUB)
