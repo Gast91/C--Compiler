@@ -309,9 +309,8 @@ int main()
     ImGui::SFML::Shutdown();
 }
 
-/*  TODO: NO SEMANTICS UNTIL CLEANUP AND MERGE WITH C--Compiler project
-*     - Docking - SFML backend issues                                        - low priority - unachievable atm (switch to other backend?)
-*     - Merge all compiler branches, create new on (dissertation)            - high priority
-*         Master becomes an ImGui frontend - can I carry commit history?                                  
+/*  TODO:
+*     - Docking - SFML backend issues                                        - low priority - unachievable atm (switch to other backend?)                               
 *     - spdlog? multisink for file and/or 'console' output?                  - medium priority - decide - this changes all prints to file(dialogs etc)
+*     - Continue Integration
 */

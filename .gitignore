@@ -23,6 +23,7 @@ mono_crash.*
 # Project Specific
 vendor/
 imgui.ini
+AST.js
 
 # Build results
 [Dd]ebug/
