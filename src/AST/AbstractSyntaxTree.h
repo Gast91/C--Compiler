@@ -2,7 +2,6 @@
 #include <iostream>
 #include <memory>
 
-#include "../Util/Utility.h"
 #include "../AST/Visitor.h"
 #include "../Lexer/Token.h"
 
