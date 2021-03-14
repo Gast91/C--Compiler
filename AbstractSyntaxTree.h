@@ -1,208 +1,240 @@
 #pragma once
 #include <iostream>
+#include <memory>
 
 #include "Utility.h"
 #include "Visitor.h"
 #include "Token.h"
 
+// Template Alias for node ptrs
+template<typename T>
+using UnqPtr = std::unique_ptr<T>;
+
 // Base Node class
 class ASTNode
 {
 public:
-	std::string parentID;
+    std::string parentID;
 public:
-	ASTNode() = default;
-	virtual ~ASTNode() = default;
+    ASTNode() = default;
+    ASTNode(const ASTNode&) = default;
+    virtual ~ASTNode() = default;
+    ASTNode(ASTNode&&) = default;
+    ASTNode& operator=(const ASTNode&) = default;
+    ASTNode& operator=(ASTNode&&) = default;
 
-	// Function allowing the implementation of the visitor pattern
-	virtual void Accept(ASTNodeVisitor& v) = 0;
-	virtual void SetChildrenPrintID(const std::string& pID) = 0;
+    // To allow a class implementing the visitor pattern to visit this node
+    virtual void Accept(ASTNodeVisitor& v) = 0;
+    // Sets each child's parentID to the current node's id (for AST visualization)
+    virtual void SetChildrenPrintID(const std::string& pID) = 0;
 };
 
 // Abstract Syntax Tree Node with one branch or leaf
 class UnaryASTNode : public ASTNode
 {
 public:
-	ASTNode* expr;
+    UnqPtr<ASTNode> expr;
 public:
-	UnaryASTNode(ASTNode* n) : expr(n) {}
-	virtual ~UnaryASTNode() { delete expr; }
+    UnaryASTNode(UnqPtr<ASTNode> n) noexcept : expr(std::move(n)) {}
 
-	virtual void Accept(ASTNodeVisitor& v) { v.Visit(*this); }
-	virtual void SetChildrenPrintID(const std::string& pID) { expr->parentID = pID; }
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+    void SetChildrenPrintID(const std::string& pID) override { expr->parentID = pID; }
 };
 
 class UnaryOperationNode : public UnaryASTNode
 {
 public:
-	TokenPair op;
+    TokenPair op;
 public:
-	UnaryOperationNode(TokenPair t, ASTNode* n) : UnaryASTNode(n), op(t) {}
-	virtual ~UnaryOperationNode() = default;
+    UnaryOperationNode(TokenPair t, UnqPtr<ASTNode> n) noexcept : UnaryASTNode(std::move(n)), op(t) {}
 
-	virtual void Accept(ASTNodeVisitor& v) { v.Visit(*this); }
-	virtual void SetChildrenPrintID(const std::string& pID) { expr->parentID = pID; }
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+    void SetChildrenPrintID(const std::string& pID) override { expr->parentID = pID; }
 };
 
 // Abstract Syntax Tree Node with two branches or leaves
 class BinaryASTNode : public ASTNode
 {
 public:
-	ASTNode*   left;
-	ASTNode*   right;
-	TokenPair  op;
+    UnqPtr<ASTNode> left;
+    UnqPtr<ASTNode> right;
+    TokenPair  op;
 public:
-	BinaryASTNode(ASTNode* l, TokenPair o, ASTNode* r) : left(l), op(o), right(r) {}
-	virtual ~BinaryASTNode()
-	{
-		delete left;
-		delete right;
-	}
+    BinaryASTNode(UnqPtr<ASTNode> l, TokenPair o, UnqPtr<ASTNode> r) noexcept : left(std::move(l)), op(o), right(std::move(r)) {}
 
-	virtual void Accept(ASTNodeVisitor& v) { v.Visit(*this); }
-	virtual void SetChildrenPrintID(const std::string& pID) { left->parentID = pID; right->parentID = pID; }
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+    void SetChildrenPrintID(const std::string& pID) override { left->parentID = pID; right->parentID = pID; }
 };
 
 // Node representing a number(integer) literal
 class IntegerNode : public ASTNode       // this doesnt have a token anymore - does it need one for the future?
 {
 public:
-	int value;
+    int value;  // should this just be a string for ease?
 public:
-	IntegerNode(const std::string& val) : value(std::stoi(val)) {}
-	virtual ~IntegerNode() = default;
+    IntegerNode(const std::string& val) : value(std::stoi(val)) {}
 
-	virtual void Accept(ASTNodeVisitor& v) { v.Visit(*this); }
-	virtual void SetChildrenPrintID(const std::string& pID) { /* No children */ }
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+    void SetChildrenPrintID(const std::string& pID) noexcept override { /* No children */ }
 };
 
 // Node representing an identifier
 class IdentifierNode : public ASTNode
 {
 public:
-	Token type;
-	const std::string name;
-	const std::string lineNo;
+    Token type;
+    std::string offset;
+    const std::string name;
+    const std::string lineNo;
 public:
-	IdentifierNode(const std::string& n, const std::string& line, const Token t = Token::UNKNOWN) : name(n), lineNo(line), type(t) {}
-	virtual ~IdentifierNode() = default;
+    IdentifierNode(const std::string& n, const std::string& line, const Token t = Token::UNKNOWN) : name(n), lineNo(line), type(t) {}
 
-	virtual void Accept(ASTNodeVisitor& v) { v.Visit(*this); }
-	virtual void SetChildrenPrintID(const std::string& pID) { /* No children */ }
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+    void SetChildrenPrintID(const std::string& pID) noexcept override { /* No children */ }
 };
 
-// Node representing a binary operation (Addition, Subtraction, Multiplication or Division)
+// Node representing a binary operation
 class BinaryOperationNode : public BinaryASTNode
 {
 public:
-	BinaryOperationNode(ASTNode* l, TokenPair o, ASTNode* r) : BinaryASTNode(l, o, r) {}
-	virtual ~BinaryOperationNode() = default;
+    BinaryOperationNode(UnqPtr<ASTNode> l, TokenPair o, UnqPtr<ASTNode> r) noexcept : BinaryASTNode(std::move(l), o, std::move(r)) {}
 
-	virtual void Accept(ASTNodeVisitor& v) { v.Visit(*this); }
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
 
-class ConditionNode : public BinaryASTNode  // WHAT????
+class ConditionNode : public BinaryASTNode
 {
 public:
-	ConditionNode(ASTNode* l, TokenPair& o, ASTNode* r) : BinaryASTNode(l, o, r) {}
-	virtual ~ConditionNode() = default;
+    ConditionNode(UnqPtr<ASTNode> l, TokenPair o, UnqPtr<ASTNode> r) noexcept : BinaryASTNode(std::move(l), o, std::move(r)) {}
 
-	virtual void Accept(ASTNodeVisitor& v) { v.Visit(*this); }
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
 
-// this should inherit from a ternary ASTNode
+// Node representing an IF condition body or an ELSE_IF condition body. Part of an umbrella IfStatementNode
 class IfNode : public ASTNode
 {
 public:
-	ASTNode* condition;
-	ASTNode* body;
+    UnqPtr<ASTNode> condition;
+    UnqPtr<ASTNode> body;
+    std::string type;  // IF or ELSE_IF used only for visualization
+    std::string parentEndLabel;
 public:
-	IfNode(ASTNode* cond, ASTNode* b) : condition(cond), body(b) {}
-	virtual ~IfNode()
-	{
-		delete condition;
-		if (body) delete body;
-	}
+    IfNode(UnqPtr<ASTNode> b, UnqPtr<ASTNode> cond) noexcept : body(std::move(b)),  condition(std::move(cond)) {}
 
-	virtual void Accept(ASTNodeVisitor& v) { v.Visit(*this); }
-	virtual void SetChildrenPrintID(const std::string& pID) { condition->parentID = pID; body->parentID = pID; }
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+    void SetChildrenPrintID(const std::string& pID) override { condition->parentID = pID; body->parentID = pID; }
 };
 
-class WhileNode : public ASTNode  // copy of if right now - if will change later
+// Node representing a collection of an IFNode, several ELSE_IF and an ELSE CompoundStatementNode
+class IfStatementNode : public ASTNode
 {
 public:
-	ASTNode* condition;
-	ASTNode* body;
+    std::vector<UnqPtr<IfNode>> ifNodes;
+    UnqPtr<ASTNode> elseBody;
 public:
-	WhileNode(ASTNode* cond, ASTNode* b) : condition(cond), body(b) {}
-	virtual ~WhileNode()
-	{
-		delete condition;
-		if (body) delete body;
-	}
 
-	virtual void Accept(ASTNodeVisitor& v) { v.Visit(*this); }
-	virtual void SetChildrenPrintID(const std::string& pID) { condition->parentID = pID; body->parentID = pID; }
+    void AddNode(UnqPtr<IfNode> node)
+    {
+        ifNodes.empty() ? node->type = "IF" : node->type = "ELSEIF";
+        ifNodes.push_back(std::move(node));
+    }
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+    void SetChildrenPrintID(const std::string& pID) override
+    {
+        for (const auto& ifN : ifNodes) ifN->parentID = pID;
+        if (elseBody) elseBody->parentID = pID;
+    }
+};
+
+class IterationNode : public ASTNode
+{
+public:
+    UnqPtr<ASTNode> condition;
+    UnqPtr<ASTNode> body;
+public:
+    IterationNode(UnqPtr<ASTNode> cond, UnqPtr<ASTNode> b) noexcept : condition(std::move(cond)), body(std::move(b)) {}
+
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+    void SetChildrenPrintID(const std::string& pID) override { condition->parentID = pID; body->parentID = pID; }
+};
+
+class WhileNode : public IterationNode
+{
+public:
+    WhileNode(UnqPtr<ASTNode> cond, UnqPtr<ASTNode> b) noexcept : IterationNode(std::move(cond), std::move(b)) {}
+
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+};
+
+class DoWhileNode : public IterationNode
+{
+public:
+    DoWhileNode(UnqPtr<ASTNode> cond, UnqPtr<ASTNode> b) noexcept : IterationNode(std::move(cond), std::move(b)) {}
+
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
 
 class CompoundStatementNode : public ASTNode
 {
 public:
-	std::vector<ASTNode*> statements;
+    std::vector<UnqPtr<ASTNode>> statements;
 public:
-	CompoundStatementNode() = default;
-	virtual ~CompoundStatementNode() { for (const auto& statement : statements) delete statement; }
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+    void SetChildrenPrintID(const std::string& pID) override { for (const auto& statement : statements) statement->parentID = pID; }
 
-	virtual void Accept(ASTNodeVisitor& v) { v.Visit(*this); }
-	virtual void SetChildrenPrintID(const std::string& pID) { for (const auto& statement : statements) statement->parentID = pID; }
+    void Push(UnqPtr<ASTNode> statement) { statements.push_back(std::move(statement)); }
+};
 
-	void Push(ASTNode* statement) { statements.push_back(statement); }
+class StatementBlockNode : public CompoundStatementNode
+{
+public:
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
 
 class DeclareStatementNode : public ASTNode
 {
 public:
-	IdentifierNode* identifier;
-	TokenPair type;
+    UnqPtr<IdentifierNode> identifier;
+    TokenPair type;
 public:
-	DeclareStatementNode(IdentifierNode* ident, TokenPair t) : identifier(ident), type(t) { identifier->type = t.second; }
-	virtual ~DeclareStatementNode() { delete identifier; }
+    DeclareStatementNode(UnqPtr<IdentifierNode> ident, TokenPair t) noexcept : identifier(std::move(ident)), type(t) { identifier->type = t.second; }
 
-	virtual void Accept(ASTNodeVisitor& v) { v.Visit(*this); }
-	virtual void SetChildrenPrintID(const std::string& pID) {identifier->parentID = pID; }
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+    void SetChildrenPrintID(const std::string& pID) override {identifier->parentID = pID; }
+};
+
+class DeclareAssignNode : public BinaryASTNode
+{
+public:
+    DeclareAssignNode(UnqPtr<DeclareStatementNode> decl, UnqPtr<ASTNode> expr) noexcept : BinaryASTNode(std::move(decl), { "=", Token::ASSIGN }, std::move(expr)) {}
+
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
 
 class AssignStatementNode : public BinaryASTNode
 {
 public:
-	AssignStatementNode(IdentifierNode* ident, ASTNode* expr) : BinaryASTNode(ident, { "=", Token::ASSIGN }, expr) {}
-	virtual ~AssignStatementNode() = default;
+    AssignStatementNode(UnqPtr<IdentifierNode> ident, UnqPtr<ASTNode> expr) noexcept : BinaryASTNode(std::move(ident), { "=", Token::ASSIGN }, std::move(expr)) {}
 
-	virtual void Accept(ASTNodeVisitor& v) { v.Visit(*this); }
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
 
 class ReturnStatementNode : public UnaryASTNode
 {
 public:
-	ReturnStatementNode(ASTNode* n) : UnaryASTNode(n) {}
-	virtual ~ReturnStatementNode() = default;
+    ReturnStatementNode(UnqPtr<ASTNode> n) noexcept : UnaryASTNode(std::move(n)) {}
 
-	virtual void Accept(ASTNodeVisitor& v) { v.Visit(*this); }
-	virtual void SetChildrenPrintID(const std::string& pID) { expr->parentID = pID; }
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+    void SetChildrenPrintID(const std::string& pID) override { expr->parentID = pID; }
 };
 
 class EmptyStatementNode : public ASTNode
 {
 public:
-	EmptyStatementNode() = default;
-	virtual ~EmptyStatementNode() = default;
-
-	virtual void Accept(ASTNodeVisitor& v) { v.Visit(*this); }
-	virtual void SetChildrenPrintID(const std::string& pID) { /* No Children */ }
+    void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
+    void SetChildrenPrintID(const std::string& pID) noexcept override { /* No Children */ }
 };
 
 /*
-Fix/Add:  -Only if/while body can be a compoundNode rather than ASTNode but it doesnt help anyway 
-		  -IFNode should be ternary - condition, else, vector of elseIf's (can be IfNodes)
-		  -Store type in literals?
+Fix/Add:    -Store type in literals?
 */

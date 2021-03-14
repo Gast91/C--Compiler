@@ -1,17 +1,94 @@
 #pragma once
 #include <string>
 #include <optional>
-#include "Token.h"
+#include <map>
+#include <vector>
+#include <fstream>
+
 #include "Visitor.h"
+
+#define OPTIMIZE_TEMPS
+// Optimization flag enables the recycling of already processed temporary variables
+// and prevents -> _t0 = a * b -> c = _t0 and instead optimizes to c = a * b.
+#ifdef OPTIMIZE_TEMPS
+#define fetch_instr(x) Temporary::CheckAndRecycle(GetValue(x))
+#else
+#define fetch_instr(x) GetValue(x)
+#endif // OPTIMIZE_TEMPS
+
+// Type of intermediate representation commands/instructions - Used in assembly generation
+enum class CmdType { ARITHM, RELAT, LOG, UNARY, IF, LABEL, GOTO, COPY, RET, REG, NONE };
+
+struct Command
+{
+    std::string value;
+    CmdType type;
+};
+
+struct Operand
+{
+    CmdType type; // this is encoded twice for command and operand! remove from here?
+    std::string name;
+    std::string address;
+};
 
 struct Quadruples
 {
-	std::optional<std::string> op;    // TOKEN_PAIR WOULD BE AMAZING HERE
-	std::optional<std::string> src1;
-	std::optional<std::string> src2;
-	std::optional<std::string> dest;
+    std::optional<Command> op;
+    std::optional<Operand> src1;
+    std::optional<Operand> src2;
+    std::optional<Operand> dest;
 };
-using ThreeAddressCode = std::vector<Quadruples>;
+
+// Handles the recycling (if enabled) and creation of new temporary variables
+// that are used in both intermediate code generation and assembly generation
+class Temporary
+{
+private:
+    static int tempCount;
+public:
+    static const Operand NewTemporary() { return Operand{ CmdType::REG, "_t" + std::to_string(tempCount), "_t" + std::to_string(tempCount++) }; } // address? const?
+    // If a temporary is passed to it, it drops the counter effectively recycling that temporary
+    // This should never be called by itself and rather through the obtain_source macro. I know bad design...
+    static const Quadruples CheckAndRecycle(const Quadruples& potentialTemporary)
+    { 
+        // What if an identifier starting with _t is passed to it...
+        if (potentialTemporary.dest.value().type == CmdType::REG) --tempCount;
+        return potentialTemporary;
+    }
+};
+
+// Handles the creation of new labels as well as the jmp label
+// distribution to conditions that request a jump location
+class Label
+{
+private:
+    static int labelCount;
+    static std::vector<std::string> cmpJmpLabels;
+    static int nextCmpLabel;
+public:
+    static const Operand NewLabel() { return Operand{ CmdType::LABEL, "_L" + std::to_string(labelCount), "_L" + std::to_string(labelCount++) }; }
+    static void AddCmpLabel(const std::string& nextLabel) { cmpJmpLabels.push_back(nextLabel); }
+    static const std::string GetCmpLabel() { return cmpJmpLabels.at(nextCmpLabel++); }
+};
+
+// MERGE????? - template template parameters
+template <typename ...Args>
+void print(std::ostream& out1, std::ofstream& out2, const Args& ...args)
+{
+    (out1 << ... << args);
+    (out2 << ... << args);
+}
+template <typename ...Args>
+void print(std::ostream& out1, const Args& ...args)
+{
+    (out1 << ... << args);
+}
+template <typename ...Args>
+void print(std::ofstream& out2, const Args& ...args)
+{
+    (out2 << ... << args);
+}
 
 // CodeGenerator derives from ValueGetter by the 'Curiously Recurring Template Pattern' so that 
 // the ValueGetter can instantiate the Evaluator itself. It also implements INodeVisitor interface 
@@ -19,26 +96,34 @@ using ThreeAddressCode = std::vector<Quadruples>;
 class CodeGenerator : public ValueGetter<CodeGenerator, ASTNode*, Quadruples>, public ASTNodeVisitor
 {
 private:
-	static ThreeAddressCode instructions;
-	static int temporaries;
-	static int labels;
-public:
-	void GenerateAssembly(ASTNode* n);
+    static std::vector<Quadruples> instructions;
 
-	// Inherited via ASTNodeVisitor
-	virtual void Visit(ASTNode& n) override;
-	virtual void Visit(UnaryASTNode& n) override;
-	virtual void Visit(BinaryASTNode& n) override;
-	virtual void Visit(IntegerNode& n) override;
-	virtual void Visit(IdentifierNode& n) override;
-	virtual void Visit(UnaryOperationNode& n) override;
-	virtual void Visit(BinaryOperationNode& n) override;
-	virtual void Visit(ConditionNode& n) override;
-	virtual void Visit(IfNode& n) override;
-	virtual void Visit(WhileNode& n) override;
-	virtual void Visit(CompoundStatementNode& n) override;
-	virtual void Visit(DeclareStatementNode& n) override;
-	virtual void Visit(AssignStatementNode& n) override;
-	virtual void Visit(ReturnStatementNode& n) override;
-	virtual void Visit(EmptyStatementNode& n) override;
+    void ProcessAssignment(const BinaryASTNode& n);
+    void ProcessBinOp(const BinaryASTNode& n, CmdType type);
+    const std::string ReverseOp(const std::string& op);
+public:
+    void GenerateTAC(ASTNode* n);
+    void GenerateAssembly();
+
+    // Inherited via ASTNodeVisitor
+    void Visit(ASTNode& n)               override;
+    void Visit(UnaryASTNode& n)          override;
+    void Visit(BinaryASTNode& n)         override;
+    void Visit(IntegerNode& n)           override;
+    void Visit(IdentifierNode& n)        override;
+    void Visit(UnaryOperationNode& n)    override;
+    void Visit(BinaryOperationNode& n)   override;
+    void Visit(ConditionNode& n)         override;
+    void Visit(IfNode& n)                override;
+    void Visit(IfStatementNode& n)       override;
+    void Visit(IterationNode& n)         override;
+    void Visit(WhileNode& n)             override;
+    void Visit(DoWhileNode& n)           override;
+    void Visit(StatementBlockNode& n)    override;
+    void Visit(CompoundStatementNode& n) override;
+    void Visit(DeclareStatementNode& n)  override;
+    void Visit(DeclareAssignNode& n)     override;
+    void Visit(AssignStatementNode& n)   override;
+    void Visit(ReturnStatementNode& n)   override;
+    void Visit(EmptyStatementNode& n)    override;
 };

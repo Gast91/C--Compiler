@@ -10,28 +10,35 @@
 class Lexer
 {
 private:
-	std::vector<TokenPair> sourceTokens;
-	unsigned int currentTokenIndex = 0;
-	unsigned int line = 0;
+    std::vector<TokenPair> sourceTokens;
+    unsigned int currentTokenIndex = 0;
+    //unsigned int line = 0;
+    struct SourceInfo
+    {
+        unsigned int line = 0;
+        unsigned int column = 1;
+        unsigned int lineStartIndex = 0;
+    } sourceInfo;
 
-	void TokenizeSource(std::ifstream& infile);
-	void AddToken(const std::string& tok);
+    bool failState = false;
 
-	bool IsDiscardableCharacter(const std::string& delimiter) const ;
-	bool IsCompoundOperator(const std::string& delimiter, const std::string& next) const;
-	bool IsComment(const std::string& delimiter, const std::string& next) const;
-	bool IsDigit(const char c) const;
-	bool IsInteger(const std::string& num) const;
-	bool IsCharacter(const char c) const;
-	bool IsIdentifier(const std::string& identifier, const bool firstCall) const;
-	//bool IsKeyword(const std::string& keyword) const;   // Not needed anymore/for now with the updated token processing
+    void TokenizeSource(std::ifstream& infile);
+    void AddToken(const std::string& tok);
+
+    bool IsDiscardableCharacter(const std::string& delimiter) const noexcept;
+    bool IsCompoundOperator(const std::string& delimiter, const std::string& next) const;
+    bool IsComment(const std::string& delimiter, const std::string& next) const;
+    bool IsInteger(const std::string& num) const;
+    bool IsCharacter(const unsigned char c) const noexcept;
+    constexpr bool IsIdentifier(const std::string& identifier, const bool firstCall) const;
 public:
-	Lexer(const char* sourcePath);
-	~Lexer() = default;
+    Lexer(const char* sourcePath);
 
-	void PrintTokens() const;
-	bool Done() const;
-	const std::string GetLine() const;
-	void Consume(const Token token);
-	const TokenPair& GetCurrentToken();
+    bool Failure() const;
+    void PrintTokens() const;
+    bool Done() const;
+    const ErrorInfo GetErrorInfo() const;
+    const std::string GetLine() const;
+    void Consume(const Token token);
+    const TokenPair& GetCurrentToken();
 };

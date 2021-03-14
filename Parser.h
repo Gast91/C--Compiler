@@ -1,33 +1,38 @@
 #pragma once
+
 #include "Lexer.h"
 #include "AbstractSyntaxTree.h"
 
 class Parser
 {
 private:
-	Lexer lexer;
-	ASTNode* root;
+    Lexer lexer;
+    UnqPtr<ASTNode> root;
 
-	ASTNode* ParseFactor();
-	ASTNode* ParseTerm();
-	ASTNode* ParseExpr();
-	ASTNode* ParseCond();
-	ASTNode* ParseIf();
-	ASTNode* ParseWhile();
-	ASTNode* ParseProgram();                      // main and functions and assignments/declarations - just main now - entry point
-	ASTNode* ParseCompoundStatement();
-	std::vector<ASTNode*> ParseStatementList();
-	ASTNode* ParseDeclarationStatement();
-	ASTNode* ParseStatement();
-	ASTNode* ParseAssignStatement();
-	ASTNode* ParseReturn();
-	ASTNode* ParseEmpty();
+    UnqPtr<ASTNode> ParseFactor();
+    UnqPtr<ASTNode> ParseTerm();
+    UnqPtr<ASTNode> ParseExpr();
+    UnqPtr<ASTNode> ParseBoolExpr();
+    UnqPtr<ASTNode> ParseCond();
+    UnqPtr<ASTNode> ParseIfCond();
+    UnqPtr<ASTNode> ParseIfStatement();
+    UnqPtr<ASTNode> ParseWhile();
+    UnqPtr<ASTNode> ParseDoWhile();
+    UnqPtr<ASTNode> ParseProgram();
+    UnqPtr<ASTNode> ParseStatementBlock();
+    UnqPtr<ASTNode> ParseCompoundStatement();
+    std::vector<UnqPtr<ASTNode>> ParseStatementList();
+    UnqPtr<ASTNode> ParseDeclarationStatement();
+    UnqPtr<ASTNode> ParseStatement();
+    UnqPtr<ASTNode> ParseAssignStatement();
+    UnqPtr<ASTNode> ParseReturn();
+    UnqPtr<ASTNode> ParseEmpty();
 
-	bool failState = false; 
+    bool failState = false;
+    bool parsingCond = false;
 public:
-	Parser(const Lexer& lex);
-	~Parser();
+    Parser(const Lexer& lex);
 
-	ASTNode* GetAST() const { return failState ? nullptr : root; }
-	bool Success()    const { return !failState; }
+    ASTNode* GetAST() const noexcept { return failState ? nullptr : root.get(); }
+    bool Success()    const noexcept { return !failState; }
 };
