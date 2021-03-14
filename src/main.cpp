@@ -14,8 +14,13 @@
 
 #include "Parser/Parser.h"
 #include "AST/ASTVisualizer.h"
+#include "AST/ASTPrinterJson.h"
 
-constexpr const char* fileTypeFilter = "Source files (*.cpp *.h *.hpp *.txt){.cpp,.h,.hpp,.txt}";
+const char* saveFileFilter = ".h,.hpp,.cpp,.txt";
+const char* openFileFilter = "Source files (*.cpp *.h *.hpp *.txt){.cpp,.h,.hpp,.txt}";
+const char* tip = "Don't forget to select the type you want to save your file as!";
+const char* dialogDir = "D:/Desktop/CTests"; // TEMP! - USER SPECIFIC
+
 
 static void HelpMarker(const char* desc) // move somewhere else/remove/whatever
 {
@@ -37,22 +42,50 @@ struct Button
     std::function<void()> action;
 };
 
-static void Save(const TextEditor& editor, const std::string& fileName)
+[[maybe_unused]] static bool PrintToFile(const TextEditor& editor, const std::string& filePath)
 {
-    if (fileName == "Untitled")
-        ImGuiFileDialog::Instance()->OpenModal("SaveAsKey", "Save File As", fileTypeFilter, "D:/Desktop/CTests", "", 1, nullptr, ImGuiFileDialogFlags_ConfirmOverwrite);
-    else
+    std::ofstream outfile;
+    outfile.open(filePath);
+    if (outfile)
     {
-        std::ofstream outfile;
-        outfile.open(fileName);
-        if (outfile)
-        {
-            outfile << std::noskipws;
-            outfile << editor.GetText();
-            outfile.close();
-        }
-        else ImGui::OpenPopup("Error");
+        outfile << std::noskipws;
+        outfile << editor.GetText();
+        outfile.close();
+        return true;
     }
+    else ImGui::OpenPopup("Error");
+    return false;
+}
+
+static void Save(const TextEditor& editor, const std::string& filePath)
+{
+    if (filePath.empty())
+        ImGuiFileDialog::Instance()->OpenModal("SaveAsKey", "Save File As", saveFileFilter, dialogDir,
+            "", std::bind(&HelpMarker, tip), 30.0f, 1, nullptr, ImGuiFileDialogFlags_ConfirmOverwrite);
+    else PrintToFile(editor, filePath);
+}
+
+void ShowJsonButton(ASTNode* AST)
+{
+    if (ImGui::Begin("Parser Output"))
+    {
+        // GHETTO SOLUTION to append extras in the parser window.. (before nodes)
+        if (ImGui::BeginChild("ParserExtra"))
+        {
+            static float width = 100.0f;
+            float pos = width + ImGui::GetStyle().ItemSpacing.x;
+            ImGui::SameLine(ImGui::GetWindowWidth() - pos);
+            if (ImGui::Button("AST to JSON")) 
+            {
+                // This will happen even if the text has not changed...
+                ASTPrinterJson jsonPrinter;
+                jsonPrinter.PrintAST(*AST);
+            }
+            width = ImGui::GetItemRectSize().x;
+        }
+        ImGui::EndChild();
+    }
+    ImGui::End();
 }
 
 int main()
@@ -69,6 +102,7 @@ int main()
     TextEditor editor;
     editor.SetLanguageDefinition(TextEditor::LanguageDefinition::CPlusPlus());
     editor.SetShowWhitespaces(false);
+    std::string filePath;
     std::string fileName = "Untitled";
 
     ImGuiFileDialog::Instance()->SetExtentionInfos(".cpp", ImVec4(1.0f, 1.0f, 0.0f, 0.9f));
@@ -96,11 +130,11 @@ int main()
                 {
                 case sf::Keyboard::S:
                     if (event.key.control && !ImGuiFileDialog::Instance()->IsOpened())
-                        Save(editor, fileName);
+                        Save(editor, filePath);
                     break;
                 case sf::Keyboard::O:
                     if (event.key.control && !ImGuiFileDialog::Instance()->IsOpened())
-                        ImGuiFileDialog::Instance()->OpenModal("ChooseFileKey", "Choose File", fileTypeFilter, "D:/Desktop/CTests", "");
+                        ImGuiFileDialog::Instance()->OpenModal("ChooseFileKey", "Choose File", saveFileFilter, "D:/Desktop/CTests", "");
                     break;
                 case sf::Keyboard::Escape: window.close(); break;
                 default: break;
@@ -118,20 +152,20 @@ int main()
         {
             if (ImGui::BeginMenu("File"))
             {
-                if (ImGui::MenuItem("New"))
-                    editor.SetText(""); fileName = "Untitled";  //?? handle file name and extension seperately?
+                if (ImGui::MenuItem("New")) { editor.SetText(""); fileName = "Untitled"; filePath.clear(); }
                 if (ImGui::MenuItem("Open", "Ctrl+O"))
-                    ImGuiFileDialog::Instance()->OpenModal("ChooseFileKey", "Choose File", fileTypeFilter, "D:/Desktop/CTests", "");
-                if (ImGui::MenuItem("Save", "Ctrl+S")) Save(editor, fileName);
+                    ImGuiFileDialog::Instance()->OpenModal("ChooseFileKey", "Choose File", openFileFilter, dialogDir, "");
+                if (ImGui::MenuItem("Save", "Ctrl+S")) Save(editor, filePath);
                 if (ImGui::MenuItem("Save As..")) 
-                    ImGuiFileDialog::Instance()->OpenModal("SaveAsKey", "Save File As", fileTypeFilter, "D:/Desktop/CTests", "", 1, nullptr, ImGuiFileDialogFlags_ConfirmOverwrite);
+                    ImGuiFileDialog::Instance()->OpenModal("SaveAsKey", "Save File As", saveFileFilter, dialogDir, "",
+                        std::bind(&HelpMarker, tip), 50.0f, 1, nullptr, ImGuiFileDialogFlags_ConfirmOverwrite);
                 if (ImGui::MenuItem("Quit", "Alt-F4")) window.close();
                 ImGui::EndMenu();
             }
             if (ImGui::BeginMenu("Edit"))
             {
                 bool ro = editor.IsReadOnly();
-                if (ImGui::Checkbox("Read-only mode", &ro))                                                   editor.SetReadOnly(ro);
+                if (ImGui::Checkbox("Read-only mode", &ro))                                                    editor.SetReadOnly(ro);
                 ImGui::Separator();
 
                 if (ImGui::MenuItem("Undo",   "ALT-Backspace", nullptr, !ro && editor.CanUndo()))              editor.Undo();
@@ -161,7 +195,7 @@ int main()
             ImGui::EndMenuBar();
         }
 
-        // Text Editor Status Bar TODO: FIX OVERLAP WITH MODULE BUTTON GROUP
+        // Text Editor Status Bar - looong name will overlap with buttons
         const auto cpos = editor.GetCursorPosition();
         ImGui::Text("%6d/%-6d %6d lines  | %s | %s | %s | %s", cpos.mLine + 1, cpos.mColumn + 1, editor.GetTotalLines(),
             editor.IsOverwrite() ? "Ovr" : "Ins",
@@ -218,22 +252,24 @@ int main()
         ImGui::End();
 
         // Parser Output Window + AST Tree (if available)
-        viz.RenderAST(*parser.GetAST());  // also AST->Accept(viz); but no top banner
+        auto AST = parser.GetAST();
+        viz.RenderAST(*AST);
+        if (AST) ShowJsonButton(AST);      
 
         if (ImGuiFileDialog::Instance()->Display("ChooseFileKey"))
         {
             if (ImGuiFileDialog::Instance()->IsOk())
             {
                 std::ifstream infile;
-                fileName = ImGuiFileDialog::Instance()->GetFilePathName();
-                infile.open(fileName);
+                filePath = ImGuiFileDialog::Instance()->GetFilePathName();
+                infile.open(filePath);
                 if (infile)
                 {
                     std::vector<std::string> lines;
                     std::string line;
                     while (std::getline(infile, line)) lines.push_back(line);
                     editor.SetTextLines(lines);
-
+                    fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
                     infile.close();
                 }
                 else ImGui::OpenPopup("Error");
@@ -245,17 +281,12 @@ int main()
         {
             if (ImGuiFileDialog::Instance()->IsOk())
             {
-                std::string fpName = ImGuiFileDialog::Instance()->GetFilePathName();
-                std::ofstream outfile;
-                outfile.open(fpName);
-                if (outfile)
+                const std::string fpName = ImGuiFileDialog::Instance()->GetFilePathName();
+                if (PrintToFile(editor, fpName))
                 {
-                    outfile << std::noskipws;
-                    outfile << editor.GetText();
-                    fileName = fpName;
-                    outfile.close();
+                    filePath = fpName;
+                    fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
                 }
-                else ImGui::OpenPopup("Error");
             }
             ImGuiFileDialog::Instance()->Close();
         }
@@ -282,8 +313,5 @@ int main()
 *     - Docking - SFML backend issues                                        - low priority - unachievable atm (switch to other backend?)
 *     - Merge all compiler branches, create new on (dissertation)            - high priority
 *         Master becomes an ImGui frontend - can I carry commit history?                                  
-*     - spdlog? multisink for file and/or 'console' output?         
-*     - Utility is useless atm - move to ASTJson or something?               - high priority - do/sort it out before merge
-*         ASTVisualizer with old functionality - no console output thought?
-*     - Fix Overlap of editor status bar (filepath) and button group         - high priority
+*     - spdlog? multisink for file and/or 'console' output?                  - medium priority - decide - this changes all prints to file(dialogs etc)
 */
