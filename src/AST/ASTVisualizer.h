@@ -6,7 +6,6 @@
 #include <functional>
 
 #include "Visitor.h"
-#include "Utility.h"
 
 class ASTVisualizer : public ASTNodeVisitor
 {

@@ -93,7 +93,9 @@ void Logger::Draw(const char* title, bool* p_open)
             if (filter.PassFilter(line_start, line_end))
             {
                 ImGui::PushStyleColor(ImGuiCol_Text, lineOffsets[line_no].color);
+                //ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50.0f);
                 ImGui::TextUnformatted(line_start, line_end);
+                //ImGui::PopTextWrapPos();
                 ImGui::PopStyleColor();
             }
         }
@@ -109,7 +111,9 @@ void Logger::Draw(const char* title, bool* p_open)
                 const char* line_start = buf + lineOffsets[line_no].lineNo;
                 const char* line_end = (line_no + 1 < lineOffsets.size()) ? (buf + lineOffsets[line_no + 1].lineNo - 1) : buf_end;
                 ImGui::PushStyleColor(ImGuiCol_Text, lineOffsets[line_no].color);
+                //ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50.0f);
                 ImGui::TextUnformatted(line_start, line_end);
+                //ImGui::PopTextWrapPos();
                 ImGui::PopStyleColor();
             }
         }

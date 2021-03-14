@@ -7,10 +7,10 @@
 #include <functional>
 #include <TextEditor.h>
 
-#include "Error.h"
+#include "../Util/Error.h"
 #include "Token.h"
-#include "Logger.h"
-#include "ModuleManager.h"
+#include "../Util/Logger.h"
+#include "../Util/ModuleManager.h"
 
 class Lexer : public IObserver
 {

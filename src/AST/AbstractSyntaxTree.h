@@ -2,9 +2,9 @@
 #include <iostream>
 #include <memory>
 
-#include "Utility.h"
-#include "Visitor.h"
-#include "Token.h"
+#include "../Util/Utility.h"
+#include "../AST/Visitor.h"
+#include "../Lexer/Token.h"
 
 // Template Alias for node ptrs
 template<typename T>

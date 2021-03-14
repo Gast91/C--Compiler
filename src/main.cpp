@@ -12,8 +12,8 @@
 
 #include <fstream>
 
-#include "Parser.h"
-#include "ASTVisualizer.h"
+#include "Parser/Parser.h"
+#include "AST/ASTVisualizer.h"
 
 constexpr const char* fileTypeFilter = "Source files (*.cpp *.h *.hpp *.txt){.cpp,.h,.hpp,.txt}";
 
@@ -285,4 +285,5 @@ int main()
 *     - spdlog? multisink for file and/or 'console' output?         
 *     - Utility is useless atm - move to ASTJson or something?               - high priority - do/sort it out before merge
 *         ASTVisualizer with old functionality - no console output thought?
+*     - Fix Overlap of editor status bar (filepath) and button group         - high priority
 */

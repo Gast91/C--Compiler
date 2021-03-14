@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Lexer.h"
-#include "AbstractSyntaxTree.h"
+#include "../Lexer/Lexer.h"
+#include "../AST/AbstractSyntaxTree.h"
 
 class Parser : public IObserver
 {
