@@ -1,15 +1,15 @@
 # C--Compiler
 
-C--Compiler is an attempt to make, by hand, a very basic compiler to translate C++ into assembly.
+C--Compiler is an attempt to make, by hand, a very basic compiler to translate C++ into assembly for educational purposes.
 The aim to begin with, is for the compiler to be able to process a relatively small subset of C++, hence 
 the name C--. This project has nothing to do with the C-- proramming language despite what the name of this project might suggest. 
-This project was part of a final year dissertation. *[the final_year_proj_june2020](https://github.com/Gast91/C--Compiler/tree/fin_year_proj_june2020) branch reflects the project as it stood on submition*
+This project was part of a final year dissertation. <br>*[the final_year_proj_june2020](https://github.com/Gast91/C--Compiler/tree/fin_year_proj_june2020) branch reflects the project as it stood on submission*
 
 <br><p align="center">
   <img src="preview.png">
 </p>
 <br>
-## Getting Started
+### Getting Started
 
 
 ### Prerequisites
