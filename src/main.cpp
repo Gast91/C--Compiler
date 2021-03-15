@@ -13,6 +13,7 @@
 #include <fstream>
 
 #include "Parser/Parser.h"
+#include "Semantics/SemanticAnalyzer.h"
 #include "AST/ASTVisualizer.h"
 #include "AST/ASTPrinterJson.h"
 
@@ -20,7 +21,6 @@ const char* saveFileFilter = ".h,.hpp,.cpp,.txt";
 const char* openFileFilter = "Source files (*.cpp *.h *.hpp *.txt){.cpp,.h,.hpp,.txt}";
 const char* tip = "Don't forget to select the type you want to save your file as!";
 const char* dialogDir = "D:/Desktop/CTests"; // TEMP! - USER SPECIFIC
-
 
 static void HelpMarker(const char* desc) // move somewhere else/remove/whatever
 {
@@ -112,10 +112,11 @@ int main()
 
     Lexer lexer(&editor);
     Parser parser(&lexer);
+    SemanticAnalyzer sem;
     // Registering order MATTERS - should mirror the order they should be run in
-    ModuleManager::Instance()->RegisterObservers(&lexer, &parser);
+    ModuleManager::Instance()->RegisterObservers(&lexer, &parser, &sem);
 
-    ASTVisualizer viz;
+    ASTVisualizer astViz;
     while (window.isOpen()) 
     {
         sf::Event event;
@@ -205,7 +206,7 @@ int main()
         // Right Aligned Module Button Group
         static Button buttons[4] = {
         {"CodeGen",  100.0f, []()  {/*ModuleManager::Instance()->RunModulesUpTo(&codeGen);*/} },
-        {"Semantic", 100.0f, []()  {/*ModuleManager::Instance()->RunModulesUpTo(&sem);*/    } },
+        {"Semantic", 100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&parser); sem.SetRoot(parser.GetAST());  ModuleManager::Instance()->RunModulesUpTo(&sem);     } },  // GAAAAAAAH FIX ME
         {"Parse",    100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&parser);    } },
         {"Tokenize", 100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&lexer);     } } };
         const float itemSpacing = ImGui::GetStyle().ItemSpacing.x;
@@ -253,8 +254,30 @@ int main()
 
         // Parser Output Window + AST Tree (if available)
         auto AST = parser.GetAST();
-        viz.RenderAST(*AST);
-        if (AST) ShowJsonButton(AST);      
+        astViz.RenderAST(*AST);
+        if (AST) ShowJsonButton(AST);
+
+        // Semantics Window
+        if (ImGui::Begin("Semantic Analysis"))
+        {
+            static ImGuiTableFlags flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody;
+
+            if (ImGui::BeginTable("SemInfo", 3, flags))
+            {
+                static const float TEXT_BASE_WIDTH = ImGui::CalcTextSize("A").x;
+                // The first column will use the default _WidthStretch when ScrollX is Off and _WidthFixed when ScrollX is On
+                ImGui::TableSetupColumn("Symbol", ImGuiTableColumnFlags_NoHide);
+                ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, TEXT_BASE_WIDTH * 12.0f);
+                ImGui::TableSetupColumn("Nested Level", ImGuiTableColumnFlags_WidthFixed, TEXT_BASE_WIDTH * 18.0f);
+                ImGui::TableHeadersRow();
+
+                // call the render thingy
+                if (sem.Success()) sem.Render();
+
+                ImGui::EndTable();
+            }
+        }
+        ImGui::End();
 
         if (ImGuiFileDialog::Instance()->Display("ChooseFileKey"))
         {
@@ -300,6 +323,7 @@ int main()
         }
 
         Logger::Instance()->Draw("Console Output", NULL);
+
         //ImGui::ShowDemoWindow();
 
         window.clear();
@@ -312,5 +336,14 @@ int main()
 /*  TODO:
 *     - Docking - SFML backend issues                                        - low priority - unachievable atm (switch to other backend?)                               
 *     - spdlog? multisink for file and/or 'console' output?                  - medium priority - decide - this changes all prints to file(dialogs etc)
-*     - Continue Integration
+* 
+*     - Continue Integration of Sem, decide on display, Create scope ID,
+*       'print' and call interface, call guards etc                          - high priority
+*     - Sem can get name from node itself - GenerateID is also not needed?   - medium priority - INVESTIGATE
+*     - swap sem etc to unique_ptrs                                          - high priority
+*     - since we delete symboltable - imgui hash fails? unique_ptrs!         - high priority
+*     - try and decouple printing and sem - create new visitor? 
+*     - future buttons for node expansion?                                   - low priority
+*     - Tidy-up sem stuff                                                    - medium priority
+*     - Parser needs to run and THEN we get ROOT - Current way is UGLY       - high priority
 */
