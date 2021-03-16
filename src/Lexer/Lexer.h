@@ -41,16 +41,17 @@ public:
     virtual ~Lexer() = default;
 
     void Consume(const Token tokenType);
-    const TokenInfo& GetCurrentToken() const;
-    std::string GetCurrentTokenVal() const;
-    Token GetCurrentTokenType() const;
-    std::string GetCurrentTokenLine() const;
-    std::string GetCurrentTokenCol() const;
-    const std::vector<TokenInfo>& GetTokens() const;
+
+    const TokenInfo& GetCurrentToken() const { return sourceTokens.at(currentTokenIndex); }
+    std::string GetCurrentTokenVal()   const { return std::get<0>(sourceTokens.at(currentTokenIndex)); }
+    Token GetCurrentTokenType()        const;
+    std::string GetCurrentTokenLine()  const { return std::to_string(std::get<2>(sourceTokens.at(currentTokenIndex))); }
+    std::string GetCurrentTokenCol()   const { return std::to_string(std::get<3>(sourceTokens.at(currentTokenIndex))); }
+    const std::vector<TokenInfo>& GetTokens() const { return sourceTokens; }
 
     const ErrorInfo GetErrorInfo();
 
-    bool Done() const;
+    bool Done() const { return currentTokenIndex == sourceTokens.size(); }
     void ResetIndex() { currentTokenIndex = 0; }
 
     // Inherited via IObserver

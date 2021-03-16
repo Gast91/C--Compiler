@@ -168,20 +168,12 @@ constexpr bool Lexer::IsIdentifier(const std::string& identifier, const bool fir
     return false;
 }
 
-const std::vector<TokenInfo>& Lexer::GetTokens() const { return sourceTokens; }
-
-bool Lexer::Done()    const { return currentTokenIndex == sourceTokens.size(); }
-
-const TokenInfo& Lexer::GetCurrentToken() const { return sourceTokens.at(currentTokenIndex); }
-std::string Lexer::GetCurrentTokenVal()   const { return std::get<0>(sourceTokens.at(currentTokenIndex)); }
-Token Lexer::GetCurrentTokenType()        const 
+Token Lexer::GetCurrentTokenType() const 
 { 
     if (currentTokenIndex == sourceTokens.size())
         throw UnexpectedTokenException("Encountered Unexpected Token 'FILE_END'");
     return std::get<1>(sourceTokens.at(currentTokenIndex)); 
 }
-std::string Lexer::GetCurrentTokenLine() const { return std::to_string(std::get<2>(sourceTokens.at(currentTokenIndex))); }
-std::string Lexer::GetCurrentTokenCol()  const { return std::to_string(std::get<3>(sourceTokens.at(currentTokenIndex))); }
 
 const ErrorInfo Lexer::GetErrorInfo()  // what about semantic errors?
 {          
