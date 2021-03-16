@@ -17,7 +17,6 @@ private:
 
     int addressOffset = 0;
     bool failState = false;
-
     bool shouldRun = false;
 
     SymbolTable* CreateNewScope(const ASTNode* n, const char* tag);
@@ -49,12 +48,10 @@ public:
 
     void PrintAnalysisInfo() const;
     void Render() const;  // ??
-    bool Success() const;
-
-    void SetRoot(ASTNode* node) { root = node; }
 
     // Inherited via IObserver Interface
-    virtual bool ShouldRun() const override { return shouldRun; }
-    virtual void SetToRun() override { shouldRun = true; }
+    virtual bool ShouldRun()  const override { return shouldRun; }
+    virtual void SetToRun()         override { shouldRun = true; }
+    virtual void Update(ASTNode* n) override { root = n; }
     virtual void Run() override;
 };

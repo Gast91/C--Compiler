@@ -1,20 +1,29 @@
 #pragma once
 #include <set>
 
+class ASTNode;
 class IObserver
 {
 public:
     virtual ~IObserver() = default;
     virtual bool ShouldRun() const = 0;
     virtual void SetToRun() = 0;
+    virtual void Update(ASTNode* n) {}
     virtual void Run() = 0;
 };
 
-class ModuleManager
+class Subject
 {
-private:
+protected:
     std::set<IObserver*> observers;
-    
+public:
+    template<typename ...Args>
+    void RegisterObservers(Args... obs) { (observers.insert(observers.end(), obs), ...); }
+};
+
+class ModuleManager : public Subject
+{
+private:    
     ModuleManager() = default;
 public:
     static ModuleManager* Instance()
@@ -23,8 +32,6 @@ public:
         return &managerInstance;
     }
 
-    template<typename ...Args>
-    void RegisterObservers(Args... obs) { (observers.insert(observers.end(), obs), ...); }
     void NotifyModulesToRun() { for (auto& obs : observers) obs->SetToRun(); }
     void RunModulesUpTo(IObserver* obs)
     {

@@ -185,10 +185,9 @@ void SemanticAnalyzer::PrintAnalysisInfo() const
 
 void SemanticAnalyzer::Render() const
 {
+    if (failState) return;  // ??
     for (const auto& scope : symbolTable) scope->Render();
 }
-
-bool SemanticAnalyzer::Success() const { return !failState; }
 
 void SemanticAnalyzer::Run()
 {

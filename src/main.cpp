@@ -113,8 +113,11 @@ int main()
     Lexer lexer(&editor);
     Parser parser(&lexer);
     SemanticAnalyzer sem;
+
     // Registering order MATTERS - should mirror the order they should be run in
     ModuleManager::Instance()->RegisterObservers(&lexer, &parser, &sem);
+    // Registering order does NOT matter, parser's AST is observed for updates by many
+    parser.RegisterObservers(&sem);
 
     ASTVisualizer astViz;
     while (window.isOpen()) 
@@ -206,7 +209,7 @@ int main()
         // Right Aligned Module Button Group
         static Button buttons[4] = {
         {"CodeGen",  100.0f, []()  {/*ModuleManager::Instance()->RunModulesUpTo(&codeGen);*/} },
-        {"Semantic", 100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&parser); sem.SetRoot(parser.GetAST());  ModuleManager::Instance()->RunModulesUpTo(&sem);     } },  // GAAAAAAAH FIX ME
+        {"Semantic", 100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&sem);       } },
         {"Parse",    100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&parser);    } },
         {"Tokenize", 100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&lexer);     } } };
         const float itemSpacing = ImGui::GetStyle().ItemSpacing.x;
@@ -230,7 +233,7 @@ int main()
         ImGui::Begin("Lexer Output");
         if (ImGui::BeginTable("Tokens", 3, flags))
         {
-            // Freeze first row of the table - NEEDS ImGuiTableFlags_ScrollY flag
+            // To freeze the first row of the table we need the ImGuiTableFlags_ScrollY flag
             ImGui::TableSetupScrollFreeze(0, 1);
             ImGui::TableSetupColumn("Token");
             ImGui::TableSetupColumn("Type");
@@ -271,8 +274,7 @@ int main()
                 ImGui::TableSetupColumn("Nested Level", ImGuiTableColumnFlags_WidthFixed, TEXT_BASE_WIDTH * 18.0f);
                 ImGui::TableHeadersRow();
 
-                // call the render thingy
-                if (sem.Success()) sem.Render();
+                sem.Render();
 
                 ImGui::EndTable();
             }
@@ -345,5 +347,4 @@ int main()
 *     - try and decouple printing and sem - create new visitor? 
 *     - future buttons for node expansion?                                   - low priority
 *     - Tidy-up sem stuff                                                    - medium priority
-*     - Parser needs to run and THEN we get ROOT - Current way is UGLY       - high priority
 */
