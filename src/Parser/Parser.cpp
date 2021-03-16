@@ -4,16 +4,15 @@ void Parser::Run()
 {
     if (!shouldRun) return;
     failState = false;
-    done = false;
     try 
     { 
         root = ParseProgram();
-        done = true;
         shouldRun = false;
     }
     catch (const UnexpectedTokenException& ex) 
     { 
-        failState = true; 
+        failState = true;
+        root.reset();
         Logger::Error("%s \n", ex.what());
     }
 
@@ -21,6 +20,10 @@ void Parser::Run()
     // Somewhere, somehow not all tokens were processed.
     if (!lexer->Done()) 
         Logger::Error("Unproccessed tokens left starting at %s:%s\n", lexer->GetCurrentTokenLine().c_str(), lexer->GetCurrentTokenCol().c_str());
+
+    // AST was either reset or recreated, notify any observers that it has changed
+    NotifyASTChanged();
+
     // Reset lexer index back to the start for the next parse
     // If lexer is always called before parser (as it should), this is pointless
     lexer->ResetIndex();
@@ -54,7 +57,6 @@ UnqPtr<ASTNode> Parser::ParseFactor()
         return node;
     }
     else throw UnexpectedTokenException(lexer->GetErrorInfo(), "Encountered Unexpected Token '" + lexer->GetCurrentTokenVal() + '\'');
-    //tokValue?
 }
 
 // TERM := FACTOR ((MUL | DIV) FACTOR)*

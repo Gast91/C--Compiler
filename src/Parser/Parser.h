@@ -1,13 +1,16 @@
 #pragma once
-
 #include "../Lexer/Lexer.h"
 #include "../AST/AbstractSyntaxTree.h"
 
-class Parser : public IObserver
+class Parser : public IObserver, public Subject
 {
 private:
     Lexer* lexer;
     UnqPtr<ASTNode> root;
+
+    bool failState = false;
+    bool parsingCond = false;
+    bool shouldRun = false;
 
     UnqPtr<ASTNode> ParseFactor();
     UnqPtr<ASTNode> ParseTerm();
@@ -28,17 +31,11 @@ private:
     UnqPtr<ASTNode> ParseReturn();
     UnqPtr<ASTNode> ParseEmpty();
 
-    bool failState = false;
-    bool parsingCond = false;
-    bool done = false;
-
-    bool shouldRun = false;
+    void NotifyASTChanged() { for (auto& obs : observers) obs->Update(root.get()); }
 public:
     Parser(Lexer* lex) : lexer(lex) {}
-    virtual ~Parser() = default;
 
-    ASTNode* GetAST() const noexcept { return failState || !done ? nullptr : root.get(); }
-    bool Success()    const noexcept { return !failState; }
+    ASTNode* GetAST() const noexcept { return root.get(); }
 
     // Inherited via IObserver Interface
     virtual bool ShouldRun() const override { return shouldRun; }
