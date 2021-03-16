@@ -17,7 +17,7 @@ void Parser::Run()
         Logger::Error("%s \n", ex.what());
     }
 
-    if (!failState) Logger::Info("Parsing Successful, AST Built\n");
+    if (!failState && root) Logger::Info("Parsing Successful, AST Built\n");
     // Somewhere, somehow not all tokens were processed.
     if (!lexer->Done()) 
         Logger::Error("Unproccessed tokens left starting at %s:%s\n", lexer->GetCurrentTokenLine().c_str(), lexer->GetCurrentTokenCol().c_str());
@@ -182,6 +182,7 @@ UnqPtr<ASTNode> Parser::ParseDoWhile()
 // PROGRAM := int main LPAR RPAR { COMPOUND_STATEMENT }
 UnqPtr<ASTNode> Parser::ParseProgram()                           // hacky way for only main now - ParseTranslationUnit-> ParseFunction or ParseDeclaration
 {
+    if (lexer->GetTokenNumber() == 0) return UnqPtr<ASTNode>();
     lexer->Consume(Token::INT_TYPE);
     lexer->Consume(Token::MAIN);                                  // hack here as well
     lexer->Consume(Token::LPAR); 

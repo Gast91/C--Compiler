@@ -37,11 +37,12 @@ public:
 
     void Consume(const Token tokenType);
 
-    const TokenInfo& GetCurrentToken() const { return sourceTokens.at(currentTokenIndex); }
-    std::string GetCurrentTokenVal()   const { return std::get<0>(sourceTokens.at(currentTokenIndex)); }
-    Token GetCurrentTokenType()        const;
-    std::string GetCurrentTokenLine()  const { return std::to_string(std::get<2>(sourceTokens.at(currentTokenIndex))); }
-    std::string GetCurrentTokenCol()   const { return std::to_string(std::get<3>(sourceTokens.at(currentTokenIndex))); }
+    size_t GetTokenNumber()                   const { return sourceTokens.size(); }
+    const TokenInfo& GetCurrentToken()        const { return sourceTokens.at(currentTokenIndex); }
+    std::string GetCurrentTokenVal()          const { return std::get<0>(sourceTokens.at(currentTokenIndex)); }
+    Token GetCurrentTokenType()               const;
+    std::string GetCurrentTokenLine()         const { return std::to_string(std::get<2>(sourceTokens.at(currentTokenIndex))); }
+    std::string GetCurrentTokenCol()          const { return std::to_string(std::get<3>(sourceTokens.at(currentTokenIndex))); }
     const std::vector<TokenInfo>& GetTokens() const { return sourceTokens; }
 
     const ErrorInfo GetErrorInfo();

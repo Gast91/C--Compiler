@@ -60,9 +60,12 @@ void Lexer::Run()
         if (prev < line.length()) AddToken(line.substr(prev, std::string::npos), lineNo, col);
     }
     shouldRun = false;
-    Logger::Info("Tokenized input!\n");
-    for (const auto& tok : sourceTokens) Logger::Debug("%s ", std::get<0>(tok).c_str());
-    Logger::Debug("\n");
+    if (!sourceTokens.empty())
+    {
+        Logger::Info("Tokenized input!\n");
+        for (const auto& tok : sourceTokens) Logger::Debug("%s ", std::get<0>(tok).c_str());
+        Logger::Debug("\n");
+    }
 }
 
 std::string Lexer::GetSourceLine(const int line, const int col)

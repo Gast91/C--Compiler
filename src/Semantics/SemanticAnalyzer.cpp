@@ -5,13 +5,6 @@
 #include "../Util/Error.h"
 #include "../Util/Logger.h"
 
-//SemanticAnalyzer::SemanticAnalyzer()
-//{
-//    // At the start, the only Scope/Symbol Table is the Global one (which also has no parent)
-//    symbolTable.push_back(new SymbolTable("GLOBAL_SCOPE", 1));
-//    currentScope = symbolTable.back();
-//}
-
 SemanticAnalyzer::~SemanticAnalyzer() { for (const auto& scope : symbolTable) delete scope; }
 
 void SemanticAnalyzer::Visit(ASTNode& n)       { assert(("Semantic Analyzer visited base ASTNode class?!"      , false)); }
@@ -190,7 +183,7 @@ void SemanticAnalyzer::PrintAnalysisInfo() const
 
 void SemanticAnalyzer::Render() const
 {
-    if (failState) return;  // ??
+    if (failState || !root) return;  // ??
     for (const auto& scope : symbolTable) scope->Render();
 }
 
@@ -201,8 +194,7 @@ void SemanticAnalyzer::Run()
     failState = false;
     addressOffset = 0;
     
-    if (!symbolTable.empty()) for (const auto& scope : symbolTable) delete scope;
-
+    symbolTable.clear();
     symbolTable.push_back(new SymbolTable("GLOBAL_SCOPE", 1));
     currentScope = symbolTable.back();
 
