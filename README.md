@@ -3,14 +3,12 @@
 C--Compiler is an attempt to make, by hand, a very basic compiler to translate C++ into assembly for educational purposes.
 The aim to begin with, is for the compiler to be able to process a relatively small subset of C++, hence 
 the name C--. This project has nothing to do with the C-- proramming language despite what the name of this project might suggest. 
-This project was part of a final year dissertation. <br>*[the final_year_proj_june2020](https://github.com/Gast91/C--Compiler/tree/fin_year_proj_june2020) branch reflects the project as it stood on submission*
+<br>*This project was part of a final year dissertation. [the final_year_proj_june2020](https://github.com/Gast91/C--Compiler/tree/fin_year_proj_june2020) branch reflects the project as it stood on submission*
 
 <br><p align="center">
   <img src="preview.png">
 </p>
-<br>
-### Getting Started
-
+## Getting Started
 
 ### Prerequisites
 
@@ -21,7 +19,7 @@ This project was part of a final year dissertation. <br>*[the final_year_proj_ju
 - [ImGuiFileDialog](https://github.com/aiekick/ImGuiFileDialog) Dear ImGui Extension/Widget for file dialogs.
 - [magic_enum](https://github.com/Neargye/magic_enum) for stringifying enums.
 
-- [treant-js](https://github.com/fperucic/treant-js) can *optionally* be used to visualize the Abstract Syntax Tree produced by the parser using a web browser (required for the dissertation branch).
+- [treant-js](https://github.com/fperucic/treant-js) can *optionally* be used to visualize the Abstract Syntax Tree produced by the parser using a web browser (**required** for the dissertation branch).
 
 - C++17
 
@@ -29,13 +27,13 @@ This project was part of a final year dissertation. <br>*[the final_year_proj_ju
 
 - Lexical Analysis (Mostly complete but some tokens, while they will be tokenized, they wont be recongized leading the parser to throw an error)
 - Parsing (declaration, declaration-assignment, assignment, if-elseif-else, while-dowhile, arithmetic-logical expressions, return statements)
-- Semantic Analysis (Checks for variable being declared or redefined in the current scope, nested scopes, symbols, symbol tables)
-- Intermediate code generation (TAC) for the language constructs mentioned above.
-- Some assembly
+- **Partial integration in this branch** Semantic Analysis (Checks for variable being declared or redefined in the current scope, nested scopes, symbols, symbol tables)
+- **Not integrated yet in this branch** Intermediate code generation (TAC) for the language constructs mentioned above.
+- **Not integrated yet in this branch** Some assembly
 
 ### In Progress
 
-- Integration of current modules from [the final_year_proj_june2020](https://github.com/Gast91/C--Compiler/tree/fin_year_proj_june2020) as windows.
+- Integration of current modules from [the final_year_proj_june2020](https://github.com/Gast91/C--Compiler/tree/fin_year_proj_june2020) as Dear Imgui windows.
 
 ## Authors
 
