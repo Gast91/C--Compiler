@@ -16,6 +16,7 @@
 #include "Semantics/SemanticAnalyzer.h"
 #include "AST/ASTVisualizer.h"
 #include "AST/ASTPrinterJson.h"
+#include "Util/Logger.h"
 
 const char* saveFileFilter = ".h,.hpp,.cpp,.txt";
 const char* openFileFilter = "Source files (*.cpp *.h *.hpp *.txt){.cpp,.h,.hpp,.txt}";
@@ -67,6 +68,7 @@ static void Save(const TextEditor& editor, const std::string& filePath)
 
 void ShowJsonButton(ASTNode* AST)
 {
+    if (!AST) return;
     if (ImGui::Begin("Parser Output"))
     {
         // GHETTO SOLUTION to append extras in the parser window.. (before nodes)
@@ -112,6 +114,7 @@ int main()
 
     Lexer lexer(&editor);
     Parser parser(&lexer);
+    ASTVisualizer astViz;
     SemanticAnalyzer sem;
 
     // Registering order MATTERS - should mirror the order they should be run in
@@ -119,7 +122,6 @@ int main()
     // Registering order does NOT matter, parser's AST is observed for updates by many
     parser.RegisterObservers(&sem);
 
-    ASTVisualizer astViz;
     while (window.isOpen()) 
     {
         sf::Event event;
@@ -258,7 +260,7 @@ int main()
         // Parser Output Window + AST Tree (if available)
         auto AST = parser.GetAST();
         astViz.RenderAST(*AST);
-        if (AST) ShowJsonButton(AST);
+        ShowJsonButton(AST);
 
         // Semantics Window
         if (ImGui::Begin("Semantic Analysis"))

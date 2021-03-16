@@ -1,9 +1,21 @@
+#include <sstream>
+#include <fstream>
+
 #include "ASTPrinterJson.h"
 #include "AbstractSyntaxTree.h"
+#include "../Util/Logger.h"
 
 void ASTPrinterJson::PrintAST(ASTNode& n)
 {
-    out.open("AST.js");    // error checking - unable to open file? also must set to completely overwrite
+    out.open("AST.js");
+
+    if (!out) 
+    {
+        out.close(); 
+        Logger::Error("File writing failed..\n"); 
+        return;
+    }
+
     // First node is the parent of all other nodes and doesnt have a parent itself, its parentID is itself
     n.parentID = GenerateJSONHeader(out, &n, "ROOT", config);  // In the future this might also be a function
     // The next node in line will look for this one's id and that is why it's value is set to its own id rather than null
@@ -15,7 +27,7 @@ void ASTPrinterJson::PrintAST(ASTNode& n)
     // Footer of the file must be a configuration list of all the nodes and their ids
     GenerateJSONFooter(out, config);
     out.close();
-    std::cout << "\n\nAST Visualisation File Successfully created\n";
+    Logger::Info("AST Visualisation File Successfully created\n");
 }
 
 std::string ASTPrinterJson::GenerateID(const ASTNode* node, const char* ID)

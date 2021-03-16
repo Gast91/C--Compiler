@@ -1,4 +1,5 @@
 #include "Lexer.h"
+#include "../Util/Logger.h"
 
 void Lexer::Run()
 {

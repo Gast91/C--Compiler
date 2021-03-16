@@ -1,4 +1,9 @@
+#include <sstream>    // TODO: REMOVE ME WHEN YOU DECIDE AGOUT ID
+#include <iostream>
+
 #include "SemanticAnalyzer.h"
+#include "../Util/Error.h"
+#include "../Util/Logger.h"
 
 //SemanticAnalyzer::SemanticAnalyzer()
 //{
@@ -212,7 +217,7 @@ void SemanticAnalyzer::Run()
         Logger::Error("%s \n", ex.what());
     }
 
-    Logger::Info(failState ? "Semantic Analysis FAILED " : "Semantic Analysis Complete\n");
+    failState ? Logger::Error("Semantic Analysis failed..\n") : Logger::Info("Semantic Analysis Complete\n");
 }
 
 /* TODO:

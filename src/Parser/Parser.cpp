@@ -1,4 +1,5 @@
 #include "Parser.h"
+#include "../Util/Logger.h"
 
 void Parser::Run()
 {

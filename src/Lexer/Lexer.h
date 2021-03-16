@@ -1,15 +1,10 @@
 #pragma once
-#include <iostream>
-#include <fstream>
 #include <string>
-#include <sstream>
 #include <vector>
-#include <functional>
 #include <TextEditor.h>
 
-#include "../Util/Error.h"
 #include "Token.h"
-#include "../Util/Logger.h"
+#include "../Util/Error.h"
 #include "../Util/ModuleManager.h"
 
 class Lexer : public IObserver

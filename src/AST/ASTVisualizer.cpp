@@ -1,3 +1,5 @@
+#include <magic_enum.hpp>
+
 #include "ASTVisualizer.h"
 #include "AbstractSyntaxTree.h"
 

@@ -2,9 +2,6 @@
 #include <string>
 #include <map>
 #include <vector>
-#include <iostream>
-
-#include <imgui.h>
 
 class Symbol
 {

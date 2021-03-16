@@ -1,11 +1,7 @@
-#include <sstream>    // TODO: REMOVE ME WHEN YOU DECIDE AGOUT ID
-
 #include "Symbol.h"
 #include "../AST/Visitor.h"
 #include "../AST/AbstractSyntaxTree.h"
 #include "../Util/ModuleManager.h"
-#include "../Util/Error.h"
-#include "../Util/Logger.h"
 
 class SemanticAnalyzer : public ASTNodeVisitor, public IObserver
 {

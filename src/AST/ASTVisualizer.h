@@ -1,8 +1,5 @@
 #pragma once
-#include <vector>
-#include <fstream>
 #include <imgui.h>
-#include <magic_enum.hpp>
 #include <functional>
 
 #include "Visitor.h"
