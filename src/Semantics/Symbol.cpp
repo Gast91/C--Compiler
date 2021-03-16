@@ -100,22 +100,23 @@ void SymbolTable::Print() const
     for (const auto& s : symbols) s.second->Print();
     std::cout << '\n';
 }
+
 void SymbolTable::Render() const
 {
     ImGui::TableNextRow();
     ImGui::TableNextColumn();
     // SymbolName - change name to pointer to this and name is just an if or whatever rather than generate???
-    if (ImGui::TreeNodeEx(scopeName.c_str(), ImGuiTreeNodeFlags_SpanFullWidth))
+    const bool showNode = ImGui::TreeNodeEx(scopeName.c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
+    ImGui::TableNextColumn();
+    ImGui::TextUnformatted("Nested Scope");   // Not always Nested, Global is not nested
+    ImGui::TableNextColumn();
+    ImGui::TextDisabled(std::to_string(scopeLevel).c_str());
+    if (showNode)
     {
-        ImGui::TableNextColumn();   // SymbolType
-        ImGui::TextUnformatted("Nested Scope");   // ????
-        ImGui::TableNextColumn();   // Nested Level
-        ImGui::TextDisabled(std::to_string(scopeLevel).c_str());  // Level here?
-        for (const auto & s : symbols) s.second->Render();
+        for (const auto& s : symbols) s.second->Render();
         ImGui::TreePop();
-    }   
+    }
 }
-
 
 /* TODO:
     -Missing Type Checking
