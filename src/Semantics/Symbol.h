@@ -26,6 +26,7 @@ class BuiltInSymbol : public Symbol
 {
 public:
     BuiltInSymbol(std::string n);
+    virtual ~BuiltInSymbol() = default;
 
     virtual void Print()  const override;
     virtual void Render() const override;
@@ -37,6 +38,7 @@ class VariableSymbol : public Symbol
 {
 public:
     VariableSymbol(std::string n, std::string off, Symbol* t);
+    virtual ~VariableSymbol() = default;
 
     virtual void Print()  const override;
     virtual void Render() const override;
@@ -47,6 +49,7 @@ class NestedScope : public Symbol
 {
 public:
     NestedScope(std::string n);
+    virtual ~NestedScope() = default;
 
     virtual void Print()  const override;
     virtual void Render() const override;

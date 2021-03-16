@@ -17,6 +17,8 @@ class Subject
 protected:
     std::set<IObserver*> observers;
 public:
+    virtual ~Subject() = default;
+
     template<typename ...Args>
     void RegisterObservers(Args... obs) { (observers.insert(observers.end(), obs), ...); }
 };
@@ -26,6 +28,8 @@ class ModuleManager : public Subject
 private:    
     ModuleManager() = default;
 public:
+    virtual ~ModuleManager() = default;
+
     static ModuleManager* Instance()
     {
         static ModuleManager managerInstance;
