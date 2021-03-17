@@ -42,7 +42,6 @@ public:
     void Visit(ReturnStatementNode& n)   override;
     void Visit(EmptyStatementNode& n)    override;
 
-    void PrintAnalysisInfo() const;
     void Render() const;  // ??
 
     // Inherited via IObserver Interface

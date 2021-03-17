@@ -1,5 +1,4 @@
 #include <imgui.h>
-#include <iostream>
 
 #include "Symbol.h"
 
@@ -29,27 +28,19 @@ Symbol::Symbol(std::string n, std::string off, Symbol * t) : name(n), offset(off
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 BuiltInSymbol::BuiltInSymbol(std::string n) : Symbol(n) {}
 
-void BuiltInSymbol::Print()  const { std::cout << "<" << name << ">\n";  }
-
 void BuiltInSymbol::Render() const { RenderNodeColumns(name.c_str(), leafFlags, "Built-In Symbol", "--"); }
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 //-----------------------------------------VariableSymbol Definitions----------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 VariableSymbol::VariableSymbol(std::string n, std::string off, Symbol* t) : Symbol(n, off, t) {}
-void VariableSymbol::Print() const
-{
-    std::cout << name << ": ";
-    type->Print();
-}
+
 void VariableSymbol::Render() const { RenderNodeColumns(name.c_str(), leafFlags, type->name.c_str(), "--"); }
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 //-----------------------------------------NestedScope Definitions-------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 NestedScope::NestedScope(std::string n) : Symbol(n) {}
-
-void NestedScope::Print()  const { std::cout << name << " <NESTED_SCOPE>\n"; }
 
 void NestedScope::Render() const { RenderNodeColumns(name.c_str(), leafFlags, "Nested Scope", "--"); }
 
@@ -80,13 +71,6 @@ Symbol* SymbolTable::LookUpSymbol(const std::string& symName)
 { 
     if (const auto it = symbols.find(symName); it != symbols.end()) return it->second;
     else return parentScope ? parentScope->LookUpSymbol(symName) : nullptr;
-}
-
-void SymbolTable::Print() const
-{
-    std::cout << "Declared Symbols in '" << scopeName << "' <Lvl: " << std::to_string(scopeLevel) << "> :\n";
-    for (const auto& s : symbols) s.second->Print();
-    std::cout << '\n';
 }
 
 void SymbolTable::Render() const

@@ -1,5 +1,4 @@
 #include <sstream>    // TODO: REMOVE ME WHEN YOU DECIDE AGOUT ID
-#include <iostream>
 
 #include "SemanticAnalyzer.h"
 #include "../Util/Error.h"
@@ -17,7 +16,7 @@ void SemanticAnalyzer::Visit(IdentifierNode& n)   // Every identifier will be hi
     if (const auto sym = currentScope->LookUpSymbol(n.name); !sym)
     {
         failState = true;
-        throw SymbolNotFoundException("\nUse of undeclared identifier '" + n.name + "' at line " + n.lineNo + " in scope '"
+        throw SymbolNotFoundException("Use of undeclared identifier '" + n.name + "' at line " + n.lineNo + " in scope '"
             + currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
     }
     else n.offset = sym->offset;
@@ -163,7 +162,7 @@ void SemanticAnalyzer::Visit(AssignStatementNode& n)
     if (const auto sym = currentScope->LookUpSymbol(identifier->name); !sym)
     {
         failState = true;
-        throw SymbolNotFoundException("\nUse of undeclared identifier '" + identifier->name + "' at line " + identifier->lineNo + " in scope '"
+        throw SymbolNotFoundException("Use of undeclared identifier '" + identifier->name + "' at line " + identifier->lineNo + " in scope '"
             + currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
     }
     else identifier->offset = sym->offset;
@@ -174,12 +173,6 @@ void SemanticAnalyzer::Visit(AssignStatementNode& n)
 void SemanticAnalyzer::Visit(ReturnStatementNode& n) { n.expr->Accept(*this); }
 
 void SemanticAnalyzer::Visit(EmptyStatementNode& n) {}
-
-void SemanticAnalyzer::PrintAnalysisInfo() const
-{
-    std::cout << (failState ? "\nSemantic Analysis FAILED " : "\nSemantic Analysis Complete ") << "-> Dumping Scope / Symbol Information : \n\n";
-    for (const auto& scope : symbolTable) scope->Print();
-}
 
 void SemanticAnalyzer::Render() const
 {
@@ -206,7 +199,7 @@ void SemanticAnalyzer::Run()
     catch (const std::exception& ex)
     {
         failState = true;
-        Logger::Error("%s \n", ex.what());
+        Logger::Error("{}\n", ex.what());
     }
 
     failState ? Logger::Error("Semantic Analysis failed..\n") : Logger::Info("Semantic Analysis Complete\n");

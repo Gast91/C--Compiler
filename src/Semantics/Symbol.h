@@ -16,7 +16,6 @@ public:
     Symbol(std::string n, std::string off = "0", Symbol* t = nullptr);
     virtual ~Symbol() = default;  // SymbolTable class will handle the deleting of Symbols
 
-    virtual void Print()  const = 0;
     virtual void Render() const = 0;
 };
 
@@ -28,7 +27,6 @@ public:
     BuiltInSymbol(std::string n);
     virtual ~BuiltInSymbol() = default;
 
-    virtual void Print()  const override;
     virtual void Render() const override;
 };
 
@@ -40,7 +38,6 @@ public:
     VariableSymbol(std::string n, std::string off, Symbol* t);
     virtual ~VariableSymbol() = default;
 
-    virtual void Print()  const override;
     virtual void Render() const override;
 };
 
@@ -51,7 +48,6 @@ public:
     NestedScope(std::string n);
     virtual ~NestedScope() = default;
 
-    virtual void Print()  const override;
     virtual void Render() const override;
 };
 
@@ -75,6 +71,5 @@ public:
     bool DefineSymbol(Symbol* s);
     Symbol* LookUpSymbol(const std::string& symName);
 
-    void Print()  const;
     void Render() const;
 };
