@@ -2,8 +2,12 @@
 
 Logger::Logger()
 {
+    auto ostream_sink = std::make_shared<spdlog::sinks::ostream_sink_mt>(oss);
+    spdlogLogger = std::make_shared<spdlog::logger>("CompilerLogger", ostream_sink); 
+    spdlogLogger->set_pattern("%v");
+
     autoScroll = true;
-    logLevel = 1;
+    SetLevel(Level::INFO);
     Clear();
 }
 
@@ -17,15 +21,15 @@ void Logger::Clear()
 {
     buffer.clear();
     lineOffsets.clear();
-    lineOffsets.push_back({ 0, color[static_cast<int>(Level::DEBUG)] });
+    lineOffsets.push_back({ 0, color[static_cast<int>(Level::DEBUG) - 1] });
 }
 
 void Logger::Log(const Level lvl, const char* fmt, ...) IM_FMTARGS(2)
 {
-    if (static_cast<int>(lvl) < logLevel || lvl > Level::ERROR) return;
+    if (static_cast<int>(lvl) - 1 < logLevel || lvl > Level::ERROR) return;
 
     // Each line MUST be its own thing, else colors get scrambled FIX-ME? 
-    lineOffsets.back().color = color[static_cast<int>(lvl)];
+    lineOffsets.back().color = color[static_cast<int>(lvl) - 1];
 
     int old_size = buffer.size();
     va_list args;
@@ -35,8 +39,10 @@ void Logger::Log(const Level lvl, const char* fmt, ...) IM_FMTARGS(2)
     for (int new_size = buffer.size(); old_size < new_size; old_size++)
     {
         if (buffer[old_size] == '\n')
-            lineOffsets.push_back({ old_size + 1, color[static_cast<int>(lvl)] });
+            lineOffsets.push_back({ old_size + 1, color[static_cast<int>(lvl) - 1] });
     }
+    oss.str("");
+    oss.clear();
 }
 
 void Logger::Draw(const char* title, bool* p_open)
@@ -60,10 +66,10 @@ void Logger::Draw(const char* title, bool* p_open)
                     ImGui::ColorEdit4("Error", (float*)&color[3], ImGuiColorEditFlags_NoInputs);
                     ImGui::EndMenu();
                 }
-                ImGui::RadioButton("Debug", &logLevel, 0);
-                ImGui::RadioButton("Info",  &logLevel, 1);
-                ImGui::RadioButton("Warn",  &logLevel, 2);
-                ImGui::RadioButton("Error", &logLevel, 3);
+                if (ImGui::RadioButton("Debug", &logLevel, 0)) SetLevel(Level::DEBUG);
+                if (ImGui::RadioButton("Info",  &logLevel, 1)) SetLevel(Level::INFO);
+                if (ImGui::RadioButton("Warn",  &logLevel, 2)) SetLevel(Level::WARN);
+                if (ImGui::RadioButton("Error", &logLevel, 3)) SetLevel(Level::ERROR);
                 ImGui::EndMenu();
             }
             ImGui::EndMenu();
@@ -79,6 +85,7 @@ void Logger::Draw(const char* title, bool* p_open)
     filter.Draw("Filter", -100.0f);
 
     ImGui::Separator();
+    ImGui::PushTextWrapPos(ImGui::GetFontSize() * 50.0f);
     ImGui::BeginChild("scrolling", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);  
 
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
@@ -121,6 +128,7 @@ void Logger::Draw(const char* title, bool* p_open)
     }
     ImGui::PopStyleVar();
 
+    
     if (autoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY())
         ImGui::SetScrollHereY(1.0f);
 
