@@ -3,6 +3,22 @@
 
 #include "Symbol.h"
 
+template<typename ...Args>
+[[maybe_unused]] bool RenderNodeColumns(const char* nodeLabel, const ImGuiTreeNodeFlags nodeFlags, Args... columnText)
+{
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    const bool nodeVisible = ImGui::TreeNodeEx(nodeLabel, nodeFlags);
+    auto nextColumn = [](auto arg) {
+        ImGui::TableNextColumn();
+        ImGui::TextUnformatted(arg);
+    };
+    (nextColumn(columnText), ...);
+
+    return nodeVisible;
+}
+static const ImGuiTreeNodeFlags leafFlags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanFullWidth;
+
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 //-----------------------------------------Symbol Definitions------------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
@@ -12,18 +28,10 @@ Symbol::Symbol(std::string n, std::string off, Symbol * t) : name(n), offset(off
 //-----------------------------------------BuiltInSymbol Definitions-----------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 BuiltInSymbol::BuiltInSymbol(std::string n) : Symbol(n) {}
+
 void BuiltInSymbol::Print()  const { std::cout << "<" << name << ">\n";  }
-void BuiltInSymbol::Render() const
-{
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
-    // SymbolName - change name to pointer to this and name is just an if or whatever rather than generate???
-    ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanFullWidth);
-    ImGui::TableNextColumn();   // SymbolType
-    ImGui::TextUnformatted("Built-In Symbol");
-    ImGui::TableNextColumn();   // Nested Level
-    ImGui::TextDisabled("--");
-}
+
+void BuiltInSymbol::Render() const { RenderNodeColumns(name.c_str(), leafFlags, "Built-In Symbol", "--"); }
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 //-----------------------------------------VariableSymbol Definitions----------------------------------------------------------------------------------
@@ -34,36 +42,16 @@ void VariableSymbol::Print() const
     std::cout << name << ": ";
     type->Print();
 }
-void VariableSymbol::Render() const
-{
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
-    // SymbolName - the node itself | Type | NestedLvl?
-    // 
-    // SymbolName - change name to pointer to this and name is just an if or whatever rather than generate???
-    ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanFullWidth);
-    ImGui::TableNextColumn();   // SymbolType
-    ImGui::TextUnformatted(type->name.c_str());
-    ImGui::TableNextColumn();   // Nested Level
-    ImGui::TextDisabled("--");
-}
+void VariableSymbol::Render() const { RenderNodeColumns(name.c_str(), leafFlags, type->name.c_str(), "--"); }
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 //-----------------------------------------NestedScope Definitions-------------------------------------------------------------------------------------
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 NestedScope::NestedScope(std::string n) : Symbol(n) {}
+
 void NestedScope::Print()  const { std::cout << name << " <NESTED_SCOPE>\n"; }
-void NestedScope::Render() const
-{
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
-    // SymbolName - change name to pointer to this and name is just an if or whatever rather than generate???
-    ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanFullWidth);
-    ImGui::TableNextColumn();   // SymbolType
-    ImGui::TextUnformatted("Nested Scope");    // ???
-    ImGui::TableNextColumn();   // Nested Level
-    ImGui::TextDisabled("--");  // Level here?
-}
+
+void NestedScope::Render() const { RenderNodeColumns(name.c_str(), leafFlags, "Nested Scope", "--"); }
 
 //-----------------------------------------------------------------------------------------------------------------------------------------------------
 //-----------------------------------------SymbolTable Definitions-------------------------------------------------------------------------------------
@@ -85,11 +73,11 @@ bool SymbolTable::DefineSymbol(Symbol* s)
     return success;
 }
 
+// If the identifier is not found in the current scope, this function will
+// recursively check the parent scope all the way up to the global scope.
+// If it at the end the identifier is not present anywhere, there is a semantic error.
 Symbol* SymbolTable::LookUpSymbol(const std::string& symName)
-{
-    // If the identifier is not found in the current scope, this function will
-    // recursively check the parent scope all the way up to the global scope.
-    // If it at the end the identifier is not present anywhere, there is a semantic error.
+{ 
     if (const auto it = symbols.find(symName); it != symbols.end()) return it->second;
     else return parentScope ? parentScope->LookUpSymbol(symName) : nullptr;
 }
@@ -103,15 +91,7 @@ void SymbolTable::Print() const
 
 void SymbolTable::Render() const
 {
-    ImGui::TableNextRow();
-    ImGui::TableNextColumn();
-    // SymbolName - change name to pointer to this and name is just an if or whatever rather than generate???
-    const bool showNode = ImGui::TreeNodeEx(scopeName.c_str(), ImGuiTreeNodeFlags_SpanFullWidth);
-    ImGui::TableNextColumn();
-    ImGui::TextUnformatted("Nested Scope");   // Not always Nested, Global is not nested
-    ImGui::TableNextColumn();
-    ImGui::TextDisabled(std::to_string(scopeLevel).c_str());
-    if (showNode)
+    if (RenderNodeColumns(scopeName.c_str(), ImGuiTreeNodeFlags_SpanFullWidth, "Nested Scope", std::to_string(scopeLevel).c_str()))
     {
         for (const auto& s : symbols) s.second->Render();
         ImGui::TreePop();
