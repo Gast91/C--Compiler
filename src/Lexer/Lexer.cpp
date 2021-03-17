@@ -63,8 +63,8 @@ void Lexer::Run()
     if (!sourceTokens.empty())
     {
         Logger::Info("Tokenized input!\n");
-        for (const auto& tok : sourceTokens) Logger::Debug("%s ", std::get<0>(tok).c_str());
-        Logger::Debug("\n");
+        for (const auto& tok : sourceTokens) Logger::Debug("{} ", std::get<0>(tok));
+        Logger::Debug('\n');
     }
 }
 

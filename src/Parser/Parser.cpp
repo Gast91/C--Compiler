@@ -14,13 +14,13 @@ void Parser::Run()
     { 
         failState = true;
         root.reset();
-        Logger::Error("%s \n", ex.what());
+        Logger::Error("{}\n", ex.what());
     }
 
     if (!failState && root) Logger::Info("Parsing Successful, AST Built\n");
     // Somewhere, somehow not all tokens were processed.
     if (!lexer->Done()) 
-        Logger::Error("Unproccessed tokens left starting at %s:%s\n", lexer->GetCurrentTokenLine().c_str(), lexer->GetCurrentTokenCol().c_str());
+        Logger::Error("Unproccessed tokens left starting at {}:{}\n", lexer->GetCurrentTokenLine(), lexer->GetCurrentTokenCol());
 
     // AST was either reset or recreated, notify any observers that it has changed
     NotifyASTChanged();
