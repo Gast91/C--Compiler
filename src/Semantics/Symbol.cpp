@@ -73,8 +73,9 @@ Symbol* SymbolTable::LookUpSymbol(const std::string& symName)
     else return parentScope ? parentScope->LookUpSymbol(symName) : nullptr;
 }
 
-void SymbolTable::Render() const
+void SymbolTable::Render(int isOpen) const
 {
+    if (isOpen != -1) ImGui::SetNextItemOpen(isOpen != 0);
     if (RenderNodeColumns(scopeName.c_str(), ImGuiTreeNodeFlags_SpanFullWidth, "Nested Scope", std::to_string(scopeLevel).c_str()))
     {
         for (const auto& s : symbols) s.second->Render();

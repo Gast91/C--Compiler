@@ -263,10 +263,18 @@ int main()
         ShowJsonButton(AST);
 
         // Semantics Window
+        int open_action = -1;
         if (ImGui::Begin("Semantic Analysis"))
         {
-            static ImGuiTableFlags flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody;
+            if (sem.CanRender())
+            {
+                if (ImGui::Button("Expand Scopes"))   open_action = 1;
+                ImGui::SameLine();
+                if (ImGui::Button("Collapse Scopes")) open_action = 0;
+                ImGui::Separator();
+            }
 
+            static ImGuiTableFlags flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody;
             if (ImGui::BeginTable("SemInfo", 3, flags))
             {
                 static const float TEXT_BASE_WIDTH = ImGui::CalcTextSize("A").x;
@@ -276,7 +284,7 @@ int main()
                 ImGui::TableSetupColumn("Nested Level", ImGuiTableColumnFlags_WidthFixed, TEXT_BASE_WIDTH * 18.0f);
                 ImGui::TableHeadersRow();
 
-                sem.Render();
+                sem.Render(open_action);
 
                 ImGui::EndTable();
             }
@@ -345,8 +353,6 @@ int main()
 *       'print' and call interface, call guards etc                          - high priority
 *     - Sem can get name from node itself - GenerateID is also not needed?   - medium priority - INVESTIGATE
 *     - swap sem etc to unique_ptrs                                          - high priority
-*     - since we delete symboltable - imgui hash fails? unique_ptrs!         - high priority
 *     - try and decouple printing and sem - create new visitor? 
-*     - future buttons for node expansion?                                   - low priority
 *     - Tidy-up sem stuff                                                    - medium priority
 */

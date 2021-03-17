@@ -71,5 +71,5 @@ public:
     bool DefineSymbol(Symbol* s);
     Symbol* LookUpSymbol(const std::string& symName);
 
-    void Render() const;
+    void Render(int isOpen) const;
 };

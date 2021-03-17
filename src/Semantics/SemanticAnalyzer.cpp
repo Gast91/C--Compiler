@@ -174,10 +174,10 @@ void SemanticAnalyzer::Visit(ReturnStatementNode& n) { n.expr->Accept(*this); }
 
 void SemanticAnalyzer::Visit(EmptyStatementNode& n) {}
 
-void SemanticAnalyzer::Render() const
+void SemanticAnalyzer::Render(int isOpen) const
 {
-    if (failState || !root) return;  // ??
-    for (const auto& scope : symbolTable) scope->Render();
+    if (failState || !root) return;
+    for (const auto& scope : symbolTable) scope->Render(isOpen);
 }
 
 void SemanticAnalyzer::Run()

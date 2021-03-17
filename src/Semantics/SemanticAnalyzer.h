@@ -42,7 +42,8 @@ public:
     void Visit(ReturnStatementNode& n)   override;
     void Visit(EmptyStatementNode& n)    override;
 
-    void Render() const;  // ??
+    void Render(int isOpen) const;
+    bool CanRender() const { return !(failState || !root); }
 
     // Inherited via IObserver Interface
     virtual bool ShouldRun()  const override { return shouldRun; }
