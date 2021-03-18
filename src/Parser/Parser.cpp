@@ -34,6 +34,7 @@ void Parser::Run()
 UnqPtr<ASTNode> Parser::ParseFactor()
 {
     const auto&[tokValue, tokType, line, col] = lexer->GetCurrentToken();
+    const auto currentTokenInfo = lexer->GetCurrentToken();
     // Just a unary operator (+ or -) before a literal or identifier
     if (tokType == Token::ADD || tokType == Token::SUB)
     {
@@ -48,7 +49,7 @@ UnqPtr<ASTNode> Parser::ParseFactor()
     else if (tokType == Token::IDENTIFIER)
     {
         lexer->Consume(Token::IDENTIFIER);
-        return std::make_unique<IdentifierNode>(tokValue, std::to_string(line), tokType);
+        return std::make_unique<IdentifierNode>(currentTokenInfo);
     }
     else if (tokType == Token::LPAR)
     {
@@ -248,12 +249,11 @@ UnqPtr<ASTNode> Parser::ParseStatement()                                        
 UnqPtr<ASTNode> Parser::ParseDeclarationStatement() // in the future it should accommodate function declarations also
 {
     // Get the type specifier (int, float, char etc..) and consume it
-    std::string tokenVal; Token tokenType;
-    std::tie(tokenVal, tokenType, std::ignore, std::ignore) = lexer->GetCurrentToken();
+    const auto [tokenVal, tokenType, line, col] = lexer->GetCurrentToken();
     lexer->Consume(tokenType);
 
     // Next is identifier so process it
-    UnqPtr<IdentifierNode> ident = std::make_unique<IdentifierNode>(lexer->GetCurrentTokenVal(), lexer->GetCurrentTokenLine(), tokenType);
+    UnqPtr<IdentifierNode> ident = std::make_unique<IdentifierNode>(lexer->GetCurrentToken());
     lexer->Consume(Token::IDENTIFIER);
     // If there is an assignment following this is a declaration and assignment statement in one
     if (lexer->GetCurrentTokenType() == Token::ASSIGN)
@@ -272,8 +272,8 @@ UnqPtr<ASTNode> Parser::ParseDeclarationStatement() // in the future it should a
 // ASSIGN_STATEMENT := IDENTIFIER ASSIGN EXPRESSION
 UnqPtr<ASTNode> Parser::ParseAssignStatement()
 {
-    const auto& [tokenValue, tokenType, line, col] = lexer->GetCurrentToken();
-    UnqPtr<IdentifierNode> ident = std::make_unique<IdentifierNode>(tokenValue, std::to_string(line), tokenType);
+    const auto currentTokenInfo = lexer->GetCurrentToken();
+    UnqPtr<IdentifierNode> ident = std::make_unique<IdentifierNode>(currentTokenInfo);
     lexer->Consume(Token::IDENTIFIER);
     lexer->Consume(Token::ASSIGN);
     UnqPtr<ASTNode> node = std::make_unique<AssignStatementNode>(std::move(ident), ParseExpr());

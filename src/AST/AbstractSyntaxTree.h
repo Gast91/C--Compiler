@@ -80,12 +80,10 @@ public:
 class IdentifierNode : public ASTNode
 {
 public:
-    Token type;
+    TokenInfo tokenInfo;
     std::string offset;
-    const std::string name;
-    const std::string lineNo;
 public:
-    IdentifierNode(const std::string& n, const std::string& line, const Token t = Token::UNKNOWN) : name(n), lineNo(line), type(t) {}
+    IdentifierNode(const TokenInfo tokInfo) : tokenInfo(tokInfo) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
     void SetChildrenPrintID(const std::string& pID) noexcept override { /* No children */ }
@@ -195,7 +193,7 @@ public:
     UnqPtr<IdentifierNode> identifier;
     TokenPair type;
 public:
-    DeclareStatementNode(UnqPtr<IdentifierNode> ident, TokenPair t) noexcept : identifier(std::move(ident)), type(t) { identifier->type = t.second; }
+    DeclareStatementNode(UnqPtr<IdentifierNode> ident, TokenPair t) noexcept : identifier(std::move(ident)), type(t) { std::get<1>(identifier->tokenInfo) = t.second; }
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
     void SetChildrenPrintID(const std::string& pID) override {identifier->parentID = pID; }

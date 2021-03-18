@@ -99,7 +99,7 @@ void ASTVisualizer::Visit(IntegerNode& n)
 void ASTVisualizer::Visit(IdentifierNode& n)
 {
     ImGuiTreeNodeFlags node_flags = base_flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_Bullet;
-    ImGui::TreeNodeEx((void*)(intptr_t)&n, node_flags, "%s:%s", n.name.c_str(), magic_enum::enum_name(n.type).data());
+    ImGui::TreeNodeEx((void*)(intptr_t)&n, node_flags, "%s:%s", std::get<0>(n.tokenInfo).c_str(), magic_enum::enum_name(std::get<1>(n.tokenInfo)).data());
     nodeRect = { ImGui::GetItemRectMin(), ImGui::GetItemRectMax() };
 
     //ImDrawList* drawList = ImGui::GetWindowDrawList();

@@ -13,11 +13,12 @@ void SemanticAnalyzer::Visit(IntegerNode& n) {}
 
 void SemanticAnalyzer::Visit(IdentifierNode& n)   // Every identifier will be hit here, so the address must be set here to the one in the symbol table
 {
-    if (const auto sym = currentScope->LookUpSymbol(n.name); !sym)
+    if (const auto sym = currentScope->LookUpSymbol(std::get<0>(n.tokenInfo)); !sym)
     {
         failState = true;
-        throw SymbolNotFoundException("Use of undeclared identifier '" + n.name + "' at line " + n.lineNo + " in scope '"
-            + currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
+        const auto [variableName, variableType, line, col] = n.tokenInfo;
+        throw SymbolNotFoundException("Use of undeclared identifier '" + variableName + "' at line " + std::to_string(line) + ":" +
+            std::to_string(col) + " in scope '" + currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
     }
     else n.offset = sym->offset;
 }
@@ -134,8 +135,7 @@ void SemanticAnalyzer::Visit(DeclareStatementNode& n)
     // Look up Declaration Node's type in the symbol table
     Symbol* symbolType = currentScope->LookUpSymbol(n.type.first);
     // Get the variable name from the Declaration's Identifier Node
-    const std::string variableName = n.identifier->name;
-    const std::string line = n.identifier->lineNo;
+    const auto [variableName, variableType, line, col] = n.identifier->tokenInfo;
     addressOffset -= 4;  // This shouldnt be hardcoded for int32's but for now we only have ints
     // Define a new VarSymbol using variable name and symbolType
     Symbol* variableSymbol = new VariableSymbol(variableName, std::to_string(addressOffset), symbolType);
@@ -145,8 +145,8 @@ void SemanticAnalyzer::Visit(DeclareStatementNode& n)
         failState = true;
         // The redefined identifier will not be stored as the program is semantically wrong and Semantic Analysis will stop
         delete variableSymbol; // Clean up this temporary and throw the RedefinitionException
-        throw SymbolRedefinitionException("Redefinition of identifier '" + variableName + "' at line " + line + " in scope '"
-            + currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
+        throw SymbolRedefinitionException("Redefinition of identifier '" + variableName + "' at line " + std::to_string(line) + ":" +
+            std::to_string(col) + " in scope '"+ currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
     }
 }
 
@@ -159,11 +159,12 @@ void SemanticAnalyzer::Visit(DeclareAssignNode& n)
 void SemanticAnalyzer::Visit(AssignStatementNode& n)
 {
     IdentifierNode* identifier = dynamic_cast<IdentifierNode*>(n.left.get());
-    if (const auto sym = currentScope->LookUpSymbol(identifier->name); !sym)
+    if (const auto sym = currentScope->LookUpSymbol(std::get<0>(identifier->tokenInfo)); !sym)
     {
         failState = true;
-        throw SymbolNotFoundException("Use of undeclared identifier '" + identifier->name + "' at line " + identifier->lineNo + " in scope '"
-            + currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
+        const auto& [tokName, tokType, line, col] = identifier->tokenInfo;
+        throw SymbolNotFoundException("Use of undeclared identifier '" + tokName + "' at line " + std::to_string(line) + ":" +
+            std::to_string(col) + " in scope '" + currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
     }
     else identifier->offset = sym->offset;
     // Identifier's name (left) has been extracted. If we reached here we know the symbol's in the table so no need to visit left node

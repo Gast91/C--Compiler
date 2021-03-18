@@ -76,7 +76,7 @@ void ASTPrinterJson::Visit(IntegerNode& n)
 
 void ASTPrinterJson::Visit(IdentifierNode& n)
 {
-    (void)GenerateJSON(out, &n, "ID", n.parentID, n.name, config);
+    (void)GenerateJSON(out, &n, "ID", n.parentID, std::get<0>(n.tokenInfo), config);
 }
 
 void ASTPrinterJson::Visit(UnaryOperationNode& n)

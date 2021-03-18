@@ -131,4 +131,4 @@ static std::unordered_map<std::string, Token> tokens =
 };
 
 using TokenPair = std::pair<const std::string, Token>;
-using TokenInfo = std::tuple<const std::string, const Token, const int, const int>;
+using TokenInfo = std::tuple<const std::string, Token, const int, const int>;
