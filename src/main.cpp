@@ -17,31 +17,32 @@
 #include "AST/ASTVisualizer.h"
 #include "AST/ASTPrinterJson.h"
 #include "Util/Logger.h"
+#include "Util/Utility.h"
 
 const char* saveFileFilter = ".h,.hpp,.cpp,.txt";
 const char* openFileFilter = "Source files (*.cpp *.h *.hpp *.txt){.cpp,.h,.hpp,.txt}";
 const char* tip = "Don't forget to select the type you want to save your file as!";
 const char* dialogDir = "D:/Desktop/CTests"; // TEMP! - USER SPECIFIC
 
-static void HelpMarker(const char* desc) // move somewhere else/remove/whatever
-{
-    ImGui::TextDisabled("(?)");
-    if (ImGui::IsItemHovered())
-    {
-        ImGui::BeginTooltip();
-        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-        ImGui::TextUnformatted(desc);
-        ImGui::PopTextWrapPos();
-        ImGui::EndTooltip();
-    }
-}
-
-struct Button
-{
-    const char* label;
-    float width;
-    std::function<void()> action;
-};
+//static void HelpMarker(const char* desc) // move somewhere else/remove/whatever
+//{
+//    ImGui::TextDisabled("(?)");
+//    if (ImGui::IsItemHovered())
+//    {
+//        ImGui::BeginTooltip();
+//        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+//        ImGui::TextUnformatted(desc);
+//        ImGui::PopTextWrapPos();
+//        ImGui::EndTooltip();
+//    }
+//}
+//
+//struct Button
+//{
+//    const char* label;
+//    float width;
+//    std::function<void()> action;
+//};
 
 [[maybe_unused]] static bool PrintToFile(const TextEditor& editor, const std::string& filePath)
 {
@@ -218,7 +219,7 @@ int main()
             editor.GetLanguageDefinition().mName.c_str(), fileName.c_str());
 
         // Right Aligned Module Button Group
-        static Button buttons[4] = {
+        static ActionButton buttons[4] = {
         {"CodeGen",  100.0f, []()  {/*ModuleManager::Instance()->RunModulesUpTo(&codeGen);*/} },
         {"Semantic", 100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&sem);       } },
         {"Parse",    100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&parser);    } },

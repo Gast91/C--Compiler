@@ -1,8 +1,9 @@
-#include <sstream>    // TODO: REMOVE ME WHEN YOU DECIDE AGOUT ID
+//#include <sstream>    // TODO: REMOVE ME WHEN YOU DECIDE AGOUT ID
 
 #include "SemanticAnalyzer.h"
 #include "../Util/Error.h"
 #include "../Util/Logger.h"
+#include "../Util/Utility.h"
 
 SemanticAnalyzer::~SemanticAnalyzer() { for (const auto& scope : symbolTable) delete scope; }
 
@@ -38,12 +39,8 @@ void SemanticAnalyzer::Visit(ConditionNode& n)
 
 SymbolTable* SemanticAnalyzer::CreateNewScope(const ASTNode* n, const char* tag)
 {
-    std::stringstream ss;
-    ss << static_cast<const void*>(n);
-    std::string nestedScopeName = ss.str();
-    nestedScopeName.insert(0, tag);
     // Generate a name for the new nested scope and add it as a symbol into the parent scope (current)
-    //const std::string nestedScopeName = generateId();                                                      // TODO: REMOVE ME WHEN YOU DECIDE AGOUT ID
+    const std::string nestedScopeName = GenerateID(n, tag);
     currentScope->DefineSymbol(new NestedScope(nestedScopeName));
     
     // New nested scope with the nested scope name, at a greater depth than the current with the current scope as its parent

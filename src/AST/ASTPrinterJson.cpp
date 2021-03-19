@@ -4,6 +4,7 @@
 #include "ASTPrinterJson.h"
 #include "AbstractSyntaxTree.h"
 #include "../Util/Logger.h"
+#include "../Util/Utility.h"
 
 void ASTPrinterJson::PrintAST(ASTNode& n)
 {
@@ -28,15 +29,6 @@ void ASTPrinterJson::PrintAST(ASTNode& n)
     GenerateJSONFooter(out, config);
     out.close();
     Logger::Info("AST Visualisation File Successfully created\n");
-}
-
-std::string ASTPrinterJson::GenerateID(const ASTNode* node, const char* ID)
-{
-    std::stringstream ss;
-    ss << static_cast<const void*>(node);
-    std::string id = ss.str();
-    id.insert(0, ID);
-    return id;
 }
 
 std::string ASTPrinterJson::GenerateJSONHeader(std::ofstream& out, const ASTNode* root, const char* rootID, std::vector<std::string>& config)
