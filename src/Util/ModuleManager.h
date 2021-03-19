@@ -1,11 +1,13 @@
 #pragma once
 #include <set>
+#include <functional>
 
 class ASTNode;
 class IObserver
 {
 public:
     virtual ~IObserver() = default;
+    virtual void SetCallback(std::function<std::string(const int)> callback) = 0;
     virtual bool ShouldRun() const = 0;
     virtual void SetToRun() = 0;
     virtual void Update(ASTNode* n) {}
@@ -37,6 +39,10 @@ public:
     }
 
     void NotifyModulesToRun() { for (auto& obs : observers) obs->SetToRun(); }
+    void UpdateGetSourceLineCallback(std::function<std::string(const int)> callback)
+    {
+        for (auto obs : observers) obs->SetCallback(callback);
+    }
     void RunModulesUpTo(IObserver* obs)
     {
         for (auto it = observers.begin(); it != std::next(observers.find(obs)); ++it)

@@ -12,6 +12,8 @@ private:
     bool parsingCond = false;
     bool shouldRun = false;
 
+    std::function<std::string(const int)> GetSourceLine;
+
     UnqPtr<ASTNode> ParseFactor();
     UnqPtr<ASTNode> ParseTerm();
     UnqPtr<ASTNode> ParseExpr();
@@ -38,6 +40,7 @@ public:
     ASTNode* GetAST() const noexcept { return root.get(); }
 
     // Inherited via IObserver Interface
+    virtual void SetCallback(std::function<std::string(const int)> callback) override { GetSourceLine = callback; }
     virtual bool ShouldRun() const override { return shouldRun; }
     virtual void SetToRun() override { shouldRun = true; }
     virtual void Run() override;

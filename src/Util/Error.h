@@ -1,27 +1,32 @@
 #pragma once
-#include <string>
+#include <sstream>
+#include "../Lexer/Token.h"
 
-struct ErrorInfo
-{
-    const std::string sourceLoc;
-    const std::string sourceCode;
-};
+std::string BuildSourceErrorInfo(const TokenInfo tok, const std::string& srcCode);
 
 class UnexpectedTokenException : public std::exception
 {
+private:
+    static std::string errorMsg;
 public:
-    UnexpectedTokenException(const std::string& msg) : exception(("ERROR: " + msg).c_str()) {}  // PARSER ERROR
-    UnexpectedTokenException(const ErrorInfo e, const std::string& msg) : exception((e.sourceLoc + " PARSER ERROR: " + msg + "\n" + e.sourceCode).c_str()) {}
+    UnexpectedTokenException(const TokenInfo tokInfo, const std::string&& errorSrc) 
+        : exception((errorMsg + '\'' + std::get<0>(tokInfo) + "\' at " + BuildSourceErrorInfo(tokInfo, errorSrc)).c_str()) {}
 };
 
 class SymbolNotFoundException : public std::exception
 {
+private:
+    static std::string errorMsg;
 public:
-    SymbolNotFoundException(const std::string& msg) : exception(("\nERROR: " + msg).c_str()) {}  // SEMANTIC ANALYZER 
+    SymbolNotFoundException(const TokenInfo tokInfo, const std::string&& errorSrc)
+        : exception((errorMsg + '\'' + std::get<0>(tokInfo) + "\' at " + BuildSourceErrorInfo(tokInfo, errorSrc)).c_str()) {}
 };
 
 class SymbolRedefinitionException : public std::exception
 {
+private:
+    static std::string errorMsg;
 public:
-    SymbolRedefinitionException(const std::string& msg) : exception(("\nERROR: " + msg).c_str()) {} // SEMANTIC ANALYZER
+    SymbolRedefinitionException(const TokenInfo tokInfo, const std::string&& errorSrc)
+        : exception((errorMsg + '\'' + std::get<0>(tokInfo) + "\' at " + BuildSourceErrorInfo(tokInfo, errorSrc)).c_str()) {}
 };

@@ -119,6 +119,15 @@ int main()
 
     // Registering order MATTERS - should mirror the order they should be run in
     ModuleManager::Instance()->RegisterObservers(&lexer, &parser, &sem);
+    // Set callback for all registered modules that enables them to get back the line text from an error location
+    ModuleManager::Instance()->UpdateGetSourceLineCallback([&editor](const int line) {
+        const auto currentCoords = editor.GetCursorPosition();
+        editor.SetCursorPosition({ line - 1, 0 });
+        std::string sourceLine = editor.GetCurrentLineText();
+        editor.SetCursorPosition(currentCoords);
+        return sourceLine;
+        });
+
     // Registering order does NOT matter, parser's AST is observed for updates by many
     parser.RegisterObservers(&sem);
 

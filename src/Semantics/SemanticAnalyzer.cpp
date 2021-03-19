@@ -17,8 +17,7 @@ void SemanticAnalyzer::Visit(IdentifierNode& n)   // Every identifier will be hi
     {
         failState = true;
         const auto [variableName, variableType, line, col] = n.tokenInfo;
-        throw SymbolNotFoundException("Use of undeclared identifier '" + variableName + "' at line " + std::to_string(line) + ":" +
-            std::to_string(col) + " in scope '" + currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
+        throw SymbolNotFoundException(n.tokenInfo, GetSourceLine ? GetSourceLine(line) : "");
     }
     else n.offset = sym->offset;
 }
@@ -145,8 +144,7 @@ void SemanticAnalyzer::Visit(DeclareStatementNode& n)
         failState = true;
         // The redefined identifier will not be stored as the program is semantically wrong and Semantic Analysis will stop
         delete variableSymbol; // Clean up this temporary and throw the RedefinitionException
-        throw SymbolRedefinitionException("Redefinition of identifier '" + variableName + "' at line " + std::to_string(line) + ":" +
-            std::to_string(col) + " in scope '"+ currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
+        throw SymbolRedefinitionException(n.identifier->tokenInfo, GetSourceLine ? GetSourceLine(line) : "");
     }
 }
 
@@ -163,8 +161,7 @@ void SemanticAnalyzer::Visit(AssignStatementNode& n)
     {
         failState = true;
         const auto& [tokName, tokType, line, col] = identifier->tokenInfo;
-        throw SymbolNotFoundException("Use of undeclared identifier '" + tokName + "' at line " + std::to_string(line) + ":" +
-            std::to_string(col) + " in scope '" + currentScope->scopeName + "'<Lvl: " + std::to_string(currentScope->scopeLevel) + ">\n");
+        throw SymbolNotFoundException(identifier->tokenInfo, GetSourceLine ? GetSourceLine(line) : "");
     }
     else identifier->offset = sym->offset;
     // Identifier's name (left) has been extracted. If we reached here we know the symbol's in the table so no need to visit left node

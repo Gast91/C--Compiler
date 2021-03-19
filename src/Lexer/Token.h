@@ -63,7 +63,7 @@ enum class Token
     SEMI,
 // Miscellaneous
     NLINE,
-    FILE_END,
+    ENDF,
     UNKNOWN
 };
 
@@ -127,7 +127,7 @@ static std::unordered_map<std::string, Token> tokens =
 //-------Miscellaneous---------------------------
 //-----------------------------------------------
     { "\n"     , Token::NLINE        },
-    { "\032"   , Token::FILE_END     }
+    { "\032"   , Token::ENDF         }
 };
 
 using TokenPair = std::pair<const std::string, Token>;

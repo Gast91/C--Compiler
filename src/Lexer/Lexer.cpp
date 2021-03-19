@@ -62,19 +62,12 @@ void Lexer::Run()
     shouldRun = false;
     if (!sourceTokens.empty())
     {
+        // The last token is always the end of file, to guard against accessing past the end of sourceTokens
+        sourceTokens.push_back({ "EOF", Token::ENDF, lineNo + 1, 1 });
         Logger::Info("Tokenized input!\n");
         for (const auto& tok : sourceTokens) Logger::Debug("{} ", std::get<0>(tok));
         Logger::Debug('\n');
     }
-}
-
-std::string Lexer::GetSourceLine(const int line, const int col)
-{
-    const auto currentCoords = editor->GetCursorPosition();
-    editor->SetCursorPosition({ line, col });
-    std::string sourceLine = editor->GetCurrentLineText();
-    editor->SetCursorPosition(currentCoords);
-    return sourceLine;
 }
 
 void Lexer::AddToken(const std::string& tok, const size_t lineNo, const size_t col)
@@ -172,26 +165,9 @@ constexpr bool Lexer::IsIdentifier(const std::string& identifier, const bool fir
     return false;
 }
 
-Token Lexer::GetCurrentTokenType() const 
-{ 
-    if (currentTokenIndex == sourceTokens.size())
-        throw UnexpectedTokenException("Encountered Unexpected Token 'FILE_END'");
-    return std::get<1>(sourceTokens.at(currentTokenIndex)); 
-}
-
-const ErrorInfo Lexer::GetErrorInfo()  // what about semantic errors?
-{          
-    const auto& [tok, type, line, col] = sourceTokens.at(currentTokenIndex);
-    const std::string loc = "<source>::" + std::to_string(line) + ":" + std::to_string(col) + ":";
-    const std::string seperator = "\t|\t\t";
-    std::string codeLine = seperator + GetSourceLine(line - 1, 0);
-    codeLine.append("\n" + seperator).append(col - 1, ' ').append("^").append(std::get<0>(sourceTokens.at(currentTokenIndex)).size() - 1, '~');
-    return { loc, codeLine };
-}
-
 void Lexer::Consume(const Token tokenType)
 {
     const auto& [tok, type, line, col] = sourceTokens.at(currentTokenIndex);
     if (tokenType == type && currentTokenIndex < sourceTokens.size()) ++currentTokenIndex;
-    else throw UnexpectedTokenException(GetErrorInfo(), "Encountered Unexpected Token '" + std::get<0>(sourceTokens.at(currentTokenIndex)) + '\'');
+    else throw UnexpectedTokenException(GetCurrentToken(), GetSourceLine ? GetSourceLine(line) : "");
 }

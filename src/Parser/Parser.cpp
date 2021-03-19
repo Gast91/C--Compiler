@@ -7,7 +7,8 @@ void Parser::Run()
     failState = false;
     try 
     { 
-        root = ParseProgram();
+        // Don't bother creating the AST if there are no tokens
+        root = lexer->GetTokenNumber() == 0 ? UnqPtr<ASTNode>() : ParseProgram();
         shouldRun = false;
     }
     catch (const UnexpectedTokenException& ex) 
@@ -58,7 +59,7 @@ UnqPtr<ASTNode> Parser::ParseFactor()
         lexer->Consume(Token::RPAR);
         return node;
     }
-    else throw UnexpectedTokenException(lexer->GetErrorInfo(), "Encountered Unexpected Token '" + lexer->GetCurrentTokenVal() + '\'');
+    else throw UnexpectedTokenException(lexer->GetCurrentToken(), GetSourceLine ? GetSourceLine(line) : "");
 }
 
 // TERM := FACTOR ((MUL | DIV) FACTOR)*
@@ -181,9 +182,8 @@ UnqPtr<ASTNode> Parser::ParseDoWhile()
 }
 
 // PROGRAM := int main LPAR RPAR { COMPOUND_STATEMENT }
-UnqPtr<ASTNode> Parser::ParseProgram()                           // hacky way for only main now - ParseTranslationUnit-> ParseFunction or ParseDeclaration
+UnqPtr<ASTNode> Parser::ParseProgram()                            // hacky way for only main now - ParseTranslationUnit-> ParseFunction or ParseDeclaration
 {
-    if (lexer->GetTokenNumber() == 0) return UnqPtr<ASTNode>();
     lexer->Consume(Token::INT_TYPE);
     lexer->Consume(Token::MAIN);                                  // hack here as well
     lexer->Consume(Token::LPAR); 
@@ -240,8 +240,7 @@ UnqPtr<ASTNode> Parser::ParseStatement()                                        
     else if    (tokenType == Token::IDENTIFIER) return ParseAssignStatement();        // Can parse an assign statement or a declare and assign statement
     else if    (tokenType == Token::LCURLY)	    return ParseStatementBlock();         // Specifically parses free floating statement blocks (enclosed by { })
     else if    (tokenType == Token::RCURLY)	    return ParseEmpty();
-    //else if    (tokenType == Token::FILE_END)   return ParseEmpty();                  // Needed? - Not used atm
-    throw UnexpectedTokenException(lexer->GetErrorInfo(), "Encountered Unexpected Token '" + tokenValue + '\'');
+    throw UnexpectedTokenException(lexer->GetCurrentToken(), GetSourceLine ? GetSourceLine(line) : "");
 }
 
 // DECLARATION_STATEMENT := TYPE_SPECIFIER IDENTIFIER SEMI |

@@ -17,6 +17,8 @@ private:
 
     bool shouldRun = false;
 
+    std::function<std::string(const int)> GetSourceLine;
+
     void AddToken(const std::string& tok, const size_t lineNo, const size_t col);
 
     bool IsDiscardableCharacter(const std::string& delimiter) const noexcept;
@@ -29,8 +31,6 @@ private:
     bool IsInteger(const std::string& num) const;
     bool IsCharacter(const unsigned char c) const noexcept;
     constexpr bool IsIdentifier(const std::string& identifier, const bool firstCall) const;
-
-    std::string GetSourceLine(const int line, const int col);
 public:
     Lexer(TextEditor* ed) : editor(ed) {}
     virtual ~Lexer() = default;
@@ -40,17 +40,16 @@ public:
     size_t GetTokenNumber()                   const { return sourceTokens.size(); }
     const TokenInfo& GetCurrentToken()        const { return sourceTokens.at(currentTokenIndex); }
     std::string GetCurrentTokenVal()          const { return std::get<0>(sourceTokens.at(currentTokenIndex)); }
-    Token GetCurrentTokenType()               const;
+    Token GetCurrentTokenType()               const { return std::get<1>(sourceTokens.at(currentTokenIndex)); }
     std::string GetCurrentTokenLine()         const { return std::to_string(std::get<2>(sourceTokens.at(currentTokenIndex))); }
     std::string GetCurrentTokenCol()          const { return std::to_string(std::get<3>(sourceTokens.at(currentTokenIndex))); }
     const std::vector<TokenInfo>& GetTokens() const { return sourceTokens; }
 
-    const ErrorInfo GetErrorInfo();
-
-    bool Done() const { return currentTokenIndex == sourceTokens.size(); }
+    bool Done() const { return GetCurrentTokenType() == Token::ENDF; }
     void ResetIndex() { currentTokenIndex = 0; }
 
     // Inherited via IObserver
+    virtual void SetCallback(std::function<std::string(const int)> callback) override { GetSourceLine = callback; }
     virtual bool ShouldRun() const override { return shouldRun; }
     virtual void SetToRun() override { shouldRun = true; }
     virtual void Run() override;

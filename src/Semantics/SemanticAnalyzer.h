@@ -15,6 +15,8 @@ private:
     bool failState = false;
     bool shouldRun = false;
 
+    std::function<std::string(const int)> GetSourceLine;
+
     SymbolTable* CreateNewScope(const ASTNode* n, const char* tag);
 public:
     SemanticAnalyzer() = default;
@@ -46,6 +48,7 @@ public:
     bool CanRender() const { return !(failState || !root); }
 
     // Inherited via IObserver Interface
+    virtual void SetCallback(std::function<std::string(const int)> callback) override { GetSourceLine = callback; }
     virtual bool ShouldRun()  const override { return shouldRun; }
     virtual void SetToRun()         override { shouldRun = true; }
     virtual void Update(ASTNode* n) override { root = n; }
