@@ -37,7 +37,6 @@ public:
 
     void Consume(const Token tokenType);
 
-    size_t GetTokenNumber()                   const { return sourceTokens.size(); }
     const TokenInfo& GetCurrentToken()        const { return sourceTokens.at(currentTokenIndex); }
     std::string GetCurrentTokenVal()          const { return std::get<0>(sourceTokens.at(currentTokenIndex)); }
     Token GetCurrentTokenType()               const { return std::get<1>(sourceTokens.at(currentTokenIndex)); }
@@ -45,7 +44,8 @@ public:
     std::string GetCurrentTokenCol()          const { return std::to_string(std::get<3>(sourceTokens.at(currentTokenIndex))); }
     const std::vector<TokenInfo>& GetTokens() const { return sourceTokens; }
 
-    bool Done() const { return GetCurrentTokenType() == Token::ENDF; }
+    bool Done()      const { return sourceTokens.empty() || GetCurrentTokenType() == Token::ENDF; }
+    bool HasTokens() const { return !sourceTokens.empty(); }
     void ResetIndex() { currentTokenIndex = 0; }
 
     // Inherited via IObserver

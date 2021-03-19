@@ -8,7 +8,7 @@ void Parser::Run()
     try 
     { 
         // Don't bother creating the AST if there are no tokens
-        root = lexer->GetTokenNumber() == 0 ? UnqPtr<ASTNode>() : ParseProgram();
+        root = lexer->HasTokens() ? ParseProgram() : UnqPtr<ASTNode>();
         shouldRun = false;
     }
     catch (const UnexpectedTokenException& ex) 
