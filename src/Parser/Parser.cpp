@@ -222,7 +222,7 @@ std::vector<UnqPtr<ASTNode>> Parser::ParseStatementList()
     nodes.push_back(std::move(node));
 
     // Statement list ends at a closing curly bracket
-    while (lexer->GetCurrentTokenType() != Token::RCURLY) nodes.push_back(ParseStatement());  // GetCurrentTokenType accesses past end of array if there is no ending semicolon
+    while (lexer->GetCurrentTokenType() != Token::RCURLY) nodes.push_back(ParseStatement());
     lexer->Consume(Token::RCURLY);
     return nodes;
 }
@@ -239,7 +239,13 @@ UnqPtr<ASTNode> Parser::ParseStatement()                                        
     else if    (tokenType == Token::INT_TYPE)   return ParseDeclarationStatement();   // lexer.isType()? the same will happen for all types - and functions + void
     else if    (tokenType == Token::IDENTIFIER) return ParseAssignStatement();        // Can parse an assign statement or a declare and assign statement
     else if    (tokenType == Token::LCURLY)	    return ParseStatementBlock();         // Specifically parses free floating statement blocks (enclosed by { })
-    else if    (tokenType == Token::RCURLY)	    return ParseEmpty();
+    else if    (tokenType == Token::RCURLY)     return ParseEmpty();
+    else if    (tokenType == Token::SEMI)       // Just an empty statement (semicolon on its own)
+    { 
+        lexer->Consume(Token::SEMI); 
+        return ParseEmpty();
+    }
+                                                
     throw UnexpectedTokenException(lexer->GetCurrentToken(), GetSourceLine ? GetSourceLine(line) : "");
 }
 
