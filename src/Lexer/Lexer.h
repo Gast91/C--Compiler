@@ -50,4 +50,5 @@ public:
     virtual bool ShouldRun() const override { return shouldRun; }
     virtual void SetToRun()        override { shouldRun = true; }
     virtual void Update()          override;
+    virtual void Reset()           override;
 };

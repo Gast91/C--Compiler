@@ -7,12 +7,8 @@ void Lexer::Update()
     if (!shouldRun) return;
 
     const auto& srcLines = editor->GetTextLines();
-    // Reset Lexer state for next run
-    if (!sourceTokens.empty())
-    {
-        sourceTokens.clear();
-        currentTokenIndex = 0;
-    }
+    Reset();
+
     size_t lineNo = 0;
     bool multiline = false;
     for (const auto& line : srcLines)
@@ -68,6 +64,15 @@ void Lexer::Update()
         Logger::Info("Tokenized input!\n");
         for (const auto& tok : sourceTokens) Logger::Debug("{} ", std::get<0>(tok));
         Logger::Debug('\n');
+    }
+}
+
+void Lexer::Reset()
+{
+    if (!sourceTokens.empty())
+    {
+        sourceTokens.clear();
+        currentTokenIndex = 0;
     }
 }
 

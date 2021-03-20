@@ -24,11 +24,18 @@ void Parser::Update()
         Logger::Error("Unproccessed tokens left starting at {}:{}\n", lexer->GetCurrentTokenLine(), lexer->GetCurrentTokenCol());
 
     // AST was either reset or recreated, notify any observers that it has changed
-    NotifyObservers();
+    NotifyObservers(Notify::ASTChanged);
 
     // Reset lexer index back to the start for the next parse
     // If lexer is always called before parser (as it should), this is pointless
     lexer->ResetIndex();
+}
+
+void Parser::Reset()
+{
+    failState = false;
+    root.reset();
+    NotifyObservers(Notify::ASTChanged);
 }
 
 // FACTOR := (ADD | SUB ) FACTOR | INTEGER | IDENTIFIER | LPAR EXPRESSION RPAR

@@ -174,12 +174,7 @@ void SemanticAnalyzer::Update()
 {
     if (!shouldRun || !root) return;
 
-    failState = false;
-    addressOffset = 0;
-    
-    symbolTable.clear();
-    symbolTable.push_back(std::make_unique<SymbolTable>("GLOBAL_SCOPE", 1));
-    currentScope = symbolTable.back().get();
+    Reset();
 
     try
     {
@@ -193,6 +188,16 @@ void SemanticAnalyzer::Update()
     }
 
     failState ? Logger::Error("Semantic Analysis failed..\n") : Logger::Info("Semantic Analysis Complete\n");
+}
+
+void SemanticAnalyzer::Reset()
+{
+    failState = false;
+    addressOffset = 0;
+
+    symbolTable.clear();
+    symbolTable.push_back(std::make_unique<SymbolTable>("GLOBAL_SCOPE", 1));
+    currentScope = symbolTable.back().get();
 }
 
 /* TODO:

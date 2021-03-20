@@ -34,10 +34,11 @@ public:
     Parser(Lexer* lex) : lexer(lex) {}
 
     // Inherited via the Subject Interface
-    virtual void NotifyObservers() override { for (auto& obs : observers) obs->Update(root.get()); }
+    virtual void NotifyObservers(const Notify what) override { for (auto& obs : observers) obs->Update(root.get()); }
 
     // Inherited via IObserver Interface
     virtual bool ShouldRun() const override { return shouldRun; }
     virtual void SetToRun()        override { shouldRun = true; }
     virtual void Update()          override;
+    virtual void Reset()           override;
 };

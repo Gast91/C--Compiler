@@ -47,4 +47,5 @@ public:
     virtual void SetToRun()         override { shouldRun = true; }
     virtual void Update(ASTNode* n) override { root = n; symbolTable.clear(); }
     virtual void Update()           override;
+    virtual void Reset()            override;
 };

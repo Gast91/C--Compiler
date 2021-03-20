@@ -3,6 +3,7 @@
 #include <functional>
 
 class ASTNode;
+enum class Notify { ShouldRun, ToReset, Run, ASTChanged };
 
 template<typename T = void>
 class IObserver
@@ -23,6 +24,7 @@ public:
 	virtual bool ShouldRun() const = 0;
 	virtual void SetToRun() = 0;
 	virtual void Update() = 0;
+	virtual void Reset() = 0;
 };
 
 template<typename T>
@@ -36,7 +38,7 @@ public:
 	template<typename ...Args>
 	void RegisterObservers(Args... obs) { (observers.push_back(obs), ...); }
 
-	virtual void NotifyObservers() = 0;
+	virtual void NotifyObservers(const Notify what) = 0;
 };
 
 class ModuleManager : public Subject<void>
@@ -52,11 +54,22 @@ public:
 		return &managerInstance;
 	}
 
-	virtual void NotifyObservers() override { for (auto& obs : observers) obs->SetToRun(); }
+	virtual void NotifyObservers(const Notify what) override 
+	{ 
+		switch (what)
+		{
+		case Notify::ShouldRun: for (auto& obs : observers) obs->SetToRun(); return;
+		case Notify::ToReset:   for (auto& obs : observers) obs->Reset();    return;
+		case Notify::Run:       for (auto& obs : observers) obs->Update();   return;
+		case Notify::ASTChanged: /*This is not a valid option for manager*/  return;
+		}
+	}
+
 	void UpdateGetSourceLineCallback(std::function<std::string(const int)> callback)
 	{
 		for (auto obs : observers) obs->SetCallback(callback);
 	}
+
 	void RunModulesUpTo(IObserver<void>* obs)
 	{
 		for (auto it = observers.begin(); it != std::next(std::find(observers.begin(), observers.end(), obs)); ++it)
