@@ -1,4 +1,5 @@
 #include <imgui.h>
+#include <imgui_stdlib.h>
 #include <imgui-SFML.h>
 
 #include <TextEditor.h>
@@ -106,7 +107,13 @@ int main()
         {
             if (ImGui::BeginMenu("File"))
             {
-                if (ImGui::MenuItem("New")) { editor.SetText(""); fileName = "Untitled"; filePath.clear(); }
+                if (ImGui::MenuItem("New")) 
+                { 
+                    editor.SetText("");
+                    fileName = "Untitled";
+                    filePath.clear();
+                    ModuleManager::Instance()->NotifyObservers(Notify::ToReset);
+                }
                 if (ImGui::MenuItem("Open", "Ctrl+O"))
                     ImGuiFileDialog::Instance()->OpenModal("ChooseFileKey", "Choose File", FD::openFileFilter, FD::dialogDir, "");
                 if (ImGui::MenuItem("Save", "Ctrl+S")) FD::Save(&editor, filePath);
@@ -175,7 +182,7 @@ int main()
         ImGui::Spacing();
         
         // Module notification HAS to happen before the editor is rendered since changed flag is reset
-        if (editor.IsTextChanged()) ModuleManager::Instance()->NotifyObservers();
+        if (editor.IsTextChanged()) ModuleManager::Instance()->NotifyObservers(Notify::ShouldRun);
         editor.Render("TextEditor");
         ImGui::End();
 
@@ -237,6 +244,30 @@ int main()
         }
         ImGui::End();
 
+        // Code Gen Window
+        if (ImGui::Begin("Code Generation"))
+        {
+            if (ImGui::BeginTabBar("##tabs", ImGuiTabBarFlags_None))
+            {
+                ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
+                if (ImGui::BeginTabItem("TAC"))  // and if there is stuff to render
+                {
+                    static std::string test = "non editable but selectable TAC in an input multiline!";
+                    ImGui::InputTextMultiline("##tac", &test, ImVec2(-1, -1), ImGuiInputTextFlags_ReadOnly);
+                    ImGui::EndTabItem();
+                }
+                if (ImGui::BeginTabItem("Assembly")) // and if there is stuff to render
+                {
+                    static std::string test = "non editable but selectable x86 in an input multiline!";
+                    ImGui::InputTextMultiline("##x86", &test, ImVec2(-1, -1), ImGuiInputTextFlags_ReadOnly);
+                    ImGui::EndTabItem();
+                }
+                ImGui::PopStyleColor();
+                ImGui::EndTabBar();
+            }
+        }
+        ImGui::End();
+
         if (ImGuiFileDialog::Instance()->Display("ChooseFileKey"))
         {
             if (ImGuiFileDialog::Instance()->IsOk())
@@ -294,5 +325,5 @@ int main()
 /*  TODO:
 *     - Docking - SFML backend does not support it, atm can only be done by switching backends
 *
-*     - new should clear everything!
+*     - Begin code gen integration
 */
