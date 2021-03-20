@@ -166,11 +166,11 @@ void SemanticAnalyzer::Visit(EmptyStatementNode& n) {}
 
 void SemanticAnalyzer::Render(int isOpen) const
 {
-    if (failState || !root) return;
+    if (!CanRender()) return;
     for (const auto& scope : symbolTable) scope->Render(isOpen);
 }
 
-void SemanticAnalyzer::Run()
+void SemanticAnalyzer::Update()
 {
     if (!shouldRun || !root) return;
 

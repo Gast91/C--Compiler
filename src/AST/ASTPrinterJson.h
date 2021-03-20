@@ -2,18 +2,21 @@
 #include <vector>
 
 #include "Visitor.h"
+#include "../Util/ModuleManager.h"
 
-class ASTPrinterJson : public ASTNodeVisitor
+class ASTPrinterJson : public ASTNodeVisitor, public IObserver<ASTNode>
 {
 private:
     std::vector<std::string> config;
     std::ofstream out;
 
+    ASTNode* root = nullptr;
+
     std::string GenerateJSONHeader(std::ofstream& out, const ASTNode* root, const char* rootID, std::vector<std::string>& config) const;
     void GenerateJSONFooter(std::ofstream& out, const std::vector<std::string>& config) const;
     std::string GenerateJSON(std::ofstream& out, const ASTNode* node, const char* ID, const std::string& parentID, const std::string& name, std::vector<std::string>& config) const;
 public:
-    void PrintAST(ASTNode& n);
+    void PrintAST();
 
     // Inherited via ASTNodeVisitor
     void Visit(ASTNode& n)               override;
@@ -36,4 +39,7 @@ public:
     void Visit(AssignStatementNode& n)   override;
     void Visit(ReturnStatementNode& n)   override;
     void Visit(EmptyStatementNode& n)    override;
+
+    // Inherited via IObserver
+    virtual void Update(ASTNode* n)      override { root = n; }
 };

@@ -6,8 +6,10 @@
 #include "../Util/Logger.h"
 #include "../Util/Utility.h"
 
-void ASTPrinterJson::PrintAST(ASTNode& n)
+void ASTPrinterJson::PrintAST()
 {
+    if (!root) return;
+
     out.open("AST.js");
 
     if (!out) 
@@ -18,12 +20,12 @@ void ASTPrinterJson::PrintAST(ASTNode& n)
     }
 
     // First node is the parent of all other nodes and doesnt have a parent itself, its parentID is itself
-    n.parentID = GenerateJSONHeader(out, &n, "ROOT", config);  // In the future this might also be a function
+    root->parentID = GenerateJSONHeader(out, root, "ROOT", config);
     // The next node in line will look for this one's id and that is why it's value is set to its own id rather than null
-    n.SetChildrenPrintID(n.parentID);
+    root->SetChildrenPrintID(root->parentID);
 
     // Recursively visit each of the tree's nodes and print JSON to file
-    n.Accept(*this);
+    root->Accept(*this);
 
     // Footer of the file must be a configuration list of all the nodes and their ids
     GenerateJSONFooter(out, config);

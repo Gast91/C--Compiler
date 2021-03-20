@@ -1,7 +1,7 @@
 #include "Parser.h"
 #include "../Util/Logger.h"
 
-void Parser::Run()
+void Parser::Update()
 {
     if (!shouldRun) return;
     failState = false;
@@ -24,7 +24,7 @@ void Parser::Run()
         Logger::Error("Unproccessed tokens left starting at {}:{}\n", lexer->GetCurrentTokenLine(), lexer->GetCurrentTokenCol());
 
     // AST was either reset or recreated, notify any observers that it has changed
-    NotifyASTChanged();
+    NotifyObservers();
 
     // Reset lexer index back to the start for the next parse
     // If lexer is always called before parser (as it should), this is pointless

@@ -13,6 +13,7 @@
 #include "Parser/Parser.h"
 #include "Semantics/SemanticAnalyzer.h"
 #include "AST/ASTVisualizer.h"
+#include "AST/ASTPrinterJson.h"
 #include "Util/Logger.h"
 #include "Util/Utility.h"
 
@@ -45,6 +46,7 @@ int main()
 
     // Registering order MATTERS - should mirror the order they should be run in
     ModuleManager::Instance()->RegisterObservers(&lexer, &parser, &sem);
+
     // Set callback for all registered modules that enables them to get back the line text from an error location
     ModuleManager::Instance()->UpdateGetSourceLineCallback([&editor](const int line) {
         const auto currentCoords = editor.GetCursorPosition();
@@ -52,10 +54,21 @@ int main()
         std::string sourceLine = editor.GetCurrentLineText();
         editor.SetCursorPosition(currentCoords);
         return sourceLine;
-        });
+    });
+
+    ASTPrinterJson jsonPrinter;
+    // Pass extra stuff to the ASTVisualizer to render
+    astViz.SetExtrasToRender([&jsonPrinter]() {
+        ImGui::SameLine();
+        static float width = 100.0f;
+        float pos = width + ImGui::GetStyle().ItemSpacing.x;
+        ImGui::SameLine(ImGui::GetWindowWidth() - pos);
+        if (ImGui::Button("AST to JSON")) jsonPrinter.PrintAST();
+        width = ImGui::GetItemRectSize().x;
+    });
 
     // Registering order does NOT matter, parser's AST is observed for updates by many
-    parser.RegisterObservers(&sem);
+    parser.RegisterObservers(&sem, &astViz, &jsonPrinter);
 
     while (window.isOpen()) 
     {
@@ -162,7 +175,7 @@ int main()
         ImGui::Spacing();
         
         // Module notification HAS to happen before the editor is rendered since changed flag is reset
-        if (editor.IsTextChanged()) ModuleManager::Instance()->NotifyModulesToRun();
+        if (editor.IsTextChanged()) ModuleManager::Instance()->NotifyObservers();
         editor.Render("TextEditor");
         ImGui::End();
 
@@ -192,10 +205,8 @@ int main()
         }
         ImGui::End();
 
-        // Parser Output Window + AST Tree (if available)
-        auto AST = parser.GetAST();
-        astViz.RenderAST(*AST);
-        GUI::ShowJsonButton(AST);
+        // Render the parser output window, if there is an AST
+        astViz.RenderAST();
 
         // Semantics Window
         int open_action = -1;
@@ -281,6 +292,7 @@ int main()
 }
 
 /*  TODO:
-*     - Docking - SFML backend does not support it, atm can only be done by switching backends                               
+*     - Docking - SFML backend does not support it, atm can only be done by switching backends
 *
+*     - new should clear everything!
 */

@@ -3,13 +3,18 @@
 #include <functional>
 
 #include "Visitor.h"
+#include "../Util/ModuleManager.h"
 
-class ASTVisualizer : public ASTNodeVisitor
+class ASTVisualizer : public ASTNodeVisitor, public IObserver<ASTNode>
 {
 private:
     ImGuiTreeNodeFlags base_flags = ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_SpanAvailWidth;
     bool align_label_with_current_x_position = false;
     int open_action = -1;
+
+    ASTNode* root = nullptr;
+
+    std::function<void()> renderExtras;
 
     struct ImRect
     {
@@ -24,7 +29,8 @@ private:
     template<class ...Args>
     ImRect RenderNode(std::function<void()> visitCallback, void* n, const char* fmt, Args...);
 public:
-    void RenderAST(ASTNode& n);
+    void SetExtrasToRender(std::function<void()> extras) { renderExtras = extras; }
+    void RenderAST();
 
     // Inherited via ASTNodeVisitor
     void Visit(ASTNode& n)               override;
@@ -47,4 +53,7 @@ public:
     void Visit(AssignStatementNode& n)   override;
     void Visit(ReturnStatementNode& n)   override;
     void Visit(EmptyStatementNode& n)    override;
+
+    // Inherited via IObserver
+    virtual void Update(ASTNode* n) override { root = n; }
 };

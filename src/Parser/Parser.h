@@ -2,7 +2,7 @@
 #include "../Lexer/Lexer.h"
 #include "../AST/AbstractSyntaxTree.h"
 
-class Parser : public IObserver, public Subject
+class Parser : public IObserver<>, public Subject<ASTNode>
 {
 private:
     Lexer* lexer;
@@ -11,8 +11,6 @@ private:
     bool failState = false;
     bool parsingCond = false;
     bool shouldRun = false;
-
-    std::function<std::string(const int)> GetSourceLine;
 
     UnqPtr<ASTNode> ParseFactor();
     UnqPtr<ASTNode> ParseTerm();
@@ -32,16 +30,15 @@ private:
     UnqPtr<ASTNode> ParseAssignStatement();
     UnqPtr<ASTNode> ParseReturn();
     UnqPtr<ASTNode> ParseEmpty();
-
-    void NotifyASTChanged() { for (auto& obs : observers) obs->Update(root.get()); }
 public:
     Parser(Lexer* lex) : lexer(lex) {}
 
     ASTNode* GetAST() const noexcept { return root.get(); }
 
+    // Inherited via the Subject Interface
+    virtual void NotifyObservers() override { for (auto& obs : observers) obs->Update(root.get()); }
     // Inherited via IObserver Interface
-    virtual void SetCallback(std::function<std::string(const int)> callback) override { GetSourceLine = callback; }
     virtual bool ShouldRun() const override { return shouldRun; }
-    virtual void SetToRun() override { shouldRun = true; }
-    virtual void Run() override;
+    virtual void SetToRun()        override { shouldRun = true; }
+    virtual void Update()          override;
 };

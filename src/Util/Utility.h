@@ -17,8 +17,6 @@ namespace GUI  // GUI Helpers
     };
 
     void HelpMarker(const char* desc);
-
-    void ShowJsonButton(ASTNode* AST);
 }
 
 class TextEditor;

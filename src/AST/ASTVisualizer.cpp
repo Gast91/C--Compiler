@@ -3,25 +3,22 @@
 #include "ASTVisualizer.h"
 #include "AbstractSyntaxTree.h"
 
-void ASTVisualizer::RenderAST(ASTNode& n)
+void ASTVisualizer::RenderAST()
 {
     open_action = -1;
     ImGui::Begin("Parser Output");
-    if (&n)
+    if (root)
     {
         if (ImGui::Button("Expand AST"))   open_action = 1; ImGui::SameLine();
         if (ImGui::Button("Collapse AST")) open_action = 0; ImGui::SameLine();
         ImGui::Checkbox("Remove Identation", &align_label_with_current_x_position);
 
-        ImGui::SameLine();
-        ImGui::BeginChild("ParserExtra", ImGui::GetItemRectSize());
-        // optional stuff to render, available to the outside - GHETTO SOLUTION
-        ImGui::EndChild();
+        if (renderExtras) renderExtras();
 
         ImGui::Separator();
 
         ImGui::BeginChild("AST");
-        nodeRect = RenderNode([&]() { n.Accept(*this); }, (void*)(intptr_t)&n, "ROOT");
+        nodeRect = RenderNode([&]() {root->Accept(*this); }, (void*)(intptr_t)&root, "ROOT");
         ImGui::EndChild();
     }
     ImGui::End();
