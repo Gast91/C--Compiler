@@ -1,21 +1,24 @@
 #pragma once
 #include <string>
+#include <memory>
 #include <map>
 #include <vector>
 
 class Symbol
 {
-public:
+protected:
     std::string name;
     std::string offset;
     // The Symbol of an identifier - not all identifiers have a symbol
     // BuiltIn Type Definitions and Nested Scopes in a symbol table dont have a type, just a name
-    Symbol* type;             
+    const Symbol* type;   
     friend class SymbolTable;
+    friend class SemanticAnalyzer;
+public:
+    Symbol(const std::string& n, const std::string& off = "0", const Symbol* t = nullptr) : name(n), offset(off), type(t) {}
+    virtual ~Symbol() = default;
 
-    Symbol(std::string n, std::string off = "0", Symbol* t = nullptr);
-    virtual ~Symbol() = default;  // SymbolTable class will handle the deleting of Symbols
-
+    std::string GetName() const { return name; }
     virtual void Render() const = 0;
 };
 
@@ -24,7 +27,7 @@ public:
 class BuiltInSymbol : public Symbol
 {
 public:
-    BuiltInSymbol(std::string n);
+    BuiltInSymbol(const std::string& n) : Symbol(n) {}
     virtual ~BuiltInSymbol() = default;
 
     virtual void Render() const override;
@@ -35,7 +38,7 @@ public:
 class VariableSymbol : public Symbol
 {
 public:
-    VariableSymbol(std::string n, std::string off, Symbol* t);
+    VariableSymbol(const std::string& n, const std::string& off, const Symbol* t) : Symbol(n, off, t) {}
     virtual ~VariableSymbol() = default;
 
     virtual void Render() const override;
@@ -45,7 +48,7 @@ public:
 class NestedScope : public Symbol
 {
 public:
-    NestedScope(std::string n);
+    NestedScope(const std::string& n) : Symbol(n) {}
     virtual ~NestedScope() = default;
 
     virtual void Render() const override;
@@ -59,17 +62,16 @@ public:
 class SymbolTable
 {
 private:
-    std::map<std::string, Symbol*> symbols;
-    std::string scopeName;
-    int scopeLevel;
+    std::map<std::string, std::unique_ptr<Symbol>> symbols;
+    const std::string scopeName;
+    const int scopeLevel;
     SymbolTable* parentScope;
     friend class SemanticAnalyzer;
 public:
     SymbolTable(const std::string& name, const int level, SymbolTable* parent = nullptr);
-    ~SymbolTable();  // Deleting of Symbols will be handled here
 
-    bool DefineSymbol(Symbol* s);
-    Symbol* LookUpSymbol(const std::string& symName);
+    [[maybe_unused]] bool DefineSymbol(std::unique_ptr<Symbol> s);
+    const Symbol* LookUpSymbol(const std::string& symName) const;
 
     void Render(int isOpen) const;
 };

@@ -6,7 +6,7 @@
 class SemanticAnalyzer : public ASTNodeVisitor, public IObserver
 {
 private:
-    std::vector<SymbolTable*> symbolTable;
+    std::vector<std::unique_ptr<SymbolTable>> symbolTable;
     SymbolTable* currentScope;
 
     ASTNode* root = nullptr;
@@ -17,10 +17,10 @@ private:
 
     std::function<std::string(const int)> GetSourceLine;
 
-    SymbolTable* CreateNewScope(const ASTNode* n, const char* tag);
+    SymbolTable* CreateNewScope(const ASTNode* n, const char* tag);  // no need to return or just return a pointer pointing to the current
 public:
-    SemanticAnalyzer() = default;
-    ~SemanticAnalyzer();
+    void Render(int isOpen) const;
+    bool CanRender() const { return !(failState || !root); }
 
     // Inherited via ASTNodeVisitor
     void Visit(ASTNode& n)               override;
@@ -43,9 +43,6 @@ public:
     void Visit(AssignStatementNode& n)   override;
     void Visit(ReturnStatementNode& n)   override;
     void Visit(EmptyStatementNode& n)    override;
-
-    void Render(int isOpen) const;
-    bool CanRender() const { return !(failState || !root); }
 
     // Inherited via IObserver Interface
     virtual void SetCallback(std::function<std::string(const int)> callback) override { GetSourceLine = callback; }

@@ -1,19 +1,16 @@
-//#include <sstream>    // TODO: REMOVE ME WHEN YOU DECIDE AGOUT ID
-
 #include "SemanticAnalyzer.h"
 #include "../Util/Error.h"
 #include "../Util/Logger.h"
 #include "../Util/Utility.h"
 
-SemanticAnalyzer::~SemanticAnalyzer() { for (const auto& scope : symbolTable) delete scope; }
-
 void SemanticAnalyzer::Visit(ASTNode& n)       { assert(("Semantic Analyzer visited base ASTNode class?!"      , false)); }
 void SemanticAnalyzer::Visit(UnaryASTNode& n)  { assert(("Semantic Analyzer visited base UnaryASTNode class?!" , false)); }
 void SemanticAnalyzer::Visit(BinaryASTNode& n) { assert(("Semantic Analyzer visited base BinaryASTNode class?!", false)); }
-void SemanticAnalyzer::Visit(IntegerNode& n) {}
+void SemanticAnalyzer::Visit(IntegerNode& n)   {}
 
-void SemanticAnalyzer::Visit(IdentifierNode& n)   // Every identifier will be hit here, so the address must be set here to the one in the symbol table
+void SemanticAnalyzer::Visit(IdentifierNode& n)
 {
+    // Every identifier will be hit here, so the address must be set here to the one in the symbol table - FIXME: REFACTOR ADDRESSES
     if (const auto sym = currentScope->LookUpSymbol(std::get<0>(n.tokenInfo)); !sym)
     {
         failState = true;
@@ -40,17 +37,17 @@ void SemanticAnalyzer::Visit(ConditionNode& n)
 SymbolTable* SemanticAnalyzer::CreateNewScope(const ASTNode* n, const char* tag)
 {
     // Generate a name for the new nested scope and add it as a symbol into the parent scope (current)
-    const std::string nestedScopeName = GenerateID(n, tag);
-    currentScope->DefineSymbol(new NestedScope(nestedScopeName));
+    const std::string nestedScopeName = Util::GenerateID(n, tag);
+    currentScope->DefineSymbol(std::make_unique<NestedScope>(nestedScopeName));
     
     // New nested scope with the nested scope name, at a greater depth than the current with the current scope as its parent
-    SymbolTable* nestedScope = new SymbolTable(nestedScopeName, currentScope->scopeLevel + 1, currentScope);
+    std::unique_ptr<SymbolTable> nestedScope = std::make_unique<SymbolTable>(nestedScopeName, currentScope->scopeLevel + 1, currentScope);
     
     // Current scope becomes this new scope
-    symbolTable.push_back(nestedScope);
-    currentScope = nestedScope;
+    currentScope = nestedScope.get();
+    symbolTable.push_back(std::move(nestedScope));
     
-    return nestedScope;
+    return currentScope;
 }
 
 void SemanticAnalyzer::Visit(IfNode& n)
@@ -129,18 +126,16 @@ void SemanticAnalyzer::Visit(StatementBlockNode& n)
 void SemanticAnalyzer::Visit(DeclareStatementNode& n)
 {
     // Look up Declaration Node's type in the symbol table
-    Symbol* symbolType = currentScope->LookUpSymbol(n.type.first);
+    const Symbol* symbolType = currentScope->LookUpSymbol(n.type.first);
     // Get the variable name from the Declaration's Identifier Node
     const auto [variableName, variableType, line, col] = n.identifier->tokenInfo;
-    addressOffset -= 4;  // This shouldnt be hardcoded for int32's but for now we only have ints
+    addressOffset -= 4;  // This shouldnt be hardcoded for int32's but for now we only have ints - FIXME: REFACTOR ADDRESSES
     // Define a new VarSymbol using variable name and symbolType
-    Symbol* variableSymbol = new VariableSymbol(variableName, std::to_string(addressOffset), symbolType);
+    std::unique_ptr<Symbol> variableSymbol = std::make_unique<VariableSymbol>(variableName, std::to_string(addressOffset), symbolType);
     n.identifier->offset = std::to_string(addressOffset);
-    if (!currentScope->DefineSymbol(variableSymbol))
+    if (!currentScope->DefineSymbol(std::move(variableSymbol)))
     {
         failState = true;
-        // The redefined identifier will not be stored as the program is semantically wrong and Semantic Analysis will stop
-        delete variableSymbol; // Clean up this temporary and throw the RedefinitionException
         throw SymbolRedefinitionException(n.identifier->tokenInfo, GetSourceLine ? GetSourceLine(line) : "");
     }
 }
@@ -183,8 +178,8 @@ void SemanticAnalyzer::Run()
     addressOffset = 0;
     
     symbolTable.clear();
-    symbolTable.push_back(new SymbolTable("GLOBAL_SCOPE", 1));
-    currentScope = symbolTable.back();
+    symbolTable.push_back(std::make_unique<SymbolTable>("GLOBAL_SCOPE", 1));
+    currentScope = symbolTable.back().get();
 
     try
     {

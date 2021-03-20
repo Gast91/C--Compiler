@@ -2,6 +2,8 @@
 
 #include "Symbol.h"
 
+static const ImGuiTreeNodeFlags leafFlags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanFullWidth;
+
 template<typename ...Args>
 [[maybe_unused]] bool RenderNodeColumns(const char* nodeLabel, const ImGuiTreeNodeFlags nodeFlags, Args... columnText)
 {
@@ -16,60 +18,33 @@ template<typename ...Args>
 
     return nodeVisible;
 }
-static const ImGuiTreeNodeFlags leafFlags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanFullWidth;
 
-//-----------------------------------------------------------------------------------------------------------------------------------------------------
-//-----------------------------------------Symbol Definitions------------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------------------------------------------------------------------
-Symbol::Symbol(std::string n, std::string off, Symbol * t) : name(n), offset(off), type(t) {}
+void BuiltInSymbol::Render()  const { RenderNodeColumns(name.c_str(), leafFlags, "Built-In Symbol",       "--"); }
+void VariableSymbol::Render() const { RenderNodeColumns(name.c_str(), leafFlags, type->GetName().c_str(), "--"); }
+void NestedScope::Render()    const { RenderNodeColumns(name.c_str(), leafFlags, "Nested Scope",          "--"); }
 
-//-----------------------------------------------------------------------------------------------------------------------------------------------------
-//-----------------------------------------BuiltInSymbol Definitions-----------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------------------------------------------------------------------
-BuiltInSymbol::BuiltInSymbol(std::string n) : Symbol(n) {}
 
-void BuiltInSymbol::Render() const { RenderNodeColumns(name.c_str(), leafFlags, "Built-In Symbol", "--"); }
-
-//-----------------------------------------------------------------------------------------------------------------------------------------------------
-//-----------------------------------------VariableSymbol Definitions----------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------------------------------------------------------------------
-VariableSymbol::VariableSymbol(std::string n, std::string off, Symbol* t) : Symbol(n, off, t) {}
-
-void VariableSymbol::Render() const { RenderNodeColumns(name.c_str(), leafFlags, type->name.c_str(), "--"); }
-
-//-----------------------------------------------------------------------------------------------------------------------------------------------------
-//-----------------------------------------NestedScope Definitions-------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------------------------------------------------------------------
-NestedScope::NestedScope(std::string n) : Symbol(n) {}
-
-void NestedScope::Render() const { RenderNodeColumns(name.c_str(), leafFlags, "Nested Scope", "--"); }
-
-//-----------------------------------------------------------------------------------------------------------------------------------------------------
-//-----------------------------------------SymbolTable Definitions-------------------------------------------------------------------------------------
-//-----------------------------------------------------------------------------------------------------------------------------------------------------
 SymbolTable::SymbolTable(const std::string& name, const int level, SymbolTable* parent) : scopeName(name), scopeLevel(level), parentScope(parent)
 { 
     // Built-In Symbols will be redefined for every new scope
-    DefineSymbol(new BuiltInSymbol("int")); 
+    DefineSymbol(std::make_unique<BuiltInSymbol>("int")); 
     // "New" Built In Symbols will have to be declared added here, in order to be used
 }
 
-SymbolTable::~SymbolTable() { for (const auto& s : symbols) delete s.second; }
-
-bool SymbolTable::DefineSymbol(Symbol* s)
+[[maybe_unused]] bool SymbolTable::DefineSymbol(std::unique_ptr<Symbol> s)
 {
     // Redefinition of an identifier can happen in a nested scope. The nested identifier
     // will hide the one in the parent scope. But redefinition cannot happen in the same scope.
-    const auto[it, success] = symbols.insert({ s->name, s });
+    const auto[it, success] = symbols.insert({ s->name, std::move(s) });
     return success;
 }
 
 // If the identifier is not found in the current scope, this function will
 // recursively check the parent scope all the way up to the global scope.
 // If it at the end the identifier is not present anywhere, there is a semantic error.
-Symbol* SymbolTable::LookUpSymbol(const std::string& symName)
+const Symbol* SymbolTable::LookUpSymbol(const std::string& symName) const
 { 
-    if (const auto it = symbols.find(symName); it != symbols.end()) return it->second;
+    if (const auto it = symbols.find(symName); it != symbols.end()) return it->second.get();
     else return parentScope ? parentScope->LookUpSymbol(symName) : nullptr;
 }
 
