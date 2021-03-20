@@ -3,7 +3,7 @@
 #include "../AST/AbstractSyntaxTree.h"
 #include "../Util/ModuleManager.h"
 
-class SemanticAnalyzer : public ASTNodeVisitor, public IObserver
+class SemanticAnalyzer : public ASTNodeVisitor, public IObserver<>, public IObserver<ASTNode>
 {
 private:
     std::vector<std::unique_ptr<SymbolTable>> symbolTable;
@@ -15,12 +15,10 @@ private:
     bool failState = false;
     bool shouldRun = false;
 
-    std::function<std::string(const int)> GetSourceLine;
-
-    SymbolTable* CreateNewScope(const ASTNode* n, const char* tag);  // no need to return or just return a pointer pointing to the current
+    SymbolTable* CreateNewScope(const ASTNode* n, const char* tag);
 public:
     void Render(int isOpen) const;
-    bool CanRender() const { return !(failState || !root); }
+    bool CanRender() const { return !(failState || !root || symbolTable.empty()); }
 
     // Inherited via ASTNodeVisitor
     void Visit(ASTNode& n)               override;
@@ -45,9 +43,8 @@ public:
     void Visit(EmptyStatementNode& n)    override;
 
     // Inherited via IObserver Interface
-    virtual void SetCallback(std::function<std::string(const int)> callback) override { GetSourceLine = callback; }
     virtual bool ShouldRun()  const override { return shouldRun; }
     virtual void SetToRun()         override { shouldRun = true; }
-    virtual void Update(ASTNode* n) override { root = n; }
-    virtual void Run() override;
+    virtual void Update(ASTNode* n) override { root = n; symbolTable.clear(); }
+    virtual void Update()           override;
 };

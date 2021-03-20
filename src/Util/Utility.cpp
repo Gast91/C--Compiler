@@ -36,30 +36,6 @@ namespace GUI
             ImGui::EndTooltip();
         }
     }
-
-    void ShowJsonButton(ASTNode* AST)
-    {
-        if (!AST) return;
-        if (ImGui::Begin("Parser Output"))
-        {
-            // GHETTO SOLUTION to append extras in the parser window.. (before nodes)
-            if (ImGui::BeginChild("ParserExtra"))
-            {
-                static float width = 100.0f;
-                float pos = width + ImGui::GetStyle().ItemSpacing.x;
-                ImGui::SameLine(ImGui::GetWindowWidth() - pos);
-                if (ImGui::Button("AST to JSON"))
-                {
-                    // This will happen even if the text has not changed...
-                    ASTPrinterJson jsonPrinter;
-                    jsonPrinter.PrintAST(*AST);
-                }
-                width = ImGui::GetItemRectSize().x;
-            }
-            ImGui::EndChild();
-        }
-        ImGui::End();
-    }
 }
 
 // FileDialog Helpers

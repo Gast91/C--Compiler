@@ -7,7 +7,7 @@
 #include "../Util/ModuleManager.h"
 
 class TextEditor;
-class Lexer : public IObserver
+class Lexer : public IObserver<>
 {
 private:
     TextEditor* editor;
@@ -16,8 +16,6 @@ private:
     unsigned int currentTokenIndex = 0;
 
     bool shouldRun = false;
-
-    std::function<std::string(const int)> GetSourceLine;
 
     void AddToken(const std::string& tok, const size_t lineNo, const size_t col);
 
@@ -46,11 +44,10 @@ public:
 
     bool Done()      const { return sourceTokens.empty() || GetCurrentTokenType() == Token::ENDF; }
     bool HasTokens() const { return !sourceTokens.empty(); }
-    void ResetIndex() { currentTokenIndex = 0; }
+    void ResetIndex()      { currentTokenIndex = 0; }
 
     // Inherited via IObserver
-    virtual void SetCallback(std::function<std::string(const int)> callback) override { GetSourceLine = callback; }
     virtual bool ShouldRun() const override { return shouldRun; }
-    virtual void SetToRun() override { shouldRun = true; }
-    virtual void Run() override;
+    virtual void SetToRun()        override { shouldRun = true; }
+    virtual void Update()          override;
 };

@@ -2,7 +2,7 @@
 #include "Lexer.h"
 #include "../Util/Logger.h"
 
-void Lexer::Run()
+void Lexer::Update()
 {
     if (!shouldRun) return;
 
