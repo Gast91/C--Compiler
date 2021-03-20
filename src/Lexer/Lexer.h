@@ -1,12 +1,12 @@
 #pragma once
 #include <string>
 #include <vector>
-#include <TextEditor.h>
 
 #include "Token.h"
 #include "../Util/Error.h"
 #include "../Util/ModuleManager.h"
 
+class TextEditor;
 class Lexer : public IObserver
 {
 private:

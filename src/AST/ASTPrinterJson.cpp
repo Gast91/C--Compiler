@@ -35,7 +35,7 @@ std::string ASTPrinterJson::GenerateJSONHeader(std::ofstream& out, const ASTNode
 {
     out << "config = {\n\tcontainer: \"#AST\"\n};\n\n";
     config.push_back("config");
-    const std::string id = GenerateID(root, rootID);
+    const std::string id = Util::GenerateID(root, rootID);
     out << id << " = {\n\ttext: { name: \"ROOT\" }\n};\n\n";
     config.push_back(id);
     return id;
@@ -50,7 +50,7 @@ void ASTPrinterJson::GenerateJSONFooter(std::ofstream& out, const std::vector<st
 
 std::string ASTPrinterJson::GenerateJSON(std::ofstream& out, const ASTNode* node, const char* ID, const std::string& parentID, const std::string& name, std::vector<std::string>& config) const
 {
-    const std::string nodeID = GenerateID(node, ID);
+    const std::string nodeID = Util::GenerateID(node, ID);
     out << nodeID << " = {\n\tparent: " << parentID <<
         ",\n\ttext: { name: \"" << name << "\" }\n};\n\n";
     config.push_back(nodeID);

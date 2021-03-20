@@ -1,3 +1,4 @@
+#include <TextEditor.h>
 #include "Lexer.h"
 #include "../Util/Logger.h"
 

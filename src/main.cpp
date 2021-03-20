@@ -10,86 +10,11 @@
 
 #include <magic_enum.hpp>
 
-#include <fstream>
-
 #include "Parser/Parser.h"
 #include "Semantics/SemanticAnalyzer.h"
 #include "AST/ASTVisualizer.h"
-#include "AST/ASTPrinterJson.h"
 #include "Util/Logger.h"
 #include "Util/Utility.h"
-
-const char* saveFileFilter = ".h,.hpp,.cpp,.txt";
-const char* openFileFilter = "Source files (*.cpp *.h *.hpp *.txt){.cpp,.h,.hpp,.txt}";
-const char* tip = "Don't forget to select the type you want to save your file as!";
-const char* dialogDir = "D:/Desktop/CTests"; // TEMP! - USER SPECIFIC
-
-//static void HelpMarker(const char* desc) // move somewhere else/remove/whatever
-//{
-//    ImGui::TextDisabled("(?)");
-//    if (ImGui::IsItemHovered())
-//    {
-//        ImGui::BeginTooltip();
-//        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
-//        ImGui::TextUnformatted(desc);
-//        ImGui::PopTextWrapPos();
-//        ImGui::EndTooltip();
-//    }
-//}
-//
-//struct Button
-//{
-//    const char* label;
-//    float width;
-//    std::function<void()> action;
-//};
-
-[[maybe_unused]] static bool PrintToFile(const TextEditor& editor, const std::string& filePath)
-{
-    std::ofstream outfile;
-    outfile.open(filePath);
-    if (outfile)
-    {
-        outfile << std::noskipws;
-        outfile << editor.GetText();
-        outfile.close();
-        return true;
-    }
-    else ImGui::OpenPopup("Error");
-    return false;
-}
-
-static void Save(const TextEditor& editor, const std::string& filePath)
-{
-    if (filePath.empty())
-        ImGuiFileDialog::Instance()->OpenModal("SaveAsKey", "Save File As", saveFileFilter, dialogDir,
-            "", std::bind(&HelpMarker, tip), 30.0f, 1, nullptr, ImGuiFileDialogFlags_ConfirmOverwrite);
-    else PrintToFile(editor, filePath);
-}
-
-void ShowJsonButton(ASTNode* AST)
-{
-    if (!AST) return;
-    if (ImGui::Begin("Parser Output"))
-    {
-        // GHETTO SOLUTION to append extras in the parser window.. (before nodes)
-        if (ImGui::BeginChild("ParserExtra"))
-        {
-            static float width = 100.0f;
-            float pos = width + ImGui::GetStyle().ItemSpacing.x;
-            ImGui::SameLine(ImGui::GetWindowWidth() - pos);
-            if (ImGui::Button("AST to JSON")) 
-            {
-                // This will happen even if the text has not changed...
-                ASTPrinterJson jsonPrinter;
-                jsonPrinter.PrintAST(*AST);
-            }
-            width = ImGui::GetItemRectSize().x;
-        }
-        ImGui::EndChild();
-    }
-    ImGui::End();
-}
 
 int main()
 {
@@ -146,11 +71,11 @@ int main()
                 {
                 case sf::Keyboard::S:
                     if (event.key.control && !ImGuiFileDialog::Instance()->IsOpened())
-                        Save(editor, filePath);
+                        FD::Save(&editor, filePath);
                     break;
                 case sf::Keyboard::O:
                     if (event.key.control && !ImGuiFileDialog::Instance()->IsOpened())
-                        ImGuiFileDialog::Instance()->OpenModal("ChooseFileKey", "Choose File", saveFileFilter, "D:/Desktop/CTests", "");
+                        ImGuiFileDialog::Instance()->OpenModal("ChooseFileKey", "Choose File", FD::saveFileFilter, FD::dialogDir, "");
                     break;
                 case sf::Keyboard::Escape: window.close(); break;
                 default: break;
@@ -170,11 +95,11 @@ int main()
             {
                 if (ImGui::MenuItem("New")) { editor.SetText(""); fileName = "Untitled"; filePath.clear(); }
                 if (ImGui::MenuItem("Open", "Ctrl+O"))
-                    ImGuiFileDialog::Instance()->OpenModal("ChooseFileKey", "Choose File", openFileFilter, dialogDir, "");
-                if (ImGui::MenuItem("Save", "Ctrl+S")) Save(editor, filePath);
+                    ImGuiFileDialog::Instance()->OpenModal("ChooseFileKey", "Choose File", FD::openFileFilter, FD::dialogDir, "");
+                if (ImGui::MenuItem("Save", "Ctrl+S")) FD::Save(&editor, filePath);
                 if (ImGui::MenuItem("Save As..")) 
-                    ImGuiFileDialog::Instance()->OpenModal("SaveAsKey", "Save File As", saveFileFilter, dialogDir, "",
-                        std::bind(&HelpMarker, tip), 50.0f, 1, nullptr, ImGuiFileDialogFlags_ConfirmOverwrite);
+                    ImGuiFileDialog::Instance()->OpenModal("SaveAsKey", "Save File As", FD::saveFileFilter, FD::dialogDir, "",
+                        std::bind(&GUI::HelpMarker, FD::tip), 50.0f, 1, nullptr, ImGuiFileDialogFlags_ConfirmOverwrite);
                 if (ImGui::MenuItem("Quit", "Alt-F4")) window.close();
                 ImGui::EndMenu();
             }
@@ -219,7 +144,7 @@ int main()
             editor.GetLanguageDefinition().mName.c_str(), fileName.c_str());
 
         // Right Aligned Module Button Group
-        static ActionButton buttons[4] = {
+        static GUI::ActionButton buttons[4] = {
         {"CodeGen",  100.0f, []()  {/*ModuleManager::Instance()->RunModulesUpTo(&codeGen);*/} },
         {"Semantic", 100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&sem);       } },
         {"Parse",    100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&parser);    } },
@@ -270,7 +195,7 @@ int main()
         // Parser Output Window + AST Tree (if available)
         auto AST = parser.GetAST();
         astViz.RenderAST(*AST);
-        ShowJsonButton(AST);
+        GUI::ShowJsonButton(AST);
 
         // Semantics Window
         int open_action = -1;
@@ -327,7 +252,7 @@ int main()
             if (ImGuiFileDialog::Instance()->IsOk())
             {
                 const std::string fpName = ImGuiFileDialog::Instance()->GetFilePathName();
-                if (PrintToFile(editor, fpName))
+                if (FD::PrintToFile(&editor, fpName))
                 {
                     filePath = fpName;
                     fileName = ImGuiFileDialog::Instance()->GetCurrentFileName();
@@ -356,13 +281,6 @@ int main()
 }
 
 /*  TODO:
-*     - Docking - SFML backend issues                                        - low priority - unachievable atm (switch to other backend?)                               
-*     - spdlog? multisink for file and/or 'console' output?                  - medium priority - decide - this changes all prints to file(dialogs etc)
-* 
-*     - Continue Integration of Sem, decide on display, Create scope ID,
-*       'print' and call interface, call guards etc                          - high priority
-*     - Sem can get name from node itself - GenerateID is also not needed?   - medium priority - INVESTIGATE
-*     - swap sem etc to unique_ptrs                                          - high priority
-*     - try and decouple printing and sem - create new visitor? 
-*     - Tidy-up sem stuff                                                    - medium priority
+*     - Docking - SFML backend does not support it, atm can only be done by switching backends                               
+*
 */
