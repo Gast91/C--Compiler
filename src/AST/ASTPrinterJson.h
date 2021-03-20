@@ -9,9 +9,9 @@ private:
     std::vector<std::string> config;
     std::ofstream out;
 
-    std::string GenerateJSONHeader(std::ofstream& out, const ASTNode* root, const char* rootID, std::vector<std::string>& config);
-    void GenerateJSONFooter(std::ofstream& out, const std::vector<std::string>& config);
-    std::string GenerateJSON(std::ofstream& out, const ASTNode* node, const char* ID, std::string& parentID, std::string name, std::vector<std::string>& config);
+    std::string GenerateJSONHeader(std::ofstream& out, const ASTNode* root, const char* rootID, std::vector<std::string>& config) const;
+    void GenerateJSONFooter(std::ofstream& out, const std::vector<std::string>& config) const;
+    std::string GenerateJSON(std::ofstream& out, const ASTNode* node, const char* ID, const std::string& parentID, const std::string& name, std::vector<std::string>& config) const;
 public:
     void PrintAST(ASTNode& n);
 

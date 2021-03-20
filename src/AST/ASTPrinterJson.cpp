@@ -31,7 +31,7 @@ void ASTPrinterJson::PrintAST(ASTNode& n)
     Logger::Info("AST Visualisation File Successfully created\n");
 }
 
-std::string ASTPrinterJson::GenerateJSONHeader(std::ofstream& out, const ASTNode* root, const char* rootID, std::vector<std::string>& config)
+std::string ASTPrinterJson::GenerateJSONHeader(std::ofstream& out, const ASTNode* root, const char* rootID, std::vector<std::string>& config) const
 {
     out << "config = {\n\tcontainer: \"#AST\"\n};\n\n";
     config.push_back("config");
@@ -41,14 +41,14 @@ std::string ASTPrinterJson::GenerateJSONHeader(std::ofstream& out, const ASTNode
     return id;
 }
 
-void ASTPrinterJson::GenerateJSONFooter(std::ofstream& out, const std::vector<std::string>& config)
+void ASTPrinterJson::GenerateJSONFooter(std::ofstream& out, const std::vector<std::string>& config) const
 {
     out << "simple_chart_config = [\n    ";
     for (unsigned int i = 0; i < config.size(); ++i) { if (i != 0) out << ", "; out << config.at(i); }
     out << "\n];";
 }
 
-std::string ASTPrinterJson::GenerateJSON(std::ofstream& out, const ASTNode* node, const char* ID, std::string& parentID, std::string name, std::vector<std::string>& config)
+std::string ASTPrinterJson::GenerateJSON(std::ofstream& out, const ASTNode* node, const char* ID, const std::string& parentID, const std::string& name, std::vector<std::string>& config) const
 {
     const std::string nodeID = GenerateID(node, ID);
     out << nodeID << " = {\n\tparent: " << parentID <<
