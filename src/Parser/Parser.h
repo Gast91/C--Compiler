@@ -36,6 +36,8 @@ public:
     // Inherited via the Subject Interface
     virtual void NotifyObservers() override { for (auto& obs : observers) obs->Update(root.get()); }
 
+    // Inherited via the Subject Interface
+    virtual void NotifyObservers() override { for (auto& obs : observers) obs->Update(root.get()); }
     // Inherited via IObserver Interface
     virtual bool ShouldRun() const override { return shouldRun; }
     virtual void SetToRun()        override { shouldRun = true; }
