@@ -1,5 +1,9 @@
+#include <map>
+#include <sstream>
+
 #include "CodeGenerator.h"
-#include "AbstractSyntaxTree.h"
+#include "../AST/AbstractSyntaxTree.h"
+#include "../Util/Logger.h"
 
 std::vector<Quadruples> CodeGenerator::instructions;
 int Temporary::tempCount = 0;
@@ -30,30 +34,59 @@ static const std::map<std::string, std::string> asmLookup =
     {"_t3", "ecx"     }
 };
 
-void CodeGenerator::GenerateTAC(ASTNode* n)
+void CodeGenerator::Update()
 {
-    std::cout << "Intermediate Language Representation:\nmain:\n";
-    PlainVisit(n);  // Start Traversing the AST
-    if (instructions.empty()) { std::cout << "\nNo Intermediate code generated.\n"; return; }
+    if (!shouldRun || !root || !semSuccess) return;
+
+    Reset();
+
+    try // ??
+    {
+        GenerateTAC();
+        GenerateAssembly();
+    }
+    catch (const std::exception& ex) { Logger::Error("[CODEGEN ERROR]: Unsupported Operation {}", ex.what()); }
+
+    shouldRun = false;
+}
+
+void CodeGenerator::Reset()
+{
+    instructions.clear();
+    tac.str("");
+    tac.clear();
+    x86.str("");
+    x86.clear();
+}
+
+void CodeGenerator::GenerateTAC()
+{
+    PlainVisit(root);  // Start Traversing the AST
+
+    if (instructions.empty()) { Logger::Info("No Intermediate Code Generated.\n"); return; }
+    else Logger::Info("Intermediate Language Representation Generated\n");
+
+    tac << "main:\n";
+
     std::vector<Command> cmp;
     unsigned int cmpIndex = 0;
     for (auto& [op, src1, src2, dest] : instructions)
     {
         // Presence of second operand indicates a full three address code instruction
-        if (src2)                            std::cout << '\t' << dest->name << " = " << src1->name << ' ' << op->value << ' ' << src2->name << ";\n"; 
-        else if (op->type == CmdType::COPY)  std::cout << '\t' << dest->name << ' '   << op->value  << ' ' << src1->name << ";\n";
+        if (src2)                            tac << '\t' << dest->name << " = " << src1->name << ' ' << op->value << ' ' << src2->name << ";\n";
+        else if (op->type == CmdType::COPY)  tac << '\t' << dest->name << ' '   << op->value  << ' ' << src1->name << ";\n";
         else if (op->type == CmdType::IF)
         {
             // Add the jump label of this control flow statement to a list so that
             // each subsequent relational statement that depends to it can access it. -Wont work for multiple conditions probably??
             for (auto i = cmpIndex; i < cmp.size(); ++i) Label::AddCmpLabel(dest->name);  ++cmpIndex;
-            std::cout << '\t' << op->value << ' ' << src1->name << " Goto " << dest->name << ";\n";
+            tac << '\t' << op->value << ' ' << src1->name << " Goto " << dest->name << ";\n";
         }
-        else if (op->type == CmdType::LABEL) std::cout << dest->name << ":\n";
+        else if (op->type == CmdType::LABEL) tac << dest->name << ":\n";
         else if (op->type == CmdType::RET 
-              || op->type == CmdType::GOTO)  std::cout << '\t' << op->value << ' ' << dest->name << ";\n";
+              || op->type == CmdType::GOTO)  tac << '\t' << op->value << ' ' << dest->name << ";\n";
         // Unaries
-        else std::cout << '\t' << dest->name << " = " << op->value << ' ' << src1->name << ";\n";
+        else tac << '\t' << dest->name << " = " << op->value << ' ' << src1->name << ";\n";
 
         if (op->type == CmdType::RELAT) cmp.push_back(Command{ dest->name, op->type });
     }
@@ -61,50 +94,52 @@ void CodeGenerator::GenerateTAC(ASTNode* n)
 
 void CodeGenerator::GenerateAssembly()
 {
-    if (instructions.empty()) { std::cout << "\nNo assembly generated.\n"; return; }
-    std::cout << "\nx86 Assembly:\nmain:\n";
+    if (instructions.empty()) { Logger::Info("No assembly generated.\n"); return; }
+    else Logger::Info("'Assembly' Generated\n");
+
+    x86 << "main:\n";
     for (auto& [op, src1, src2, dest] : instructions)
     {
         const auto destination = asmLookup.find(dest->name) != asmLookup.end() ? asmLookup.at(dest->name) : dest->address;
-        if (op->type == CmdType::GOTO)       std::cout << asmLookup.at("Goto") << destination << '\n';
-        else if (op->type == CmdType::LABEL) std::cout << destination << ":\n";
+        if (op->type == CmdType::GOTO)       x86 << asmLookup.at("Goto") << destination << '\n';
+        else if (op->type == CmdType::LABEL) x86 << destination << ":\n";
         else if (op->type == CmdType::IF);   // We processed condition(s) for this control flow, no need to do anything
         else if (op->type == CmdType::RET)
         {
-            std::cout << "\tmov eax, " << destination << '\n'; // EAX will always have the return value
-            std::cout << asmLookup.at("Goto") << "_END\n";     // Jump to the end label, since return might have been nested somewhere
+            x86 << "\tmov eax, " << destination << '\n'; // EAX will always have the return value
+            x86 << asmLookup.at("Goto") << "_END\n";     // Jump to the end label, since return might have been nested somewhere
         }
         else if (const auto operand1 = asmLookup.find(src1->name) != asmLookup.end() ? asmLookup.at(src1->name) : src1->address; src1 && !src2)
         {
-            std::cout << "\tmov " << destination << ", " << operand1 << '\n';
-            if (op->type == CmdType::UNARY) std::cout << "\tneg " << destination << '\n';
+            x86 << "\tmov " << destination << ", " << operand1 << '\n';
+            if (op->type == CmdType::UNARY) x86 << "\tneg " << destination << '\n';
         }
         else if (src2)
         {
             const auto operand2 = asmLookup.find(src2->name) != asmLookup.end() ? asmLookup.at(src2->name) : src2->address;
             if (op->type == CmdType::RELAT)
             {
-                if (operand1 != destination) std::cout << "\tmov " << destination << ", " << operand1 << '\n';
-                std::cout << "\tcmp " << destination << ", " << operand2 << '\n';
-                std::cout << ReverseOp(op->value) << ' ' << Label::GetCmpLabel() << '\n';
+                if (operand1 != destination) x86 << "\tmov " << destination << ", " << operand1 << '\n';
+                x86 << "\tcmp " << destination << ", " << operand2 << '\n';
+                x86 << ReverseOp(op->value) << ' ' << Label::GetCmpLabel() << '\n';
             }
-            else if (op->type == CmdType::LOG) std::cout << "\t;Multiple conditions with operators \"&&\" and \"||\" are not fully supported. There might be errors\n";
+            else if (op->type == CmdType::LOG) x86 << "\t;Multiple conditions with operators \"&&\" and \"||\" are not fully supported. There might be errors\n";
             else if (dest->type == CmdType::REG)
             {
-                if (operand1 != destination) std::cout << "\tmov " << destination << ", " << operand1 << '\n';
+                if (operand1 != destination) x86 << "\tmov " << destination << ", " << operand1 << '\n';
                 if (const auto opCode = asmLookup.at(op->value); opCode == "\timul " && destination == "eax")
-                    std::cout << opCode << ' ' << operand2 << '\n';
+                    x86 << opCode << ' ' << operand2 << '\n';
                 else if (opCode == "\timul " && destination != "eax")
-                    std::cout << opCode << destination << ", " << operand2 << " ;Note that \"imul reg, ... \" is not valid, eax is always the implicit register for imul\n";
+                    x86 << opCode << destination << ", " << operand2 << " ;Note that \"imul reg, ... \" is not valid, eax is always the implicit register for imul\n";
                 else
-                    std::cout << opCode << destination << ", " << operand2 << '\n';
+                    x86 << opCode << destination << ", " << operand2 << '\n';
             }
         }
     }
-    std::cout << "_END:\n"; // Final label that all return statements jump to - will need to change when functions are introduced
+    x86 << "_END:\n"; // Final label that all return statements jump to - will need to change when functions are introduced
 }
 
-const std::string CodeGenerator::ReverseOp(const std::string& op)
+const std::string CodeGenerator::ReverseOp(const std::string& op) const
 {
     if (op == ">")       return asmLookup.at("<=");
     else if (op == "<")  return asmLookup.at(">=");
@@ -118,9 +153,10 @@ const std::string CodeGenerator::ReverseOp(const std::string& op)
 void CodeGenerator::Visit(ASTNode& n)        { assert(("Code Generator visited base ASTNode class?!"      , false)); }
 void CodeGenerator::Visit(UnaryASTNode& n)   { assert(("Code Generator visited base UnaryASTNode class?!" , false)); }
 void CodeGenerator::Visit(BinaryASTNode& n)  { assert(("Code Generator visited base BinaryASTNode class?!", false)); }
+
 // Integer and Identifier Leaf Nodes. A throwaway Quadruple is returned that effectively passes back their value or name
 void CodeGenerator::Visit(IntegerNode& n)    { Return({ std::nullopt, std::nullopt, std::nullopt, Operand{CmdType::NONE, std::to_string(n.value), std::to_string(n.value)} }); }
-void CodeGenerator::Visit(IdentifierNode& n) { Return({ std::nullopt, std::nullopt,  std::nullopt, Operand{CmdType::NONE, n.name, "DWORD [ebp" + n.offset + "]"} }); }
+void CodeGenerator::Visit(IdentifierNode& n) { Return({ std::nullopt, std::nullopt,  std::nullopt, Operand{CmdType::NONE, std::get<0>(n.tokenInfo), "DWORD [ebp" + n.offset + "]"} }); }
 
 void CodeGenerator::Visit(UnaryOperationNode& n)
 {

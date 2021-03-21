@@ -15,6 +15,7 @@
 #include "Semantics/SemanticAnalyzer.h"
 #include "AST/ASTVisualizer.h"
 #include "AST/ASTPrinterJson.h"
+#include "CodeGen/CodeGenerator.h"
 #include "Util/Logger.h"
 #include "Util/Utility.h"
 
@@ -44,9 +45,10 @@ int main()
     Parser parser(&lexer);
     ASTVisualizer astViz;
     SemanticAnalyzer sem;
+    CodeGenerator codeGen;
 
     // Registering order MATTERS - should mirror the order they should be run in
-    ModuleManager::Instance()->RegisterObservers(&lexer, &parser, &sem);
+    ModuleManager::Instance()->RegisterObservers(&lexer, &parser, &sem, &codeGen);
 
     // Set callback for all registered modules that enables them to get back the line text from an error location
     ModuleManager::Instance()->UpdateGetSourceLineCallback([&editor](const int line) {
@@ -69,7 +71,9 @@ int main()
     });
 
     // Registering order does NOT matter, parser's AST is observed for updates by many
-    parser.RegisterObservers(&sem, &astViz, &jsonPrinter);
+    parser.RegisterObservers(&sem, &astViz, &jsonPrinter, &codeGen);
+    // Semantic Analyzer state is observed by CodeGen - if sem analysis failed there is not point to run code gen
+    sem.RegisterObservers(&codeGen);
 
     while (window.isOpen()) 
     {
@@ -165,10 +169,10 @@ int main()
 
         // Right Aligned Module Button Group
         static GUI::ActionButton buttons[4] = {
-        {"CodeGen",  100.0f, []()  {/*ModuleManager::Instance()->RunModulesUpTo(&codeGen);*/} },
-        {"Semantic", 100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&sem);       } },
-        {"Parse",    100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&parser);    } },
-        {"Tokenize", 100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&lexer);     } } };
+        {"CodeGen",  100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&codeGen); } },
+        {"Semantic", 100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&sem);     } },
+        {"Parse",    100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&parser);  } },
+        {"Tokenize", 100.0f, [&]() { ModuleManager::Instance()->RunModulesUpTo(&lexer);   } } };
         const float itemSpacing = ImGui::GetStyle().ItemSpacing.x;
         float pos = 0.0f;
         for (int i = 0; i < 4; ++i)
@@ -244,22 +248,24 @@ int main()
         }
         ImGui::End();
 
-        // Code Gen Window
+        // Code Gen Window (TAC & 'Assembly')
         if (ImGui::Begin("Code Generation"))
         {
             if (ImGui::BeginTabBar("##tabs", ImGuiTabBarFlags_None))
             {
                 ImGui::PushStyleColor(ImGuiCol_FrameBg, 0);
-                if (ImGui::BeginTabItem("TAC"))  // and if there is stuff to render
+                if (ImGui::BeginTabItem("TAC"))
                 {
-                    static std::string test = "non editable but selectable TAC in an input multiline!";
-                    ImGui::InputTextMultiline("##tac", &test, ImVec2(-1, -1), ImGuiInputTextFlags_ReadOnly);
+                    static std::string tac;
+                    tac = codeGen.GetTAC();
+                    ImGui::InputTextMultiline("##tac", &tac, ImVec2(-1, -1), ImGuiInputTextFlags_ReadOnly);
                     ImGui::EndTabItem();
                 }
-                if (ImGui::BeginTabItem("Assembly")) // and if there is stuff to render
+                if (ImGui::BeginTabItem("Assembly"))
                 {
-                    static std::string test = "non editable but selectable x86 in an input multiline!";
-                    ImGui::InputTextMultiline("##x86", &test, ImVec2(-1, -1), ImGuiInputTextFlags_ReadOnly);
+                    static std::string x86;
+                    x86 = codeGen.Getx86();
+                    ImGui::InputTextMultiline("##x86", &x86, ImVec2(-1, -1), ImGuiInputTextFlags_ReadOnly);
                     ImGui::EndTabItem();
                 }
                 ImGui::PopStyleColor();
@@ -325,5 +331,7 @@ int main()
 /*  TODO:
 *     - Docking - SFML backend does not support it, atm can only be done by switching backends
 *
-*     - Begin code gen integration
+*     - Horizontal scrollbar for tab panes
+*     - No copy of string with GetTAC/Getx86?
+*     - Tidy up/Improve/split CodeGen
 */

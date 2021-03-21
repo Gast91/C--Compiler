@@ -54,7 +54,7 @@ void Lexer::Update()
             else if (delimiter == " ")  col += 1;
             prev = pos + 1;
         }
-        if (prev < line.length()) AddToken(line.substr(prev, std::string::npos), lineNo, col);
+        if (prev < line.length() && !multiline) AddToken(line.substr(prev, std::string::npos), lineNo, col);
     }
     shouldRun = false;
     if (!sourceTokens.empty())

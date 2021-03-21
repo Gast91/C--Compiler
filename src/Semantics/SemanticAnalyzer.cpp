@@ -188,6 +188,8 @@ void SemanticAnalyzer::Update()
     }
 
     failState ? Logger::Error("Semantic Analysis failed..\n") : Logger::Info("Semantic Analysis Complete\n");
+
+    NotifyObservers(Notify::StateStatus);
 }
 
 void SemanticAnalyzer::Reset()
@@ -198,6 +200,7 @@ void SemanticAnalyzer::Reset()
     symbolTable.clear();
     symbolTable.push_back(std::make_unique<SymbolTable>("GLOBAL_SCOPE", 1));
     currentScope = symbolTable.back().get();
+    NotifyObservers(Notify::StateStatus);
 }
 
 /* TODO:
