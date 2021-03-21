@@ -1,11 +1,8 @@
 #pragma once
-#include <string>
 #include <optional>
-#include <map>
-#include <vector>
-#include <fstream>
 
-#include "Visitor.h"
+#include "../AST/Visitor.h"
+#include "../Util/ModuleManager.h"
 
 #define OPTIMIZE_TEMPS
 // Optimization flag enables the recycling of already processed temporary variables
@@ -72,38 +69,32 @@ public:
     static const std::string GetCmpLabel() { return cmpJmpLabels.at(nextCmpLabel++); }
 };
 
-// MERGE????? - template template parameters
-template <typename ...Args>
-void print(std::ostream& out1, std::ofstream& out2, const Args& ...args)
-{
-    (out1 << ... << args);
-    (out2 << ... << args);
-}
-template <typename ...Args>
-void print(std::ostream& out1, const Args& ...args)
-{
-    (out1 << ... << args);
-}
-template <typename ...Args>
-void print(std::ofstream& out2, const Args& ...args)
-{
-    (out2 << ... << args);
-}
 
 // CodeGenerator derives from ValueGetter by the 'Curiously Recurring Template Pattern' so that 
 // the ValueGetter can instantiate the Evaluator itself. It also implements INodeVisitor interface 
 // the conventional way - overriding all overloads of Visit virtual method for every type of supported node.
-class CodeGenerator : public ValueGetter<CodeGenerator, ASTNode*, Quadruples>, public ASTNodeVisitor
+class CodeGenerator : public ValueGetter<CodeGenerator, ASTNode*, Quadruples>, public ASTNodeVisitor,
+                      public IObserver<>, public IObserver<ASTNode>, public IObserver<bool>
 {
 private:
     static std::vector<Quadruples> instructions;
 
+    std::stringstream tac, x86;
+
+    ASTNode* root = nullptr;
+
+    bool shouldRun  = false;
+    bool semSuccess = false;
+
     void ProcessAssignment(const BinaryASTNode& n);
     void ProcessBinOp(const BinaryASTNode& n, CmdType type);
-    const std::string ReverseOp(const std::string& op);
-public:
-    void GenerateTAC(ASTNode* n);
+    const std::string ReverseOp(const std::string& op) const;
+
+    void GenerateTAC();
     void GenerateAssembly();
+public:
+    std::string GetTAC() const { return tac.str(); }
+    std::string Getx86() const { return x86.str(); }   // TEMPS - NO COPY
 
     // Inherited via ASTNodeVisitor
     void Visit(ASTNode& n)               override;
@@ -126,4 +117,16 @@ public:
     void Visit(AssignStatementNode& n)   override;
     void Visit(ReturnStatementNode& n)   override;
     void Visit(EmptyStatementNode& n)    override;
+
+    // Inherited via IObserver - Observing Module Manager
+    virtual bool ShouldRun()  const override  { return shouldRun; }
+    virtual void SetToRun()         override  { shouldRun = true; }
+    virtual void Update()           override;
+    virtual void Reset()            override;
+
+    // Inherited via IObserver - Observing AST Changes
+    virtual void Update(ASTNode* n) override  { root = n; }
+
+    // Inherited via IObserver - Observing Semantic Analyzer State
+    virtual void Update(bool* run)  override  { semSuccess = !*run; }  // ???
 };

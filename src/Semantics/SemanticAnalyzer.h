@@ -3,7 +3,7 @@
 #include "../AST/AbstractSyntaxTree.h"
 #include "../Util/ModuleManager.h"
 
-class SemanticAnalyzer : public ASTNodeVisitor, public IObserver<>, public IObserver<ASTNode>
+class SemanticAnalyzer : public ASTNodeVisitor, public IObserver<>, public IObserver<ASTNode>, public Subject<bool>
 {
 private:
     std::vector<std::unique_ptr<SymbolTable>> symbolTable;
@@ -48,4 +48,7 @@ public:
     virtual void Update(ASTNode* n) override { root = n; symbolTable.clear(); }
     virtual void Update()           override;
     virtual void Reset()            override;
+
+    // Inherited via Subject
+    virtual void NotifyObservers(const Notify what) override { for (auto& obs : observers) obs->Update(&failState); }
 };

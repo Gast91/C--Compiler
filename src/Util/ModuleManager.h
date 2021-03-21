@@ -3,7 +3,7 @@
 #include <functional>
 
 class ASTNode;
-enum class Notify { ShouldRun, ToReset, Run, ASTChanged };
+enum class Notify { ShouldRun, ToReset, Run, ASTChanged, StateStatus };
 
 template<typename T = void>
 class IObserver
@@ -61,7 +61,8 @@ public:
 		case Notify::ShouldRun: for (auto& obs : observers) obs->SetToRun(); return;
 		case Notify::ToReset:   for (auto& obs : observers) obs->Reset();    return;
 		case Notify::Run:       for (auto& obs : observers) obs->Update();   return;
-		case Notify::ASTChanged: /*This is not a valid option for manager*/  return;
+		case Notify::ASTChanged:  /*This is not a valid option for manager*/ return;
+		case Notify::StateStatus: /*This is not a valid option for manager*/ return;
 		}
 	}
 
