@@ -5,7 +5,7 @@ The aim to begin with, is for the compiler to be able to process a relatively sm
 the name C--. This project has nothing to do with the C-- proramming language despite what the name of this project might suggest. 
 <br>*This project was part of a final year dissertation. [the final_year_proj_june2020](https://github.com/Gast91/C--Compiler/tree/fin_year_proj_june2020) branch reflects the project as it stood on submission*
 <br><p align="center">
-  <img src="preview.png">
+  <img src="preview.png"/>
 </p>
 ## Getting Started
 
