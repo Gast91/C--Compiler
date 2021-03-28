@@ -1,25 +1,21 @@
 #pragma once
 #include <unordered_map>
-#include <tuple>
 
-/* IDENTIFIER and LITERALS are not present in the tokens map at the start.
-   They will be added by the lexer once encountered and identified as such
-   in the form of { NAME||VALUE, IDENTIFIER||LITERAL }.
-   Tokens that cannot be identified, (i.e not an identifier or literal and not present in the map)
-   will be inserted into the map in the form of { VALUE , UNKNOWN } */
-
-enum class Token
+enum class TokenID
 {
 // Variable/Function Names
     IDENTIFIER,
-// Literals
+// Numeric Literals
     INT_LITERAL,
+    FLOAT_LITERAL,
 // Arithmetic Operators
     ADD,
     SUB,
     MUL,
     DIV,
     MOD,
+    INCR,
+    DECR,
 // Shift Operators
     SHL,
     SHR,
@@ -34,25 +30,30 @@ enum class Token
     BIT_AND,
     BIT_XOR,
     BIT_OR,
+    BIT_NOT,
 // Logical Operators
     AND,
     OR,
-// Assignment Operators    // MISSING <<=, >>= Lexer can't deal with triple character operators but parser (for now) cant understand them anyway
+    NOT,
+// Assignment Operators
     ASSIGN,
-    ADD_ASSIGN,
-    SUB_ASSIGN,
-    MUL_ASSIGN,
-    DIV_ASSIGN,
-    MOD_ASSIGN,
-    XOR_ASSIGN,
-    B_OR_ASSIGN,
-    B_AND_ASSIGN,
+    ADD_ASGN,
+    SUB_ASGN,
+    MUL_ASGN,
+    DIV_ASGN,
+    MOD_ASGN,
+    XOR_ASGN,
+    SHL_ASGN,
+    SHR_ASGN,
+    B_OR_ASGN,
+    B_AND_ASGN,
 // Reserved Keywords       // Missing stuff, to be added as the parser expands - until then missing ones are treated as identifiers
     IF,
     ELSE,
     WHILE,
     DO,
     INT_TYPE,
+    FLOAT_TYPE,
     RET,
     MAIN,                  // MAIN IS NOT A RESERVED WORD - ITS AN IDENTIFIER THAT CAN ONLY EXIST ONE OF FOR FUNCTIONS - HACK FOR NOW
 // Terminals
@@ -60,75 +61,113 @@ enum class Token
     RPAR,
     LCURLY,
     RCURLY,
+    LBRACK,
+    RBRACK,
     SEMI,
+// Strings
+    S_QUOTE,
+    D_QUOTE,
+    RAWSTR,
+    ESCAPESEQ,         // ???
 // Miscellaneous
-    NLINE,
+    COMMA,
+    TERNARY,
+    DOT,
     ENDF,
     UNKNOWN
 };
 
-static std::unordered_map<std::string, Token> tokens =
+static std::unordered_map<std::string, TokenID> tokens =
 {
-//-------Arithmetic Operators--------------------
+//----------Arithmetic Operators-----------------
 //-----------------------------------------------
-    { "+"      , Token::ADD          },
-    { "-"      , Token::SUB          },
-    { "*"      , Token::MUL          },
-    { "/"      , Token::DIV          },
-    { "%"      , Token::MOD          },
-//-------Shift Operators-------------------------
+    { "+"      , TokenID::ADD        },
+    { "-"      , TokenID::SUB        },
+    { "*"      , TokenID::MUL        },
+    { "/"      , TokenID::DIV        },
+    { "%"      , TokenID::MOD        },
+    { "++"     , TokenID::INCR       },
+    { "--"     , TokenID::DECR       },
+//------------Shift Operators--------------------
 //-----------------------------------------------
-    { "<<"     , Token::SHL          },
-    { ">>"     , Token::SHR          },
-//-------Relational and Equality Operations
+    { "<<"     , TokenID::SHL        },
+    { ">>"     , TokenID::SHR        },
+//------Relational and Equality Operations-------
 //-----------------------------------------------
-    { ">"      , Token::GT           },
-    { "<"      , Token::LT           },
-    { ">="     , Token::GTE          },
-    { "<="     , Token::LTE          },
-    { "=="     , Token::EQ           },
-    { "!="     , Token::NEQ          },
-//-------Bitwise Operators-----------------------
+    { ">"      , TokenID::GT         },
+    { "<"      , TokenID::LT         },
+    { ">="     , TokenID::GTE        },
+    { "<="     , TokenID::LTE        },
+    { "=="     , TokenID::EQ         },
+    { "!="     , TokenID::NEQ        },
+//------------Bitwise Operators------------------
 //-----------------------------------------------
-    { "&"      , Token::BIT_AND      },
-    { "^"      , Token::BIT_XOR      },
-    { "|"      , Token::BIT_OR       },
-//-------Logical Operators-----------------------
+    { "&"      , TokenID::BIT_AND    },
+    { "^"      , TokenID::BIT_XOR    },
+    { "|"      , TokenID::BIT_OR     },
+    { "~"      , TokenID::BIT_NOT    },
+//----------Logical Operators--------------------
 //-----------------------------------------------
-    { "&&"     , Token::AND          },
-    { "||"     , Token::OR           },
-//-------Assignment Operators--------------------
+    { "&&"     , TokenID::AND        },
+    { "||"     , TokenID::OR         },
+    { "!"      , TokenID::NOT        },
+//----------Assignment Operators-----------------
 //-----------------------------------------------
-    { "="      , Token::ASSIGN       },
-    { "+="     , Token::ADD_ASSIGN   },
-    { "-="     , Token::SUB_ASSIGN   },
-    { "*="     , Token::MUL_ASSIGN   },
-    { "/="     , Token::DIV_ASSIGN   },
-    { "%="     , Token::MOD_ASSIGN   },
-    { "^="     , Token::XOR_ASSIGN   },
-    { "|="     , Token::B_OR_ASSIGN  },
-    { "&="     , Token::B_AND_ASSIGN },
-//-------Reserved Keywords-----------------------
+    { "="      , TokenID::ASSIGN     },
+    { "+="     , TokenID::ADD_ASGN   },
+    { "-="     , TokenID::SUB_ASGN   },
+    { "*="     , TokenID::MUL_ASGN   },
+    { "/="     , TokenID::DIV_ASGN   },
+    { "%="     , TokenID::MOD_ASGN   },
+    { "^="     , TokenID::XOR_ASGN   },
+    { "<<="    , TokenID::SHL_ASGN   },
+    { ">>="    , TokenID::SHR_ASGN   },
+    { "|="     , TokenID::B_OR_ASGN  },
+    { "&="     , TokenID::B_AND_ASGN },
+//----------Reserved Keywords--------------------
 //-----------------------------------------------
-    { "if"     , Token::IF           },
-    { "else"   , Token::ELSE         },
-    { "while"  , Token::WHILE        },
-    { "do"     , Token::DO           },
-    { "int"    , Token::INT_TYPE     },
-    { "return" , Token::RET          },
-    { "main"   , Token::MAIN         },              // MAIN IS NOT A RESERVED WORD - ITS AN IDENTIFIER THAT CAN ONLY EXIST ONE OF FOR FUNCTIONS - HACK FOR NOW
-//-------Terminals-------------------------------
+    { "if"     , TokenID::IF         },
+    { "else"   , TokenID::ELSE       },
+    { "while"  , TokenID::WHILE      },
+    { "do"     , TokenID::DO         },
+    { "int"    , TokenID::INT_TYPE   },
+    { "float"  , TokenID::FLOAT_TYPE },
+    { "return" , TokenID::RET        },
+    { "main"   , TokenID::MAIN       },               // MAIN IS NOT A RESERVED WORD - ITS AN IDENTIFIER THAT CAN ONLY EXIST ONE OF FOR FUNCTIONS - HACK FOR NOW
+//-------------Terminals-------------------------
 //-----------------------------------------------
-    { "("      , Token::LPAR         },
-    { ")"      , Token::RPAR         },
-    { "{"      , Token::LCURLY       },
-    { "}"      , Token::RCURLY       },
-    { ";"      , Token::SEMI         },
-//-------Miscellaneous---------------------------
+    { "("      , TokenID::LPAR       },
+    { ")"      , TokenID::RPAR       },
+    { "{"      , TokenID::LCURLY     },
+    { "}"      , TokenID::RCURLY     },
+    { "["      , TokenID::LBRACK     },
+    { "]"      , TokenID::RBRACK     },
+    { ";"      , TokenID::SEMI       },
+//--------------Strings--------------------------
 //-----------------------------------------------
-    { "\n"     , Token::NLINE        },
-    { "\032"   , Token::ENDF         }
+    { "'"      , TokenID::S_QUOTE    },
+    { "\""     , TokenID::D_QUOTE    },
+    { "R"      , TokenID::RAWSTR     },
+    { "\\"     , TokenID::ESCAPESEQ  },
+//--------Miscellaneous Operators----------------
+//-----------------------------------------------
+    { ","      , TokenID::COMMA      },
+    { "?"      , TokenID::TERNARY    },
+    { "."      , TokenID::DOT        },  
+//-----------Miscellaneous-----------------------
+//-----------------------------------------------
+    { "\032"   , TokenID::ENDF       }
 };
 
-using TokenPair = std::pair<const std::string, Token>;
-using TokenInfo = std::tuple<const std::string, Token, const int, const int>;
+struct TokenCoords
+{
+    size_t line = 1;
+    size_t col  = 1;
+};
+
+struct Token
+{
+    const std::string str;
+    const TokenCoords coords;
+    TokenID type = TokenID::UNKNOWN;
+};

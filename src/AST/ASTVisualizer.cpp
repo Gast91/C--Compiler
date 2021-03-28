@@ -96,7 +96,7 @@ void ASTVisualizer::Visit(IntegerNode& n)
 void ASTVisualizer::Visit(IdentifierNode& n)
 {
     ImGuiTreeNodeFlags node_flags = base_flags | ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_Bullet;
-    ImGui::TreeNodeEx((void*)(intptr_t)&n, node_flags, "%s:%s", std::get<0>(n.tokenInfo).c_str(), magic_enum::enum_name(std::get<1>(n.tokenInfo)).data());
+    ImGui::TreeNodeEx((void*)(intptr_t)&n, node_flags, "%s:%s", n.token.str.c_str(), magic_enum::enum_name(n.token.type).data());
     nodeRect = { ImGui::GetItemRectMin(), ImGui::GetItemRectMax() };
 
     //ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -114,7 +114,7 @@ void ASTVisualizer::Visit(IdentifierNode& n)
 
 void ASTVisualizer::Visit(UnaryOperationNode& n)
 {
-    nodeRect = RenderNode( [&]() { n.expr->Accept(*this); }, (void*)(intptr_t)&n, "UNARY OP '%s'", n.op.first.c_str());
+    nodeRect = RenderNode( [&]() { n.expr->Accept(*this); }, (void*)(intptr_t)&n, "UNARY OP '%s'", n.op.str.c_str());
 }
 
 void ASTVisualizer::Visit(BinaryOperationNode& n)
@@ -122,7 +122,7 @@ void ASTVisualizer::Visit(BinaryOperationNode& n)
     nodeRect = RenderNode( [&]() {
         n.left->Accept(*this); 
         n.right->Accept(*this); },
-        (void*)(intptr_t)&n, "BINARY OP '%s'", n.op.first.c_str());
+        (void*)(intptr_t)&n, "BINARY OP '%s'", n.op.str.c_str());
 }
 
 void ASTVisualizer::Visit(ConditionNode& n)
@@ -130,7 +130,7 @@ void ASTVisualizer::Visit(ConditionNode& n)
     nodeRect = RenderNode( [&]() {
         n.left->Accept(*this); 
         n.right->Accept(*this); },
-        (void*)(intptr_t)&n, "CONDITION '%s'", n.op.first.c_str());
+        (void*)(intptr_t)&n, "CONDITION '%s'", n.op.str.c_str());
 }
 
 void ASTVisualizer::Visit(IfNode& n)
@@ -197,7 +197,7 @@ void ASTVisualizer::Visit(DeclareAssignNode& n)
     nodeRect = RenderNode( [&]() {
         n.left->Accept(*this); 
         n.right->Accept(*this); },
-        (void*)(intptr_t)&n, "DECLARE_ASSIGN '%s'", n.op.first.c_str());
+        (void*)(intptr_t)&n, "DECLARE_ASSIGN '%s'", n.op.str.c_str());
 }
 
 void ASTVisualizer::Visit(AssignStatementNode& n)
@@ -205,7 +205,7 @@ void ASTVisualizer::Visit(AssignStatementNode& n)
     nodeRect = RenderNode( [&]() {
         n.left->Accept(*this); 
         n.right->Accept(*this); },
-        (void*)(intptr_t)&n, "ASSIGN '%s'", n.op.first.c_str());
+        (void*)(intptr_t)&n, "ASSIGN '%s'", n.op.str.c_str());
 }
 
 void ASTVisualizer::Visit(ReturnStatementNode& n)

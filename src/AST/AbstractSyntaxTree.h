@@ -42,9 +42,9 @@ public:
 class UnaryOperationNode : public UnaryASTNode
 {
 public:
-    TokenPair op;
+    Token op;
 public:
-    UnaryOperationNode(TokenPair t, UnqPtr<ASTNode> n) noexcept : UnaryASTNode(std::move(n)), op(t) {}
+    UnaryOperationNode(const Token& t, UnqPtr<ASTNode> n) noexcept : UnaryASTNode(std::move(n)), op(t) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
     void SetChildrenPrintID(const std::string& pID) override { expr->parentID = pID; }
@@ -56,9 +56,9 @@ class BinaryASTNode : public ASTNode
 public:
     UnqPtr<ASTNode> left;
     UnqPtr<ASTNode> right;
-    TokenPair  op;
+    Token op;
 public:
-    BinaryASTNode(UnqPtr<ASTNode> l, TokenPair o, UnqPtr<ASTNode> r) noexcept : left(std::move(l)), op(o), right(std::move(r)) {}
+    BinaryASTNode(UnqPtr<ASTNode> l, const Token& o, UnqPtr<ASTNode> r) noexcept : left(std::move(l)), op(o), right(std::move(r)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
     void SetChildrenPrintID(const std::string& pID) override { left->parentID = pID; right->parentID = pID; }
@@ -80,10 +80,10 @@ public:
 class IdentifierNode : public ASTNode
 {
 public:
-    TokenInfo tokenInfo;
+    Token token;
     std::string offset;
 public:
-    IdentifierNode(const TokenInfo tokInfo) : tokenInfo(tokInfo) {}
+    IdentifierNode(const Token& tok) : token(tok) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
     void SetChildrenPrintID(const std::string& pID) noexcept override { /* No children */ }
@@ -93,7 +93,7 @@ public:
 class BinaryOperationNode : public BinaryASTNode
 {
 public:
-    BinaryOperationNode(UnqPtr<ASTNode> l, TokenPair o, UnqPtr<ASTNode> r) noexcept : BinaryASTNode(std::move(l), o, std::move(r)) {}
+    BinaryOperationNode(UnqPtr<ASTNode> l, const Token& o, UnqPtr<ASTNode> r) noexcept : BinaryASTNode(std::move(l), o, std::move(r)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
@@ -101,7 +101,7 @@ public:
 class ConditionNode : public BinaryASTNode
 {
 public:
-    ConditionNode(UnqPtr<ASTNode> l, TokenPair o, UnqPtr<ASTNode> r) noexcept : BinaryASTNode(std::move(l), o, std::move(r)) {}
+    ConditionNode(UnqPtr<ASTNode> l, const Token& o, UnqPtr<ASTNode> r) noexcept : BinaryASTNode(std::move(l), o, std::move(r)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
@@ -191,9 +191,9 @@ class DeclareStatementNode : public ASTNode
 {
 public:
     UnqPtr<IdentifierNode> identifier;
-    TokenPair type;
+    Token type;
 public:
-    DeclareStatementNode(UnqPtr<IdentifierNode> ident, TokenPair t) noexcept : identifier(std::move(ident)), type(t) { std::get<1>(identifier->tokenInfo) = t.second; }
+    DeclareStatementNode(UnqPtr<IdentifierNode> ident, const Token& t) noexcept : identifier(std::move(ident)), type(t) { identifier->token.type = t.type; }
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
     void SetChildrenPrintID(const std::string& pID) override {identifier->parentID = pID; }
@@ -202,7 +202,7 @@ public:
 class DeclareAssignNode : public BinaryASTNode
 {
 public:
-    DeclareAssignNode(UnqPtr<DeclareStatementNode> decl, UnqPtr<ASTNode> expr) noexcept : BinaryASTNode(std::move(decl), { "=", Token::ASSIGN }, std::move(expr)) {}
+    DeclareAssignNode(UnqPtr<DeclareStatementNode> decl, const Token& o, UnqPtr<ASTNode> expr) noexcept : BinaryASTNode(std::move(decl), o, std::move(expr)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };
@@ -210,7 +210,7 @@ public:
 class AssignStatementNode : public BinaryASTNode
 {
 public:
-    AssignStatementNode(UnqPtr<IdentifierNode> ident, UnqPtr<ASTNode> expr) noexcept : BinaryASTNode(std::move(ident), { "=", Token::ASSIGN }, std::move(expr)) {}
+    AssignStatementNode(UnqPtr<IdentifierNode> ident, const Token& o, UnqPtr<ASTNode> expr) noexcept : BinaryASTNode(std::move(ident), o, std::move(expr)) {}
 
     void Accept(ASTNodeVisitor& v) override { v.Visit(*this); }
 };

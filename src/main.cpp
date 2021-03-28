@@ -204,13 +204,13 @@ int main()
             for (int row = 0; row < tokens.size(); row++)
             {
                 ImGui::TableNextRow();
-                const auto& [str, type, line, col] = tokens.at(row);
+                const auto& [str, coords, type] = tokens.at(row);
                 ImGui::TableSetColumnIndex(0);
                 ImGui::Text("%s", str.c_str());
                 ImGui::TableSetColumnIndex(1);
                 ImGui::Text("%s", magic_enum::enum_name(type).data());
                 ImGui::TableSetColumnIndex(2);
-                ImGui::Text("%d:%d", line, col);
+                ImGui::Text("%d:%d", coords.line, coords.col);
             }
             ImGui::EndTable();
         }

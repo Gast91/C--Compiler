@@ -70,25 +70,25 @@ void ASTPrinterJson::Visit(IntegerNode& n)
 
 void ASTPrinterJson::Visit(IdentifierNode& n)
 {
-    (void)GenerateJSON(out, &n, "ID", n.parentID, std::get<0>(n.tokenInfo), config);
+    (void)GenerateJSON(out, &n, "ID", n.parentID, n.token.str, config);
 }
 
 void ASTPrinterJson::Visit(UnaryOperationNode& n)
 {
-    n.SetChildrenPrintID(GenerateJSON(out, &n, "UNARY", n.parentID, n.op.first, config));
+    n.SetChildrenPrintID(GenerateJSON(out, &n, "UNARY", n.parentID, n.op.str, config));
     n.expr->Accept(*this);
 }
 
 void ASTPrinterJson::Visit(BinaryOperationNode& n)
 {
-    n.SetChildrenPrintID(GenerateJSON(out, &n, "BINOP", n.parentID, n.op.first, config));
+    n.SetChildrenPrintID(GenerateJSON(out, &n, "BINOP", n.parentID, n.op.str, config));
     n.left->Accept(*this);
     n.right->Accept(*this);
 }
 
 void ASTPrinterJson::Visit(ConditionNode& n)
 {
-    n.SetChildrenPrintID(GenerateJSON(out, &n, "COND", n.parentID, n.op.first, config));
+    n.SetChildrenPrintID(GenerateJSON(out, &n, "COND", n.parentID, n.op.str, config));
     n.left->Accept(*this);
     n.right->Accept(*this);
 }
@@ -140,20 +140,20 @@ void ASTPrinterJson::Visit(StatementBlockNode& n)
 
 void ASTPrinterJson::Visit(DeclareStatementNode& n)
 {
-    n.SetChildrenPrintID(GenerateJSON(out, &n, "DECL", n.parentID, n.type.first, config));
+    n.SetChildrenPrintID(GenerateJSON(out, &n, "DECL", n.parentID, n.type.str, config));
     n.identifier->Accept(*this);
 }
 
 void ASTPrinterJson::Visit(DeclareAssignNode& n)
 {
-    n.SetChildrenPrintID(GenerateJSON(out, &n, "DECL_ASSIGN", n.parentID, n.op.first, config));
+    n.SetChildrenPrintID(GenerateJSON(out, &n, "DECL_ASSIGN", n.parentID, n.op.str, config));
     n.left->Accept(*this);
     n.right->Accept(*this);
 }
 
 void ASTPrinterJson::Visit(AssignStatementNode& n)
 {
-    n.SetChildrenPrintID(GenerateJSON(out, &n, "ASSIGN", n.parentID, n.op.first, config));
+    n.SetChildrenPrintID(GenerateJSON(out, &n, "ASSIGN", n.parentID, n.op.str, config));
     n.left->Accept(*this);
     n.right->Accept(*this);
 }

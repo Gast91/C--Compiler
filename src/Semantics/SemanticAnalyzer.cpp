@@ -11,11 +11,11 @@ void SemanticAnalyzer::Visit(IntegerNode& n)   {}
 void SemanticAnalyzer::Visit(IdentifierNode& n)
 {
     // Every identifier will be hit here, so the address must be set here to the one in the symbol table - FIXME: REFACTOR ADDRESSES
-    if (const auto sym = currentScope->LookUpSymbol(std::get<0>(n.tokenInfo)); !sym)
+    if (const auto sym = currentScope->LookUpSymbol(n.token.str); !sym)
     {
         failState = true;
-        const auto [variableName, variableType, line, col] = n.tokenInfo;
-        throw SymbolNotFoundException(n.tokenInfo, GetSourceLine ? GetSourceLine(line) : "");
+        const auto& [variableName, coords, variableType] = n.token;
+        throw SymbolNotFoundException(n.token, GetSourceLine ? GetSourceLine(coords.line) : "");
     }
     else n.offset = sym->offset;
 }
@@ -126,9 +126,9 @@ void SemanticAnalyzer::Visit(StatementBlockNode& n)
 void SemanticAnalyzer::Visit(DeclareStatementNode& n)
 {
     // Look up Declaration Node's type in the symbol table
-    const Symbol* symbolType = currentScope->LookUpSymbol(n.type.first);
+    const Symbol* symbolType = currentScope->LookUpSymbol(n.type.str);
     // Get the variable name from the Declaration's Identifier Node
-    const auto [variableName, variableType, line, col] = n.identifier->tokenInfo;
+    const auto& [variableName, coords, variableType] = n.identifier->token;
     addressOffset -= 4;  // This shouldnt be hardcoded for int32's but for now we only have ints - FIXME: REFACTOR ADDRESSES
     // Define a new VarSymbol using variable name and symbolType
     std::unique_ptr<Symbol> variableSymbol = std::make_unique<VariableSymbol>(variableName, std::to_string(addressOffset), symbolType);
@@ -136,7 +136,7 @@ void SemanticAnalyzer::Visit(DeclareStatementNode& n)
     if (!currentScope->DefineSymbol(std::move(variableSymbol)))
     {
         failState = true;
-        throw SymbolRedefinitionException(n.identifier->tokenInfo, GetSourceLine ? GetSourceLine(line) : "");
+        throw SymbolRedefinitionException(n.identifier->token, GetSourceLine ? GetSourceLine(coords.line) : "");
     }
 }
 
@@ -149,11 +149,11 @@ void SemanticAnalyzer::Visit(DeclareAssignNode& n)
 void SemanticAnalyzer::Visit(AssignStatementNode& n)
 {
     IdentifierNode* identifier = dynamic_cast<IdentifierNode*>(n.left.get());
-    if (const auto sym = currentScope->LookUpSymbol(std::get<0>(identifier->tokenInfo)); !sym)
+    if (const auto sym = currentScope->LookUpSymbol(identifier->token.str); !sym)
     {
         failState = true;
-        const auto& [tokName, tokType, line, col] = identifier->tokenInfo;
-        throw SymbolNotFoundException(identifier->tokenInfo, GetSourceLine ? GetSourceLine(line) : "");
+        const auto& [tokName, coords, tokType] = identifier->token;
+        throw SymbolNotFoundException(identifier->token, GetSourceLine ? GetSourceLine(coords.line) : "");
     }
     else identifier->offset = sym->offset;
     // Identifier's name (left) has been extracted. If we reached here we know the symbol's in the table so no need to visit left node

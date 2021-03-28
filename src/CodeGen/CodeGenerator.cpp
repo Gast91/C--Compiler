@@ -156,11 +156,11 @@ void CodeGenerator::Visit(BinaryASTNode& n)  { assert(("Code Generator visited b
 
 // Integer and Identifier Leaf Nodes. A throwaway Quadruple is returned that effectively passes back their value or name
 void CodeGenerator::Visit(IntegerNode& n)    { Return({ std::nullopt, std::nullopt, std::nullopt, Operand{CmdType::NONE, std::to_string(n.value), std::to_string(n.value)} }); }
-void CodeGenerator::Visit(IdentifierNode& n) { Return({ std::nullopt, std::nullopt,  std::nullopt, Operand{CmdType::NONE, std::get<0>(n.tokenInfo), "DWORD [ebp" + n.offset + "]"} }); }
+void CodeGenerator::Visit(IdentifierNode& n) { Return({ std::nullopt, std::nullopt,  std::nullopt, Operand{CmdType::NONE, n.token.str, "DWORD [ebp" + n.offset + "]"} }); }
 
 void CodeGenerator::Visit(UnaryOperationNode& n)
 {
-    instructions.push_back({ Command{n.op.first, CmdType::UNARY }, fetch_instr(n.expr.get()).dest, std::nullopt, Temporary::NewTemporary() });
+    instructions.push_back({ Command{n.op.str, CmdType::UNARY }, fetch_instr(n.expr.get()).dest, std::nullopt, Temporary::NewTemporary() });
     Return(instructions.back());
 }
 
@@ -170,7 +170,7 @@ void CodeGenerator::ProcessBinOp(const BinaryASTNode& n, CmdType type)
     const auto src1 = fetch_instr(n.left.get()).dest;
     const auto dest = Temporary::NewTemporary();
     const auto src2 = fetch_instr(n.right.get()).dest;
-    instructions.push_back({ Command{n.op.first, type }, src1, src2, dest });
+    instructions.push_back({ Command{n.op.str, type }, src1, src2, dest });
 #else
     instructions.push_back({ Command{n.op.first, type }, fetch_instr(n.left.get()).dest, fetch_instr(n.right.get()).dest, Temporary::NewTemporary() });
 #endif // OPTIMIZE_TEMPS
@@ -178,7 +178,7 @@ void CodeGenerator::ProcessBinOp(const BinaryASTNode& n, CmdType type)
 }
 
 void CodeGenerator::Visit(BinaryOperationNode& n) { ProcessBinOp(n, CmdType::ARITHM); }
-void CodeGenerator::Visit(ConditionNode& n)       { ProcessBinOp(n, n.op.first == "&&" || n.op.first == "||" ? CmdType::LOG : CmdType::RELAT); }
+void CodeGenerator::Visit(ConditionNode& n)       { ProcessBinOp(n, n.op.str == "&&" || n.op.str == "||" ? CmdType::LOG : CmdType::RELAT); }
 
 void CodeGenerator::Visit(IfNode& n)
 {
@@ -255,7 +255,7 @@ void CodeGenerator::ProcessAssignment(const BinaryASTNode& n)
 //    else instructions.push_back({ n.op.first, src2.dest, std::nullopt, GetValue(n.left.get()).dest });
 //#else
     // Assign the expression to your left
-    instructions.push_back({ Command{ n.op.first, CmdType::COPY }, fetch_instr(n.right.get()).dest, std::nullopt, GetValue(n.left.get()).dest });
+    instructions.push_back({ Command{ n.op.str, CmdType::COPY }, fetch_instr(n.right.get()).dest, std::nullopt, GetValue(n.left.get()).dest });
 //#endif // OPTIMIZE_TEMPS
 }
 

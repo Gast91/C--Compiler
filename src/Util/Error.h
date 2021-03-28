@@ -2,15 +2,15 @@
 #include <sstream>
 #include "../Lexer/Token.h"
 
-std::string BuildSourceErrorInfo(const TokenInfo tok, const std::string& srcCode);
+std::string BuildSourceErrorInfo(const Token& tok, const std::string& srcCode);
 
 class UnexpectedTokenException : public std::exception
 {
 private:
     static std::string errorMsg;
 public:
-    UnexpectedTokenException(const TokenInfo tokInfo, const std::string&& errorSrc) 
-        : exception((errorMsg + '\'' + std::get<0>(tokInfo) + "\' at " + BuildSourceErrorInfo(tokInfo, errorSrc)).c_str()) {}
+    UnexpectedTokenException(const Token& tok, const std::string&& errorSrc) 
+        : exception((errorMsg + '\'' + tok.str + "\' at " + BuildSourceErrorInfo(tok, errorSrc)).c_str()) {}
 };
 
 class SymbolNotFoundException : public std::exception
@@ -18,8 +18,8 @@ class SymbolNotFoundException : public std::exception
 private:
     static std::string errorMsg;
 public:
-    SymbolNotFoundException(const TokenInfo tokInfo, const std::string&& errorSrc)
-        : exception((errorMsg + '\'' + std::get<0>(tokInfo) + "\' at " + BuildSourceErrorInfo(tokInfo, errorSrc)).c_str()) {}
+    SymbolNotFoundException(const Token& tok, const std::string&& errorSrc)
+        : exception((errorMsg + '\'' + tok.str + "\' at " + BuildSourceErrorInfo(tok, errorSrc)).c_str()) {}
 };
 
 class SymbolRedefinitionException : public std::exception
@@ -27,6 +27,6 @@ class SymbolRedefinitionException : public std::exception
 private:
     static std::string errorMsg;
 public:
-    SymbolRedefinitionException(const TokenInfo tokInfo, const std::string&& errorSrc)
-        : exception((errorMsg + '\'' + std::get<0>(tokInfo) + "\' at " + BuildSourceErrorInfo(tokInfo, errorSrc)).c_str()) {}
+    SymbolRedefinitionException(const Token& tok, const std::string&& errorSrc)
+        : exception((errorMsg + '\'' + tok.str + "\' at " + BuildSourceErrorInfo(tok, errorSrc)).c_str()) {}
 };
