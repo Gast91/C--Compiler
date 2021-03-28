@@ -12,39 +12,45 @@ class Lexer : public IObserver<>
 private:
     TextEditor* editor;
 
-    std::vector<TokenInfo> sourceTokens;
-    unsigned int currentTokenIndex = 0;
+    std::vector<Token> sourceTokens;
+    size_t currentTokenIndex = 0;
+    size_t sourceIndex = 0;
+    size_t tokenStartIndex = 0;
+
+    TokenCoords pos;
+    TokenCoords tokenStartPos;
+
+    std::string input;
 
     bool shouldRun = false;
 
-    void AddToken(const std::string& tok, const size_t lineNo, const size_t col);
+    bool IsQuote(const TokenID quoteType);
+    bool IsRawString();
+    bool IsNumber(const char current);
+    bool IsIdentifier(const char current);
 
-    bool IsDiscardableCharacter(const std::string& delimiter) const noexcept;
-    bool IsCompoundOperator(const std::string& delimiter, const std::string& next) const;
-    //size_t OperatorWidth(const std::string& delimiter, const std::string& twoNext) const;
-    bool IsMultiLineCommentStart(const std::string& delimiter, const std::string& next) const;
-    bool IsMultiLineCommentEnd(const std::string& delimiter, const std::string& next) const;
-    bool ShouldSkipChars(const std::string& line, size_t& pos, size_t& prev, size_t& col, bool& multiline);
-    bool IsComment(const std::string& delimiter, const std::string& next) const;
-    bool IsInteger(const std::string& num) const;
-    bool IsCharacter(const unsigned char c) const noexcept;
-    constexpr bool IsIdentifier(const std::string& identifier, const bool firstCall) const;
+    char Peek(const size_t amount = 0) const { return sourceIndex + amount >= input.size() ? 0 : input.at(sourceIndex + amount); }
+    char Advance(const size_t amount = 1);
+    void StartToken();
+    void SubmitToken();
+    void AddToken(const Token& token);
+    size_t MatchStringPrefix(const char quote) const;
 public:
     Lexer(TextEditor* ed) : editor(ed) {}
     virtual ~Lexer() = default;
 
-    void Consume(const Token tokenType);
+    void Consume(const TokenID tokenType);
 
-    const TokenInfo& GetCurrentToken()        const { return sourceTokens.at(currentTokenIndex); }
-    std::string GetCurrentTokenVal()          const { return std::get<0>(sourceTokens.at(currentTokenIndex)); }
-    Token GetCurrentTokenType()               const { return std::get<1>(sourceTokens.at(currentTokenIndex)); }
-    std::string GetCurrentTokenLine()         const { return std::to_string(std::get<2>(sourceTokens.at(currentTokenIndex))); }
-    std::string GetCurrentTokenCol()          const { return std::to_string(std::get<3>(sourceTokens.at(currentTokenIndex))); }
-    const std::vector<TokenInfo>& GetTokens() const { return sourceTokens; }
+    const Token& GetCurrentToken()        const { return sourceTokens.at(currentTokenIndex); }
+    std::string GetCurrentTokenVal()      const { return sourceTokens.at(currentTokenIndex).str; }
+    TokenID GetCurrentTokenType()         const { return sourceTokens.at(currentTokenIndex).type; }
+    size_t GetCurrentTokenLine()          const { return sourceTokens.at(currentTokenIndex).coords.line; }
+    size_t GetCurrentTokenCol()           const { return sourceTokens.at(currentTokenIndex).coords.line; }
+    const std::vector<Token>& GetTokens() const { return sourceTokens; }
 
-    bool Done()      const { return sourceTokens.empty() || GetCurrentTokenType() == Token::ENDF; }
-    bool HasTokens() const { return !sourceTokens.empty(); }
-    void ResetIndex()      { currentTokenIndex = 0; }
+    bool Done()       const { return sourceTokens.empty() || GetCurrentTokenType() == TokenID::ENDF; }
+    bool HasTokens()  const { return !sourceTokens.empty(); }
+    void ResetIndex()       { currentTokenIndex = 0; }
 
     // Inherited via IObserver
     virtual bool ShouldRun() const override { return shouldRun; }
